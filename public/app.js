@@ -18,11 +18,13 @@ const RUNWAYS = {
 // In production on Vercel, same endpoint works
 const API_ENDPOINT = '/api/aircraft';
 
-// Fetch interval (10 seconds, matches server cache)
-const FETCH_INTERVAL = 10000;
+// Fetch interval (60 seconds = once per minute to respect OpenSky rate limits)
+const FETCH_INTERVAL = 60000;
 
 // State
 let aircraftData = {};
+let isFetching = false;
+let rateLimitResetTime = 0;
 
 /**
  * Calculate distance between two coordinates (Haversine formula)
@@ -118,8 +120,33 @@ function estimateRunway(aircraft) {
  * Fetch aircraft data from local API (Vercel serverless function)
  */
 async function fetchAircraftData() {
+    // Prevent concurrent requests
+    if (isFetching) {
+        return;
+    }
+
+    // If rate limited, wait before retrying
+    if (rateLimitResetTime > Date.now()) {
+        console.warn('Rate limited, waiting before next request...');
+        return;
+    }
+
+    isFetching = true;
+
     try {
         const response = await fetch(API_ENDPOINT);
+
+        // Handle rate limiting (503 or 429)
+        if (response.status === 503 || response.status === 429) {
+            const errorData = await response.json().catch(() => ({}));
+            const retryAfter = errorData.retryAfter || 120;
+            console.warn(`Rate limited. Retry after ${retryAfter} seconds`);
+            rateLimitResetTime = Date.now() + (retryAfter * 1000);
+            isFetching = false;
+            displayError(`OpenSky API rate limited. Retrying in ${retryAfter} seconds...`);
+            return;
+        }
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -160,10 +187,12 @@ async function fetchAircraftData() {
         aircraftData = landings;
         updateUI();
         updateLastUpdated();
+        isFetching = false;
 
     } catch (error) {
         console.error('Error fetching aircraft data:', error);
         displayError('Failed to fetch aircraft data. Please check the console.');
+        isFetching = false;
     }
 }
 
