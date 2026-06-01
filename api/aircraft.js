@@ -1,14 +1,60 @@
+const fs = require('fs/promises');
+const os = require('os');
+const path = require('path');
+
 // In-memory cache for Vercel serverless function
-let cachedData = null;
-let lastFetchTime = 0;
-let cachedToken = null;
-let tokenExpiresAt = 0;
-let tokenRefreshPromise = null;
+const runtimeState = globalThis.__genevaRunwayAircraftState || {
+    cachedData: null,
+    lastFetchTime: 0,
+    cachedToken: null,
+    tokenExpiresAt: 0,
+    tokenRefreshPromise: null
+};
+globalThis.__genevaRunwayAircraftState = runtimeState;
+
 const CACHE_DURATION = 120000; // 120 seconds cache duration
 const MAX_STALE_AGE = 600000; // Allow serving stale data up to 10 minutes old
 const TOKEN_REFRESH_MARGIN = 30000; // Refresh 30 seconds before expiry
 const OPENSKY_TOKEN_URL = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
 const OPENSKY_STATES_URL = 'https://opensky-network.org/api/states/all';
+const AIRCRAFT_CACHE_FILE = path.join(os.tmpdir(), 'geneva-runway-aircraft-cache.json');
+
+async function loadCachedAircraftData() {
+    if (runtimeState.cachedData) {
+        return;
+    }
+
+    try {
+        const cacheContents = await fs.readFile(AIRCRAFT_CACHE_FILE, 'utf8');
+        const cache = JSON.parse(cacheContents);
+
+        if (cache && cache.cachedData && Number.isFinite(cache.lastFetchTime)) {
+            runtimeState.cachedData = cache.cachedData;
+            runtimeState.lastFetchTime = cache.lastFetchTime;
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.warn('Failed to read aircraft cache file:', error.message);
+        }
+    }
+}
+
+async function saveCachedAircraftData(data) {
+    runtimeState.cachedData = data;
+    runtimeState.lastFetchTime = Date.now();
+
+    try {
+        await fs.writeFile(
+            AIRCRAFT_CACHE_FILE,
+            JSON.stringify({
+                cachedData: runtimeState.cachedData,
+                lastFetchTime: runtimeState.lastFetchTime
+            })
+        );
+    } catch (error) {
+        console.warn('Failed to write aircraft cache file:', error.message);
+    }
+}
 
 function getOpenSkyCredentials() {
     const clientId = process.env.OPENSKY_NETWORK_CLIENT_ID;
@@ -22,11 +68,11 @@ function getOpenSkyCredentials() {
 }
 
 async function refreshOpenSkyToken() {
-    if (tokenRefreshPromise) {
-        return tokenRefreshPromise;
+    if (runtimeState.tokenRefreshPromise) {
+        return runtimeState.tokenRefreshPromise;
     }
 
-    tokenRefreshPromise = (async () => {
+    runtimeState.tokenRefreshPromise = (async () => {
         const { clientId, clientSecret } = getOpenSkyCredentials();
         const body = new URLSearchParams({
             grant_type: 'client_credentials',
@@ -50,22 +96,22 @@ async function refreshOpenSkyToken() {
         }
 
         const expiresInMs = (tokenData.expires_in || 1800) * 1000;
-        cachedToken = tokenData.access_token;
-        tokenExpiresAt = Date.now() + expiresInMs - TOKEN_REFRESH_MARGIN;
+        runtimeState.cachedToken = tokenData.access_token;
+        runtimeState.tokenExpiresAt = Date.now() + expiresInMs - TOKEN_REFRESH_MARGIN;
 
-        return cachedToken;
+        return runtimeState.cachedToken;
     })();
 
     try {
-        return await tokenRefreshPromise;
+        return await runtimeState.tokenRefreshPromise;
     } finally {
-        tokenRefreshPromise = null;
+        runtimeState.tokenRefreshPromise = null;
     }
 }
 
 async function getOpenSkyToken() {
-    if (cachedToken && Date.now() < tokenExpiresAt) {
-        return cachedToken;
+    if (runtimeState.cachedToken && Date.now() < runtimeState.tokenExpiresAt) {
+        return runtimeState.cachedToken;
     }
 
     return refreshOpenSkyToken();
@@ -113,19 +159,21 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const timeSinceLastFetch = Date.now() - lastFetchTime;
+        await loadCachedAircraftData();
+
+        const timeSinceLastFetch = Date.now() - runtimeState.lastFetchTime;
 
         // Return cached data if still valid (within 120 seconds)
-        if (cachedData && timeSinceLastFetch < CACHE_DURATION) {
+        if (runtimeState.cachedData && timeSinceLastFetch < CACHE_DURATION) {
             console.log(`Returning fresh cached data (${Math.round(timeSinceLastFetch / 1000)}s old)`);
             res.setHeader('Cache-Control', 'public, max-age=120');
             res.setHeader('X-Cache', 'HIT');
-            res.status(200).json(cachedData);
+            res.status(200).json(runtimeState.cachedData);
             return;
         }
 
         // If cache is older than 120s but newer than 10 min, serve stale but try to refresh
-        if (cachedData && timeSinceLastFetch < MAX_STALE_AGE) {
+        if (runtimeState.cachedData && timeSinceLastFetch < MAX_STALE_AGE) {
             console.log(`Cache is ${Math.round(timeSinceLastFetch / 1000)}s old, attempting refresh...`);
 
             // Try to fetch fresh data
@@ -134,8 +182,7 @@ module.exports = async (req, res) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    cachedData = data;
-                    lastFetchTime = Date.now();
+                    await saveCachedAircraftData(data);
                     console.log('Successfully refreshed cache from OpenSky');
                     res.setHeader('Cache-Control', 'public, max-age=120');
                     res.setHeader('X-Cache', 'REFRESHED');
@@ -145,14 +192,20 @@ module.exports = async (req, res) => {
                     console.warn('OpenSky rate limited, returning stale cached data');
                     res.setHeader('Cache-Control', 'public, max-age=120');
                     res.setHeader('X-Cache', 'STALE-RATE-LIMITED');
-                    res.status(200).json(cachedData);
+                    res.status(200).json(runtimeState.cachedData);
+                    return;
+                } else {
+                    console.warn(`OpenSky refresh failed with ${response.status}, returning stale cached data`);
+                    res.setHeader('Cache-Control', 'public, max-age=120');
+                    res.setHeader('X-Cache', 'STALE-REFRESH-ERROR');
+                    res.status(200).json(runtimeState.cachedData);
                     return;
                 }
             } catch (fetchError) {
                 console.warn('Fetch attempt failed, returning stale cached data:', fetchError.message);
                 res.setHeader('Cache-Control', 'public, max-age=120');
                 res.setHeader('X-Cache', 'STALE-FETCH-ERROR');
-                res.status(200).json(cachedData);
+                res.status(200).json(runtimeState.cachedData);
                 return;
             }
         }
@@ -175,8 +228,7 @@ module.exports = async (req, res) => {
         }
 
         const data = await response.json();
-        cachedData = data;
-        lastFetchTime = Date.now();
+        await saveCachedAircraftData(data);
 
         res.setHeader('Cache-Control', 'public, max-age=120');
         res.setHeader('X-Cache', 'MISS');
@@ -184,11 +236,11 @@ module.exports = async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching from OpenSky API:', error);
-        if (cachedData) {
+        if (runtimeState.cachedData) {
             console.log('Error occurred, returning stale cached data');
             res.setHeader('Cache-Control', 'public, max-age=120');
             res.setHeader('X-Cache', 'STALE-ERROR');
-            res.status(200).json(cachedData);
+            res.status(200).json(runtimeState.cachedData);
         } else {
             res.status(500).json({ error: 'Failed to fetch aircraft data' });
         }
