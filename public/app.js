@@ -13,11 +13,13 @@ const RUNWAYS = {
     '04R/22L': 40
 };
 
-// OpenSky API endpoint
-const OPENSKY_API = 'https://opensky-network.org/api/states/all';
+// API endpoint (local Vercel function or direct if available)
+// In development, this will be /api/aircraft (Vercel serverless function)
+// In production on Vercel, same endpoint works
+const API_ENDPOINT = '/api/aircraft';
 
-// Fetch interval (5 seconds)
-const FETCH_INTERVAL = 5000;
+// Fetch interval (10 seconds, matches server cache)
+const FETCH_INTERVAL = 10000;
 
 // State
 let aircraftData = {};
@@ -92,22 +94,32 @@ function isHeadingToward(aircraft) {
 }
 
 /**
- * Estimate runway based on aircraft altitude and heading
+ * Estimate runway based on aircraft heading
+ * Runway 04: heading ~40° (0-90°)
+ * Runway 22: heading ~220° (180-270°)
  */
 function estimateRunway(aircraft) {
-    // Simple estimation: alternate between runways
-    // In reality, this would depend on wind direction
-    const runways = Object.keys(RUNWAYS);
-    const index = Math.abs(aircraft.longitude.toString().charCodeAt(0)) % runways.length;
-    return runways[index];
+    if (aircraft.heading === null) {
+        // If no heading, use random runway
+        return Math.random() < 0.5 ? '04' : '22';
+    }
+
+    const heading = aircraft.heading;
+
+    // Determine if landing on 04 or 22 based on heading
+    if ((heading >= 0 && heading < 90) || (heading >= 270 && heading <= 360)) {
+        return '04';
+    } else {
+        return '22';
+    }
 }
 
 /**
- * Fetch aircraft data from OpenSky API
+ * Fetch aircraft data from local API (Vercel serverless function)
  */
 async function fetchAircraftData() {
     try {
-        const response = await fetch(OPENSKY_API);
+        const response = await fetch(API_ENDPOINT);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -167,42 +179,33 @@ function updateUI() {
  * Update runway status cards
  */
 function updateRunwayCards() {
-    const runway04L = aircraftData.filter(a => {
-        const runway = estimateRunway(a);
-        return runway === '04L/22R';
-    });
+    const runway04 = aircraftData.filter(a => estimateRunway(a) === '04');
+    const runway22 = aircraftData.filter(a => estimateRunway(a) === '22');
 
-    const runway04R = aircraftData.filter(a => {
-        const runway = estimateRunway(a);
-        return runway === '04R/22L';
-    });
-
-    // Update runway 04L/22R
-    document.getElementById('runway04LCount').textContent =
-        `${runway04L.length} incoming`;
-
-    const runway04LAircraftDiv = document.getElementById('runway04LAircraft');
-    if (runway04L.length > 0) {
-        runway04LAircraftDiv.innerHTML = runway04L
-            .slice(0, 2)
-            .map(a => `<p><strong>${a.callsign}</strong> • ${Math.round(a.altitude)}m</p>`)
-            .join('');
+    // Determine active runway (the one with most incoming aircraft, or first with any)
+    let activeRunway, activeAircraft;
+    if (runway22.length > 0) {
+        activeRunway = '22';
+        activeAircraft = runway22[0];
+    } else if (runway04.length > 0) {
+        activeRunway = '04';
+        activeAircraft = runway04[0];
     } else {
-        runway04LAircraftDiv.innerHTML = '<p class="no-data">--</p>';
+        activeRunway = '--';
+        activeAircraft = null;
     }
 
-    // Update runway 04R/22L
-    document.getElementById('runway04RCount').textContent =
-        `${runway04R.length} incoming`;
+    // Update runway display
+    document.getElementById('runwayNumber').textContent = activeRunway;
 
-    const runway04RAircraftDiv = document.getElementById('runway04RAircraft');
-    if (runway04R.length > 0) {
-        runway04RAircraftDiv.innerHTML = runway04R
-            .slice(0, 2)
-            .map(a => `<p><strong>${a.callsign}</strong> • ${Math.round(a.altitude)}m</p>`)
-            .join('');
+    const nextPlaneDiv = document.getElementById('nextPlane');
+    if (activeAircraft) {
+        nextPlaneDiv.innerHTML = `
+            <p><strong>${activeAircraft.callsign}</strong></p>
+            <p class="altitude">${Math.round(activeAircraft.altitude)}m • ${Math.round(activeAircraft.velocity * 3.6)} km/h</p>
+        `;
     } else {
-        runway04RAircraftDiv.innerHTML = '<p class="no-data">--</p>';
+        nextPlaneDiv.innerHTML = '<p class="no-data">No incoming aircraft</p>';
     }
 }
 

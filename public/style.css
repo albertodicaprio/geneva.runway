@@ -65,64 +65,86 @@ section h2 {
     gap: 10px;
 }
 
+/* Runway Section */
+.runway-section {
+    display: flex;
+    justify-content: center;
+}
+
+.runway-card {
+    border: 2px solid #667eea;
+    border-radius: 12px;
+    padding: 40px;
+    background: linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%);
+    transition: all 0.3s ease;
+    max-width: 600px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+}
+
+.runway-card:hover {
+    box-shadow: 0 12px 30px rgba(102, 126, 234, 0.25);
+}
+
+.runway-card h2 {
+    font-size: 1.2em;
+    color: #666;
+    margin-bottom: 20px;
+    margin-top: 0;
+}
+
+.runway-card h3 {
+    font-size: 1em;
+    color: #999;
+    margin-bottom: 15px;
+    margin-top: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.runway-display {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.runway-number {
+    font-size: 4em;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.next-plane {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.next-plane p {
+    margin: 5px 0;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+.next-plane p:first-child {
+    font-size: 1.3em;
+    color: #667eea;
+}
+
+.next-plane .altitude {
+    font-size: 0.95em;
+    color: #999;
+}
+
 /* Runway Cards */
 .runways-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
-}
-
-.runway-card {
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-    background: #f9f9f9;
-    transition: all 0.3s ease;
-}
-
-.runway-card:hover {
-    border-color: #667eea;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-}
-
-.runway-card h3 {
-    font-size: 1.3em;
-    color: #667eea;
-    margin-bottom: 15px;
-}
-
-.runway-status {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.status-badge {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.9em;
-    font-weight: 600;
-}
-
-.incoming-count {
-    font-size: 0.95em;
-    color: #666;
-    font-weight: 500;
-}
-
-.aircraft-on-runway {
-    font-size: 0.9em;
-    color: #666;
-}
-
-.no-data {
-    color: #ccc;
-    font-style: italic;
 }
 
 /* Aircraft List */
@@ -243,6 +265,11 @@ section h2 {
     text-align: center;
     padding: 40px 20px;
     color: #999;
+    font-style: italic;
+}
+
+.no-data {
+    color: #ccc;
     font-style: italic;
 }
 

@@ -17,35 +17,21 @@
         </header>
 
         <main>
-            <section class="runways-section">
-                <h2>Runway Status</h2>
-                <div class="runways-grid">
-                    <div class="runway-card">
-                        <h3>Runway 04L/22R</h3>
-                        <div class="runway-status">
-                            <div class="status-badge">Active</div>
-                            <div class="incoming-count" id="runway04LCount">0 incoming</div>
-                        </div>
-                        <div class="aircraft-on-runway" id="runway04LAircraft">
-                            <p class="no-data">--</p>
-                        </div>
+            <section class="runway-section">
+                <div class="runway-card">
+                    <h2>Approach Runway</h2>
+                    <div class="runway-display">
+                        <div class="runway-number" id="runwayNumber">--</div>
                     </div>
-
-                    <div class="runway-card">
-                        <h3>Runway 04R/22L</h3>
-                        <div class="runway-status">
-                            <div class="status-badge">Active</div>
-                            <div class="incoming-count" id="runway04RCount">0 incoming</div>
-                        </div>
-                        <div class="aircraft-on-runway" id="runway04RAircraft">
-                            <p class="no-data">--</p>
-                        </div>
+                    <h3>Next Plane to Land</h3>
+                    <div class="next-plane" id="nextPlane">
+                        <p class="no-data">Loading...</p>
                     </div>
                 </div>
             </section>
 
             <section class="aircraft-section">
-                <h2>Incoming Aircraft</h2>
+                <h2>All Incoming Aircraft</h2>
                 <div class="aircraft-list" id="aircraftList">
                     <div class="loading">Loading aircraft data...</div>
                 </div>
@@ -53,7 +39,7 @@
 
             <section class="info-section">
                 <p class="info-text">Data from <a href="https://opensky-network.org/" target="_blank">OpenSky
-                        Network</a> • Updates every 5 seconds</p>
+                        Network</a> • Updates every 10 seconds</p>
             </section>
         </main>
     </div>

@@ -1,6 +1,0 @@
-{
-  "buildCommand": "echo 'Skipping build'",
-  "outputDirectory": "public",
-  "cleanUrls": true,
-  "trailingSlash": false
-}
