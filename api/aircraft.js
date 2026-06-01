@@ -38,15 +38,12 @@ module.exports = async (req, res) => {
         if (cachedData && timeSinceLastFetch < MAX_STALE_AGE) {
             console.log(`Cache is ${Math.round(timeSinceLastFetch / 1000)}s old, attempting refresh...`);
 
-            // Try to fetch but don't wait long
-            const fetchPromise = fetch('https://opensky-network.org/api/states/all', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(5000) // 5 second timeout
-            });
-
+            // Try to fetch fresh data
             try {
-                const response = await fetchPromise;
+                const response = await fetch('https://opensky-network.org/api/states/all', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
 
                 if (response.ok) {
                     const data = await response.json();
