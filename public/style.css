@@ -1,0 +1,309 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+header h1 {
+    font-size: 2.5em;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 1.1em;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.last-updated {
+    font-size: 0.9em;
+    color: #999;
+    font-family: 'Courier New', monospace;
+}
+
+main {
+    display: grid;
+    gap: 30px;
+}
+
+section {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+section h2 {
+    font-size: 1.5em;
+    color: #333;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Runway Cards */
+.runways-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.runway-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    background: #f9f9f9;
+    transition: all 0.3s ease;
+}
+
+.runway-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.runway-card h3 {
+    font-size: 1.3em;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.runway-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.status-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.incoming-count {
+    font-size: 0.95em;
+    color: #666;
+    font-weight: 500;
+}
+
+.aircraft-on-runway {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.no-data {
+    color: #ccc;
+    font-style: italic;
+}
+
+/* Aircraft List */
+.aircraft-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.aircraft-item {
+    background: #f5f5f5;
+    border-left: 4px solid #667eea;
+    padding: 15px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.aircraft-item:hover {
+    background: #efefef;
+    transform: translateX(4px);
+}
+
+.aircraft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.aircraft-callsign {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    font-family: 'Courier New', monospace;
+}
+
+.aircraft-type {
+    background: #667eea;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.aircraft-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.detail {
+    font-size: 0.9em;
+}
+
+.detail-label {
+    color: #999;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    color: #333;
+    font-weight: 500;
+    font-family: 'Courier New', monospace;
+}
+
+.detail-value.descending {
+    color: #e74c3c;
+}
+
+.detail-value.approaching {
+    color: #27ae60;
+}
+
+/* Info Section */
+.info-section {
+    text-align: center;
+    padding: 15px !important;
+    background: #f0f4ff !important;
+}
+
+.info-text {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.info-text a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.info-text a:hover {
+    text-decoration: underline;
+}
+
+/* Loading & Error States */
+.loading {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+.error {
+    background: #fee;
+    color: #c33;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 10px 0;
+    border-left: 4px solid #c33;
+}
+
+.no-aircraft {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8em;
+    }
+
+    section {
+        padding: 20px;
+    }
+
+    section h2 {
+        font-size: 1.2em;
+    }
+
+    .runways-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .aircraft-details {
+        grid-template-columns: 1fr;
+    }
+
+    .runway-status {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    header {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    header h1 {
+        font-size: 1.5em;
+    }
+
+    .subtitle {
+        font-size: 1em;
+    }
+
+    main {
+        gap: 20px;
+    }
+
+    section {
+        padding: 15px;
+    }
+
+    .aircraft-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
