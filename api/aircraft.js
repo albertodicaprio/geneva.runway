@@ -1,8 +1,98 @@
 // In-memory cache for Vercel serverless function
 let cachedData = null;
 let lastFetchTime = 0;
+let cachedToken = null;
+let tokenExpiresAt = 0;
+let tokenRefreshPromise = null;
 const CACHE_DURATION = 120000; // 120 seconds cache duration
 const MAX_STALE_AGE = 600000; // Allow serving stale data up to 10 minutes old
+const TOKEN_REFRESH_MARGIN = 30000; // Refresh 30 seconds before expiry
+const OPENSKY_TOKEN_URL = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+const OPENSKY_STATES_URL = 'https://opensky-network.org/api/states/all';
+
+function getOpenSkyCredentials() {
+    const clientId = process.env.OPENSKY_NETWORK_CLIENT_ID;
+    const clientSecret = process.env.OPENSKY_NETWORK_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        throw new Error('Missing OPENSKY_NETWORK_CLIENT_ID or OPENSKY_NETWORK_CLIENT_SECRET');
+    }
+
+    return { clientId, clientSecret };
+}
+
+async function refreshOpenSkyToken() {
+    if (tokenRefreshPromise) {
+        return tokenRefreshPromise;
+    }
+
+    tokenRefreshPromise = (async () => {
+        const { clientId, clientSecret } = getOpenSkyCredentials();
+        const body = new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: clientId,
+            client_secret: clientSecret
+        });
+
+        const response = await fetch(OPENSKY_TOKEN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenSky token request failed with ${response.status}`);
+        }
+
+        const tokenData = await response.json();
+        if (!tokenData.access_token) {
+            throw new Error('OpenSky token response did not include an access token');
+        }
+
+        const expiresInMs = (tokenData.expires_in || 1800) * 1000;
+        cachedToken = tokenData.access_token;
+        tokenExpiresAt = Date.now() + expiresInMs - TOKEN_REFRESH_MARGIN;
+
+        return cachedToken;
+    })();
+
+    try {
+        return await tokenRefreshPromise;
+    } finally {
+        tokenRefreshPromise = null;
+    }
+}
+
+async function getOpenSkyToken() {
+    if (cachedToken && Date.now() < tokenExpiresAt) {
+        return cachedToken;
+    }
+
+    return refreshOpenSkyToken();
+}
+
+async function fetchOpenSkyStates({ forceTokenRefresh = false } = {}) {
+    const token = forceTokenRefresh ? await refreshOpenSkyToken() : await getOpenSkyToken();
+
+    return fetch(OPENSKY_STATES_URL, {
+        method: 'GET',
+        headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    });
+}
+
+async function fetchOpenSkyStatesWithRetry() {
+    const response = await fetchOpenSkyStates();
+
+    if (response.status === 401) {
+        console.warn('OpenSky token expired or was rejected, refreshing token and retrying once');
+        return fetchOpenSkyStates({ forceTokenRefresh: true });
+    }
+
+    return response;
+}
 
 module.exports = async (req, res) => {
     // CORS headers to allow frontend requests
@@ -40,10 +130,7 @@ module.exports = async (req, res) => {
 
             // Try to fetch fresh data
             try {
-                const response = await fetch('https://opensky-network.org/api/states/all', {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' }
-                });
+                const response = await fetchOpenSkyStatesWithRetry();
 
                 if (response.ok) {
                     const data = await response.json();
@@ -72,10 +159,7 @@ module.exports = async (req, res) => {
 
         // No cache available, must fetch fresh
         console.log('No cache available, fetching from OpenSky...');
-        const response = await fetch('https://opensky-network.org/api/states/all', {
-            method: 'GET',
-            headers: { 'Accept': 'application/json' }
-        });
+        const response = await fetchOpenSkyStatesWithRetry();
 
         if (!response.ok) {
             console.error(`OpenSky API error: ${response.status}`);
