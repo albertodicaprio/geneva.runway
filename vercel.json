@@ -1,3 +1,11 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/aircraft.js": {
+      "regions": ["fra1"]
+    },
+    "api/health-opensky.js": {
+      "regions": ["fra1"]
+    }
+  }
 }
