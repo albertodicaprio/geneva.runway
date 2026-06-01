@@ -5,6 +5,7 @@ const tls = require('tls');
 const OPENSKY_AUTH_HOST = 'auth.opensky-network.org';
 const OPENSKY_API_HOST = 'opensky-network.org';
 const CONTROL_URL = 'https://example.com/';
+const EGRESS_IP_URL = 'https://api.ipify.org?format=json';
 const OPENSKY_TOKEN_URL = `https://${OPENSKY_AUTH_HOST}/auth/realms/opensky-network/protocol/openid-connect/token`;
 const OPENSKY_STATES_URL = `https://${OPENSKY_API_HOST}/api/states/all`;
 const FETCH_TIMEOUT = 10000;
@@ -169,6 +170,24 @@ module.exports = async (req, res) => {
         });
 
         return responseSummary(response);
+    }));
+
+    checks.push(await timeStep('fetch.egressIp', async () => {
+        const response = await fetchWithTimeout(EGRESS_IP_URL, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+        const summary = responseSummary(response);
+
+        if (!response.ok) {
+            return summary;
+        }
+
+        const data = await response.json();
+        return {
+            ...summary,
+            ip: data.ip || null
+        };
     }));
 
     checks.push(await timeStep('fetch.states.anonymous', async () => {
