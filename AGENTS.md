@@ -41,20 +41,8 @@ and Docker Compose `env_file` or environment variables for deployment.
 
 ## Recommended Direction
 
-Move from Vercel functions to a normal long-running Node service:
-
-1. Add a minimal Node server, preferably using Express unless the repo chooses
-   to stay dependency-free with the built-in `http` module.
-2. Serve `public/` as static files.
-3. Expose `/api/aircraft` and `/api/health-opensky` from the same process.
-4. Refactor shared OpenSky logic out of Vercel handler files into reusable
-   modules so the HTTP layer is thin.
-5. Add `package.json` scripts for local run and Docker run.
-6. Add `Dockerfile` and `docker-compose.yml` for home-network deployment.
-7. Persist the aircraft cache in an app-controlled path such as `/data`, not
-   only in `os.tmpdir()`, and mount that path as a Docker volume.
-8. Keep polling conservative. OpenSky is rate-limited; preserve server-side
-   caching and avoid having every browser tab hit OpenSky directly.
+Use `ROADMAP.md` for the current step-by-step implementation plan and progress.
+Keep this file focused on durable project context and working rules.
 
 ## Product/Logic Notes
 
@@ -106,12 +94,10 @@ Useful next improvements:
 
 ## Validation Checklist
 
-Before considering deployment work complete:
+Before considering a deployment-related step complete:
 
 - `npm start` or equivalent runs the app locally.
 - `GET /` serves the frontend.
 - `GET /api/aircraft` returns JSON without exposing OpenSky secrets.
 - `GET /api/health-opensky` reports credential presence and connectivity.
-- Docker image builds.
-- Docker container starts with environment variables supplied externally.
 - Browser polling does not cause multiple OpenSky upstream requests per minute.
