@@ -1,6 +1,9 @@
 const http = require('http');
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const path = require('path');
+
+loadLocalEnv();
 
 const aircraftHandler = require('./api/aircraft');
 const healthOpenSkyHandler = require('./api/health-opensky');
@@ -18,6 +21,46 @@ const CONTENT_TYPES = {
     '.svg': 'image/svg+xml',
     '.ico': 'image/x-icon'
 };
+
+function parseEnvValue(value) {
+    const trimmed = value.trim();
+    const quote = trimmed[0];
+
+    if ((quote === '"' || quote === "'") && trimmed.endsWith(quote)) {
+        return trimmed.slice(1, -1);
+    }
+
+    return trimmed;
+}
+
+function loadLocalEnv() {
+    const envPath = path.join(__dirname, '.env');
+
+    if (!fsSync.existsSync(envPath)) {
+        return;
+    }
+
+    const contents = fsSync.readFileSync(envPath, 'utf8');
+    for (const line of contents.split(/\r?\n/)) {
+        const trimmed = line.trim();
+
+        if (!trimmed || trimmed.startsWith('#')) {
+            continue;
+        }
+
+        const separatorIndex = trimmed.indexOf('=');
+        if (separatorIndex === -1) {
+            continue;
+        }
+
+        const key = trimmed.slice(0, separatorIndex).trim();
+        const value = parseEnvValue(trimmed.slice(separatorIndex + 1));
+
+        if (key && process.env[key] === undefined) {
+            process.env[key] = value;
+        }
+    }
+}
 
 function createVercelResponseAdapter(res) {
     return {
