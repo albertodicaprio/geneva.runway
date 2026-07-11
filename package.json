@@ -1,0 +1,13 @@
+{
+  "name": "geneva-runway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Geneva Airport landing tracker for plane spotting.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

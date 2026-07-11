@@ -1,0 +1,128 @@
+const http = require('http');
+const fs = require('fs/promises');
+const path = require('path');
+
+const aircraftHandler = require('./api/aircraft');
+const healthOpenSkyHandler = require('./api/health-opensky');
+
+const PORT = Number(process.env.PORT || 3000);
+const HOST = process.env.HOST || '127.0.0.1';
+const PUBLIC_DIR = path.join(__dirname, 'public');
+
+const CONTENT_TYPES = {
+    '.css': 'text/css; charset=utf-8',
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.ico': 'image/x-icon'
+};
+
+function createVercelResponseAdapter(res) {
+    return {
+        setHeader(name, value) {
+            res.setHeader(name, value);
+        },
+        status(statusCode) {
+            res.statusCode = statusCode;
+            return this;
+        },
+        json(body) {
+            if (!res.hasHeader('Content-Type')) {
+                res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            }
+            res.end(JSON.stringify(body));
+        },
+        end(body) {
+            res.end(body);
+        }
+    };
+}
+
+async function handleApi(handler, req, res) {
+    try {
+        await handler(req, createVercelResponseAdapter(res));
+    } catch (error) {
+        console.error('Unhandled API error:', error);
+        if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        }
+        res.end(JSON.stringify({ error: 'Internal server error' }));
+    }
+}
+
+function getStaticFilePath(urlPathname) {
+    const pathname = urlPathname === '/' ? '/index.html' : urlPathname;
+    const decodedPath = decodeURIComponent(pathname);
+    const filePath = path.normalize(path.join(PUBLIC_DIR, decodedPath));
+
+    if (!filePath.startsWith(PUBLIC_DIR + path.sep)) {
+        return null;
+    }
+
+    return filePath;
+}
+
+async function serveStatic(req, res, urlPathname) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+        res.statusCode = 405;
+        res.setHeader('Allow', 'GET, HEAD');
+        res.end('Method not allowed');
+        return;
+    }
+
+    const filePath = getStaticFilePath(urlPathname);
+    if (!filePath) {
+        res.statusCode = 403;
+        res.end('Forbidden');
+        return;
+    }
+
+    try {
+        const contents = await fs.readFile(filePath);
+        const contentType = CONTENT_TYPES[path.extname(filePath)] || 'application/octet-stream';
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'no-store');
+
+        if (req.method === 'HEAD') {
+            res.end();
+            return;
+        }
+
+        res.end(contents);
+    } catch (error) {
+        if (error.code === 'ENOENT' || error.code === 'EISDIR') {
+            res.statusCode = 404;
+            res.end('Not found');
+            return;
+        }
+
+        console.error('Static file error:', error);
+        res.statusCode = 500;
+        res.end('Internal server error');
+    }
+}
+
+const server = http.createServer((req, res) => {
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+
+    if (url.pathname === '/api/aircraft') {
+        handleApi(aircraftHandler, req, res);
+        return;
+    }
+
+    if (url.pathname === '/api/health-opensky') {
+        handleApi(healthOpenSkyHandler, req, res);
+        return;
+    }
+
+    serveStatic(req, res, url.pathname);
+});
+
+server.listen(PORT, HOST, () => {
+    console.log(`Geneva Runway app listening on http://${HOST}:${PORT}`);
+});
