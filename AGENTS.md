@@ -1,0 +1,117 @@
+# AGENTS.md
+
+## Project Overview
+
+This repository contains a small Geneva Airport plane-spotting web app.
+
+The current app shows aircraft that appear to be on approach to Geneva Airport
+and estimates whether they are landing toward runway direction `04` or `22`.
+It exists to help a local user know which arrivals are next and which runway
+direction is active before going plane spotting.
+
+## Current Structure
+
+- `public/index.html` is the static page.
+- `public/app.js` contains all browser-side state, OpenSky response parsing,
+  landing filtering, runway estimation, sorting, and DOM updates.
+- `public/style.css` contains the current visual styling.
+- `api/aircraft.js` is a Vercel-style Node serverless function that fetches
+  OpenSky state vectors with OAuth client credentials and caches responses.
+- `api/health-opensky.js` is a Vercel-style diagnostic endpoint for DNS, TCP,
+  TLS, egress IP, anonymous states access, and token access.
+- `vercel.json` configures Vercel function regions. This is legacy for the
+  original cloud deployment attempt.
+
+There is currently no `package.json`, build step, test runner, Dockerfile, or
+README.
+
+## Runtime Constraints
+
+OpenSky access is the key deployment constraint. The project should be designed
+to run from a local home-network machine instead of a public cloud host such as
+Vercel/AWS.
+
+Expected runtime secrets:
+
+- `OPENSKY_NETWORK_CLIENT_ID`
+- `OPENSKY_NETWORK_CLIENT_SECRET`
+
+Do not put these values in source control. Prefer `.env` for local development
+and Docker Compose `env_file` or environment variables for deployment.
+
+## Recommended Direction
+
+Move from Vercel functions to a normal long-running Node service:
+
+1. Add a minimal Node server, preferably using Express unless the repo chooses
+   to stay dependency-free with the built-in `http` module.
+2. Serve `public/` as static files.
+3. Expose `/api/aircraft` and `/api/health-opensky` from the same process.
+4. Refactor shared OpenSky logic out of Vercel handler files into reusable
+   modules so the HTTP layer is thin.
+5. Add `package.json` scripts for local run and Docker run.
+6. Add `Dockerfile` and `docker-compose.yml` for home-network deployment.
+7. Persist the aircraft cache in an app-controlled path such as `/data`, not
+   only in `os.tmpdir()`, and mount that path as a Docker volume.
+8. Keep polling conservative. OpenSky is rate-limited; preserve server-side
+   caching and avoid having every browser tab hit OpenSky directly.
+
+## Product/Logic Notes
+
+The current browser logic is only a rough heuristic:
+
+- It treats aircraft as landing when they are within 50 km, descending, below
+  3000 m, and heading broadly toward the airport.
+- It estimates runway direction from aircraft heading.
+- It sorts by altitude, not estimated time to runway threshold.
+- It randomly assigns a runway if heading is missing. Avoid randomness in
+  operational display code; prefer an explicit unknown state.
+
+Geneva has one physical runway direction pair, commonly represented as `04/22`.
+Future work should model approach direction and threshold rather than showing
+independent runway choices unless there is a specific need for parallel/taxiway
+distinctions.
+
+Useful next improvements:
+
+- Move landing classification to the backend and return a smaller app-specific
+  JSON payload instead of the full OpenSky `states` array.
+- Add approach corridors for runway `04` and `22` and classify candidates by
+  track alignment to those corridors.
+- Estimate time-to-arrival using distance-to-threshold and ground speed.
+- Include confidence and reason fields in the API response so the UI can show
+  `likely 22`, `likely 04`, or `unknown`.
+- Add a local health page or status indicator for OpenSky cache age and API
+  failures.
+
+## Development Guidance
+
+- Keep the app simple. This does not currently need a frontend framework.
+- Work incrementally, one step at a time.
+- Explain the intended change before implementing it.
+- Ask clarification questions when requirements, deployment assumptions, or
+  product behavior are ambiguous.
+- After each step, make it possible to run the app locally so the user can test
+  and understand the change before moving on.
+- Commit at the end of each completed step unless the user explicitly asks not
+  to commit.
+- Prefer server-side normalization of OpenSky data so the browser only renders
+  already-classified arrivals.
+- Preserve conservative caching and stale-data fallback behavior.
+- Avoid adding cloud-only assumptions; this project is intended for a local
+  Docker deployment on a home-network host.
+- If adding dependencies, keep them minimal and document why they are needed.
+- Add focused tests around runway/arrival classification before changing those
+  heuristics substantially.
+
+## Validation Checklist
+
+Before considering deployment work complete:
+
+- `npm start` or equivalent runs the app locally.
+- `GET /` serves the frontend.
+- `GET /api/aircraft` returns JSON without exposing OpenSky secrets.
+- `GET /api/health-opensky` reports credential presence and connectivity.
+- Docker image builds.
+- Docker container starts with environment variables supplied externally.
+- Browser polling does not cause multiple OpenSky upstream requests per minute.
