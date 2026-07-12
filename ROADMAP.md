@@ -41,13 +41,13 @@ Completed:
      in reusable service modules; the route handlers are now HTTP adapters.
      Legacy cloud-deployment configuration and references have been removed.
 
-## Next Steps
-
 6. Add Docker support.
-   - Add `Dockerfile` and `.dockerignore`.
-   - Add `docker-compose.yml` for local home-network deployment.
-   - Use environment variables from the host or Compose, not committed secrets.
-   - Bind to `0.0.0.0` in Docker and expose the chosen port.
+   - Commit: `76ba108 Add non-root Docker deployment`
+   - Result: Docker runs the app as the unprivileged `node` user, listens on
+     `0.0.0.0:3000` inside the container, and uses `.env` without copying it
+     into the image. Docker Compose publishes the service only on host loopback.
+
+## Next Steps
 
 7. Add backend normalization for aircraft data.
    - Return a smaller app-specific JSON payload instead of the full OpenSky
