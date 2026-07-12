@@ -47,13 +47,13 @@ Completed:
      `0.0.0.0:3000` inside the container, and uses `.env` without copying it
      into the image. Docker Compose publishes the service on the home network.
 
-## Next Steps
-
 7. Add backend normalization for aircraft data.
-   - Return a smaller app-specific JSON payload instead of the full OpenSky
-     `states` array.
-   - Preserve conservative upstream caching.
-   - Keep the frontend display working after the API shape changes.
+   - Commit: `4652fbf Normalize Geneva-area aircraft data`
+   - Result: `/api/aircraft` returns normalized aircraft within 250 km of Geneva
+     and includes OpenSky's extended aircraft category data. The frontend uses
+     this smaller API payload and displays the category.
+
+## Next Steps
 
 8. Improve arrival and runway-direction classification.
    - Replace random runway fallback with an explicit `unknown` state.
