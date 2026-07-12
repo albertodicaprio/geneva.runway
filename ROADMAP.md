@@ -49,9 +49,8 @@ Completed:
 
 7. Add backend normalization for aircraft data.
    - Commit: `4652fbf Normalize Geneva-area aircraft data`
-   - Result: `/api/aircraft` returns normalized aircraft within 250 km of Geneva
-     and includes OpenSky's extended aircraft category data. The frontend uses
-     this smaller API payload and displays the category.
+   - Result: `/api/aircraft` returns a normalized app-specific payload instead
+     of OpenSky's raw state vectors.
 
 8. Improve arrival and runway-direction classification.
    - Commit: `5376e44 Enrich Geneva arrivals with ADSBdb`
@@ -61,17 +60,18 @@ Completed:
      immediately. Arrivals are altitude-sorted and classified as approach
      `04`, `22`, or `unknown` from heading without randomness.
 
+10. Improve the plane-spotting UI.
+   - Commit: `5a67be6 Redesign Geneva arrivals interface`
+   - Result: the mobile-friendly interface shows the lowest-altitude confirmed
+     arrival first, with ADSBdb origin, airline, aircraft identity, thumbnail
+     when available, approach direction, distance, descent, and cache status.
+
 ## Next Steps
 
 9. Add focused tests.
     - Cover distance, bearing, landing candidate filtering, approach direction,
       and sorting.
     - Keep tests runnable without OpenSky credentials.
-
-10. Improve the plane-spotting UI.
-    - Show cache age and API health.
-    - Show likely approach direction, next arrivals, confidence, and ETA.
-    - Keep the interface usable on a phone.
 
 ## Current Local Run Command
 
