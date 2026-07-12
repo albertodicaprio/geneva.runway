@@ -43,34 +43,29 @@ Completed:
 
 ## Next Steps
 
-6. Add a persistent cache path.
-   - Goal: support an app-controlled cache path such as `DATA_DIR=/data`.
-   - Keep a sensible local default for development.
-   - Verify cache hits survive server restarts when the cache file remains.
-
-7. Add Docker support.
+6. Add Docker support.
    - Add `Dockerfile` and `.dockerignore`.
    - Add `docker-compose.yml` for local home-network deployment.
    - Use environment variables from the host or Compose, not committed secrets.
    - Bind to `0.0.0.0` in Docker and expose the chosen port.
 
-8. Add backend normalization for aircraft data.
+7. Add backend normalization for aircraft data.
    - Return a smaller app-specific JSON payload instead of the full OpenSky
      `states` array.
    - Preserve conservative upstream caching.
    - Keep the frontend display working after the API shape changes.
 
-9. Improve arrival and runway-direction classification.
+8. Improve arrival and runway-direction classification.
    - Replace random runway fallback with an explicit `unknown` state.
    - Model approach direction as `04`, `22`, or `unknown`.
    - Add confidence/reason fields for display and debugging.
 
-10. Add focused tests.
+9. Add focused tests.
     - Cover distance, bearing, landing candidate filtering, approach direction,
       and sorting.
     - Keep tests runnable without OpenSky credentials.
 
-11. Improve the plane-spotting UI.
+10. Improve the plane-spotting UI.
     - Show cache age and API health.
     - Show likely approach direction, next arrivals, confidence, and ETA.
     - Keep the interface usable on a phone.
@@ -80,6 +75,9 @@ Completed:
 ```sh
 npm start
 ```
+
+The app intentionally keeps its cache in the system temporary directory; a
+persistent cache path is out of scope.
 
 Then open:
 
