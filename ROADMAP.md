@@ -35,12 +35,12 @@ Completed:
      variables are not already set. Docker-provided environment variables still
      take precedence.
 
-## Next Steps
-
 5. Refactor API logic out of Vercel handlers.
-   - Goal: separate OpenSky fetching/cache logic from HTTP handler adapters.
-   - Keep `/api/aircraft` and `/api/health-opensky` behavior unchanged.
-   - Run locally with `npm start` and verify both API routes.
+   - Commit: `d791359 Refactor OpenSky API services`
+   - Result: OpenSky aircraft caching/fetching and connectivity diagnostics live
+     in reusable service modules; the Vercel handlers are now HTTP adapters.
+
+## Next Steps
 
 6. Add a persistent cache path.
    - Goal: support an app-controlled cache path such as `DATA_DIR=/data`.
@@ -84,4 +84,3 @@ Then open:
 
 - `http://127.0.0.1:3000/`
 - `http://127.0.0.1:3000/api/health-opensky`
-
