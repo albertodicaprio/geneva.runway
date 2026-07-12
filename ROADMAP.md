@@ -36,7 +36,7 @@ Completed:
      take precedence.
 
 5. Refactor API logic out of Vercel handlers.
-   - Commit: `d791359 Refactor OpenSky API services`
+   - Commit: `eb15afc Refactor OpenSky API services`
    - Result: OpenSky aircraft caching/fetching and connectivity diagnostics live
      in reusable service modules; the Vercel handlers are now HTTP adapters.
 
