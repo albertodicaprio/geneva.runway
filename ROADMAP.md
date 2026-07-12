@@ -53,12 +53,14 @@ Completed:
      and includes OpenSky's extended aircraft category data. The frontend uses
      this smaller API payload and displays the category.
 
-## Next Steps
-
 8. Improve arrival and runway-direction classification.
-   - Replace random runway fallback with an explicit `unknown` state.
-   - Model approach direction as `04`, `22`, or `unknown`.
-   - Add confidence/reason fields for display and debugging.
+   - Commit: `5376e44 Enrich Geneva arrivals with ADSBdb`
+   - Result: only airborne aircraft within 80 km whose ADSBdb route ends at GVA
+     are returned. ADSBdb flight and aircraft responses are retained in the
+     temporary-file cache; arrivals are altitude-sorted and classified as
+     approach `04`, `22`, or `unknown` from heading without randomness.
+
+## Next Steps
 
 9. Add focused tests.
     - Cover distance, bearing, landing candidate filtering, approach direction,
