@@ -1,226 +1,194 @@
-// Runway Information
-const RUNWAYS = {
-    '04L/22R': 40,
-    '04R/22L': 40
-};
-
-// Local API endpoint
 const API_ENDPOINT = '/api/aircraft';
-
-// Fetch interval (60 seconds = once per minute to respect OpenSky rate limits)
 const FETCH_INTERVAL = 60000;
 
-// State
-let aircraftData = {};
+let aircraftData = [];
 let isFetching = false;
 let rateLimitResetTime = 0;
+let latestData = null;
+let latestCacheStatus = null;
 
-/**
- * Fetch aircraft data from the local API
- */
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    })[character]);
+}
+
+function safeImageUrl(value) {
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? escapeHtml(url.href) : null;
+    } catch {
+        return null;
+    }
+}
+
+function formatAirport(airport) {
+    if (!airport) return 'Origin unavailable';
+    const code = airport.iata_code || airport.icao_code || '—';
+    return [code, airport.municipality || airport.name].filter(Boolean).join(' · ');
+}
+
+function formatAltitude(altitude) {
+    return Number.isFinite(altitude) ? `${Math.round(altitude).toLocaleString()} m` : '—';
+}
+
+function formatSpeed(velocity) {
+    return Number.isFinite(velocity) ? `${Math.round(velocity * 3.6)} km/h` : '—';
+}
+
+function formatDescent(verticalRate) {
+    if (!Number.isFinite(verticalRate)) return '—';
+    return `${Math.round(verticalRate * 60).toLocaleString()} m/min`;
+}
+
+function formatEta(aircraft) {
+    if (!Number.isFinite(aircraft.distanceKm) || !Number.isFinite(aircraft.velocity) || aircraft.velocity <= 0) return '—';
+    const minutes = Math.max(1, Math.round((aircraft.distanceKm * 1000) / aircraft.velocity / 60));
+    return `~${minutes} min`;
+}
+
+function approachLabel(aircraft) {
+    return aircraft.approachDirection === 'unknown'
+        ? 'Approach unknown'
+        : `Likely runway ${aircraft.approachDirection}`;
+}
+
+function aircraftIdentity(aircraft) {
+    const details = aircraft.aircraftDetails || {};
+    return [details.type, details.icao_type, details.registration].filter(Boolean).join(' · ') || 'Aircraft details unavailable';
+}
+
+function aircraftPhoto(aircraft, className = 'aircraft-photo') {
+    const url = safeImageUrl(aircraft.aircraftDetails?.url_photo_thumbnail);
+    return url ? `<img class="${className}" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
+}
+
+function aircraftPhotoFrame(aircraft, frameClass, imageClass) {
+    const photo = aircraftPhoto(aircraft, imageClass);
+    return photo ? `<div class="${frameClass}">${photo}</div>` : '';
+}
+
 async function fetchAircraftData() {
-    // Prevent concurrent requests
-    if (isFetching) {
-        return;
-    }
-
-    // If rate limited, wait before retrying
-    if (rateLimitResetTime > Date.now()) {
-        console.warn('Rate limited, waiting before next request...');
-        return;
-    }
-
+    if (isFetching || rateLimitResetTime > Date.now()) return;
     isFetching = true;
 
     try {
         const response = await fetch(API_ENDPOINT);
-
-        // Handle rate limiting (503 or 429)
         if (response.status === 503 || response.status === 429) {
             const errorData = await response.json().catch(() => ({}));
             const retryAfter = errorData.retryAfter || 120;
-            console.warn(`Rate limited. Retry after ${retryAfter} seconds`);
-            rateLimitResetTime = Date.now() + (retryAfter * 1000);
-            isFetching = false;
-            displayError(`OpenSky API rate limited. Retrying in ${retryAfter} seconds...`);
+            rateLimitResetTime = Date.now() + retryAfter * 1000;
+            displayError(`Data source rate limited. Retrying in ${retryAfter} seconds.`);
             return;
         }
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        aircraftData = Array.isArray(data.aircraft) ? data.aircraft : [];
+        latestData = await response.json();
+        latestCacheStatus = response.headers.get('X-Cache');
+        aircraftData = Array.isArray(latestData.aircraft) ? latestData.aircraft : [];
         updateUI();
-        updateLastUpdated();
-        isFetching = false;
-
     } catch (error) {
         console.error('Error fetching aircraft data:', error);
-        displayError('Failed to fetch aircraft data. Please check the console.');
+        displayError('Unable to load arrival data.');
+    } finally {
         isFetching = false;
     }
 }
 
-function aircraftCategoryLabel(category) {
-    const labels = {
-        2: 'Light',
-        3: 'Small',
-        4: 'Large',
-        5: 'High vortex large',
-        6: 'Heavy',
-        7: 'High performance',
-        8: 'Rotorcraft',
-        9: 'Glider',
-        10: 'Lighter-than-air',
-        14: 'Unmanned',
-        16: 'Emergency vehicle',
-        17: 'Service vehicle'
-    };
-
-    return labels[category] || 'Unknown category';
-}
-
-/**
- * Update UI with aircraft data
- */
 function updateUI() {
-    updateRunwayCards();
+    updateStatus();
+    updateNextArrival();
     updateAircraftList();
 }
 
-/**
- * Update runway status cards
- */
-function updateRunwayCards() {
-    const runway04 = aircraftData.filter(a => a.approachDirection === '04');
-    const runway22 = aircraftData.filter(a => a.approachDirection === '22');
+function updateStatus() {
+    const updatedAt = latestData?.updatedAt ? new Date(latestData.updatedAt * 1000) : null;
+    document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
 
-    // Determine active runway (the one with most incoming aircraft, or first with any)
-    let activeRunway, activeAircraft;
-    if (runway22.length > 0) {
-        activeRunway = '22';
-        activeAircraft = runway22[0];
-    } else if (runway04.length > 0) {
-        activeRunway = '04';
-        activeAircraft = runway04[0];
-    } else {
-        activeRunway = '--';
-        activeAircraft = null;
-    }
-
-    // Update runway display
-    document.getElementById('runwayNumber').textContent = activeRunway;
-
-    const nextPlaneDiv = document.getElementById('nextPlane');
-    if (activeAircraft) {
-        nextPlaneDiv.innerHTML = `
-            <p><strong>${activeAircraft.callsign}</strong></p>
-            <p class="altitude">${Math.round(activeAircraft.altitude)}m • ${Math.round(activeAircraft.velocity * 3.6)} km/h</p>
-        `;
-    } else {
-        nextPlaneDiv.innerHTML = '<p class="no-data">No incoming aircraft</p>';
-    }
+    const labels = {
+        HIT: 'Live cache',
+        MISS: 'Freshly updated',
+        'STALE-REFRESHING': 'Refreshing in background'
+    };
+    const status = labels[latestCacheStatus] || 'Live data';
+    document.getElementById('dataStatus').textContent = status;
 }
 
-/**
- * Update aircraft list
- */
-function updateAircraftList() {
-    const listDiv = document.getElementById('aircraftList');
-
-    if (aircraftData.length === 0) {
-        listDiv.innerHTML = '<div class="no-aircraft">No incoming aircraft detected</div>';
+function updateNextArrival() {
+    const container = document.getElementById('nextPlane');
+    const aircraft = aircraftData[0];
+    if (!aircraft) {
+        container.innerHTML = '<p class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</p>';
         return;
     }
 
-    // Sort by altitude (ascending = closest to landing)
-    const sorted = [...aircraftData];
-
-    listDiv.innerHTML = sorted.map(aircraft => {
-        const distance = aircraft.distanceKm;
-
-        const runway = aircraft.approachDirection === 'unknown' ? 'Unknown' : aircraft.approachDirection;
-        const isDescending = aircraft.verticalRate && aircraft.verticalRate < 0;
-        const verticalRateClass = isDescending ? 'descending' : 'approaching';
-
-        return `
-            <div class="aircraft-item">
-                <div class="aircraft-header">
-                    <span class="aircraft-callsign">${aircraft.callsign}</span>
-                    <span class="aircraft-type">${aircraftCategoryLabel(aircraft.category)}</span>
+    const airline = aircraft.route?.airline?.name || 'Airline unavailable';
+    const origin = formatAirport(aircraft.route?.origin);
+    container.innerHTML = `
+        ${aircraftPhotoFrame(aircraft, 'next-photo-wrap', 'next-photo')}
+        <div class="next-copy">
+            <div class="arrival-title-row">
+                <div>
+                    <p class="callsign">${escapeHtml(aircraft.callsign)}</p>
+                    <p class="airline">${escapeHtml(airline)}</p>
                 </div>
-                <div class="aircraft-details">
-                    <div class="detail">
-                        <div class="detail-label">Altitude</div>
-                        <div class="detail-value">${aircraft.altitude ? Math.round(aircraft.altitude) + 'm' : 'N/A'}</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Distance</div>
-                        <div class="detail-value">${distance.toFixed(1)} km</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Speed</div>
-                        <div class="detail-value">${aircraft.velocity ? Math.round(aircraft.velocity * 3.6) + ' km/h' : 'N/A'}</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Vertical Rate</div>
-                        <div class="detail-value ${verticalRateClass}">
-                            ${aircraft.verticalRate ? Math.round(aircraft.verticalRate * 60) + ' m/min' : 'N/A'}
-                        </div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Heading</div>
-                        <div class="detail-value">${aircraft.heading ? Math.round(aircraft.heading) + '°' : 'N/A'}</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Approach</div>
-                        <div class="detail-value">Runway ${runway}</div>
-                    </div>
-                    <div class="detail">
-                        <div class="detail-label">Country</div>
-                        <div class="detail-value">${aircraft.country || 'N/A'}</div>
-                    </div>
-                </div>
+                <span class="approach-badge ${escapeHtml(aircraft.approachConfidence)}">${escapeHtml(approachLabel(aircraft))}</span>
             </div>
-        `;
+            <p class="route">${escapeHtml(origin)} <span>→</span> GVA</p>
+            <p class="aircraft-model">${escapeHtml(aircraftIdentity(aircraft))}</p>
+            <div class="metrics hero-metrics">
+                <div><span>Altitude</span><strong>${formatAltitude(aircraft.altitude)}</strong></div>
+                <div><span>Distance</span><strong>${aircraft.distanceKm.toFixed(1)} km</strong></div>
+                <div><span>Descent</span><strong>${formatDescent(aircraft.verticalRate)}</strong></div>
+                <div><span>Rough ETA</span><strong>${formatEta(aircraft)}</strong></div>
+            </div>
+        </div>`;
+}
+
+function updateAircraftList() {
+    const list = document.getElementById('aircraftList');
+    document.getElementById('arrivalCount').textContent = `${aircraftData.length} arrival${aircraftData.length === 1 ? '' : 's'}`;
+    if (!aircraftData.length) {
+        list.innerHTML = '<div class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</div>';
+        return;
+    }
+
+    list.innerHTML = aircraftData.map(aircraft => {
+        const airline = aircraft.route?.airline?.name || 'Airline unavailable';
+        const origin = formatAirport(aircraft.route?.origin);
+        return `
+            <article class="arrival-card">
+                ${aircraftPhotoFrame(aircraft, 'card-photo-wrap', 'aircraft-photo')}
+                <div class="arrival-card-main">
+                    <div class="arrival-title-row">
+                        <div>
+                            <h3>${escapeHtml(aircraft.callsign)}</h3>
+                            <p class="airline">${escapeHtml(airline)}</p>
+                        </div>
+                        <span class="approach-badge ${escapeHtml(aircraft.approachConfidence)}">${escapeHtml(approachLabel(aircraft))}</span>
+                    </div>
+                    <p class="route">${escapeHtml(origin)} <span>→</span> GVA</p>
+                    <p class="aircraft-model">${escapeHtml(aircraftIdentity(aircraft))}</p>
+                    <div class="metrics">
+                        <div><span>Altitude</span><strong>${formatAltitude(aircraft.altitude)}</strong></div>
+                        <div><span>Distance</span><strong>${aircraft.distanceKm.toFixed(1)} km</strong></div>
+                        <div><span>Speed</span><strong>${formatSpeed(aircraft.velocity)}</strong></div>
+                        <div><span>Descent</span><strong>${formatDescent(aircraft.verticalRate)}</strong></div>
+                    </div>
+                </div>
+            </article>`;
     }).join('');
 }
 
-/**
- * Update last updated timestamp
- */
-function updateLastUpdated() {
-    const now = new Date();
-    const time = now.toLocaleTimeString();
-    document.getElementById('lastUpdated').textContent = time;
-}
-
-/**
- * Display error message
- */
 function displayError(message) {
-    const listDiv = document.getElementById('aircraftList');
-    listDiv.innerHTML = `<div class="error">${message}</div>`;
+    document.getElementById('aircraftList').innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
 }
 
-/**
- * Initialize app
- */
 function init() {
-    console.log('Geneva Airport Landing Tracker initialized');
-    console.log('The backend provides ADSBdb-confirmed arrivals within 80 km of Geneva.');
-
-    // Fetch immediately
     fetchAircraftData();
-
-    // Set up interval
     setInterval(fetchAircraftData, FETCH_INTERVAL);
 }
 
-// Start when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

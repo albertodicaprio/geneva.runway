@@ -4,44 +4,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geneva Airport Landing Tracker</title>
+    <title>Geneva arrivals</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <div class="container">
-        <header>
-            <h1>✈️ Geneva Airport Landing Tracker</h1>
-            <p class="subtitle">Real-time runway status and incoming flights</p>
-            <p class="last-updated">Last updated: <span id="lastUpdated">--:--:--</span></p>
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">LSGG · GENEVA</p>
+                <h1>Incoming flights</h1>
+                <p class="subtitle">ADSBdb-confirmed arrivals within 80 km</p>
+            </div>
+            <div class="data-status" id="dataStatus" aria-live="polite">Loading live data…</div>
         </header>
 
         <main>
-            <section class="runway-section">
-                <div class="runway-card">
-                    <h2>Approach Runway</h2>
-                    <div class="runway-display">
-                        <div class="runway-number" id="runwayNumber">--</div>
+            <section class="next-section" aria-labelledby="nextArrivalHeading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">NEXT TO LAND</p>
+                        <h2 id="nextArrivalHeading">Lowest reported arrival</h2>
                     </div>
-                    <h3>Next Plane to Land</h3>
-                    <div class="next-plane" id="nextPlane">
-                        <p class="no-data">Loading...</p>
-                    </div>
+                    <p class="last-updated">Updated <span id="lastUpdated">—</span></p>
+                </div>
+                <div class="next-arrival" id="nextPlane">
+                    <p class="loading">Loading arrival data…</p>
                 </div>
             </section>
 
-            <section class="aircraft-section">
-                <h2>All Incoming Aircraft</h2>
+            <section class="aircraft-section" aria-labelledby="arrivalsHeading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">ARRIVALS</p>
+                        <h2 id="arrivalsHeading">Confirmed for Geneva</h2>
+                    </div>
+                    <p class="arrival-count" id="arrivalCount">—</p>
+                </div>
                 <div class="aircraft-list" id="aircraftList">
-                    <div class="loading">Loading aircraft data...</div>
+                    <div class="loading">Loading arrival data…</div>
                 </div>
-            </section>
-
-            <section class="info-section">
-                <p class="info-text">Data from <a href="https://opensky-network.org/" target="_blank">OpenSky
-                        Network</a> • Updates every 60 seconds</p>
             </section>
         </main>
+
+        <footer>
+            Position data: <a href="https://opensky-network.org/" target="_blank" rel="noreferrer">OpenSky</a>
+            · Route and aircraft data: <a href="https://www.adsbdb.com/" target="_blank" rel="noreferrer">ADSBdb</a>
+        </footer>
     </div>
 
     <script src="app.js"></script>
