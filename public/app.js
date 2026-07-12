@@ -1,12 +1,3 @@
-// Geneva Airport Configuration
-const GENEVA_AIRPORT = {
-    lat: 46.2381,
-    lon: 6.1093,
-    radius_km: 50,
-    icao: 'LSGG',
-    iata: 'GVA'
-};
-
 // Runway Information
 const RUNWAYS = {
     '04L/22R': 40,
@@ -23,96 +14,6 @@ const FETCH_INTERVAL = 60000;
 let aircraftData = {};
 let isFetching = false;
 let rateLimitResetTime = 0;
-
-/**
- * Calculate distance between two coordinates (Haversine formula)
- */
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * (Math.PI / 180);
-    const dLon = (lon2 - lon1) * (Math.PI / 180);
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-/**
- * Determine if aircraft is landing (descending and approaching)
- */
-function isLanding(aircraft) {
-    const distance = calculateDistance(
-        GENEVA_AIRPORT.lat,
-        GENEVA_AIRPORT.lon,
-        aircraft.latitude,
-        aircraft.longitude
-    );
-
-    // Check if aircraft is within range and descending
-    if (distance < GENEVA_AIRPORT.radius_km) {
-        // Vertical rate < 0 means descending
-        const isDescending = aircraft.verticalRate !== null && aircraft.verticalRate < 0;
-
-        // Check if altitude is reasonable for landing (below 3000m)
-        const isLowAltitude = aircraft.altitude !== null && aircraft.altitude < 3000;
-
-        // Check if heading is towards airport (within 180 degrees)
-        const isHeadingTowardAirport = isHeadingToward(aircraft);
-
-        return isDescending && isLowAltitude && isHeadingTowardAirport;
-    }
-    return false;
-}
-
-/**
- * Check if aircraft heading is towards airport
- */
-function isHeadingToward(aircraft) {
-    if (aircraft.heading === null) return false;
-
-    // Calculate true heading to airport
-    const lat1 = aircraft.latitude * (Math.PI / 180);
-    const lon1 = aircraft.longitude * (Math.PI / 180);
-    const lat2 = GENEVA_AIRPORT.lat * (Math.PI / 180);
-    const lon2 = GENEVA_AIRPORT.lon * (Math.PI / 180);
-
-    const dLon = lon2 - lon1;
-    const y = Math.sin(dLon) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) -
-        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    let bearing = Math.atan2(y, x) * (180 / Math.PI);
-    bearing = (bearing + 360) % 360;
-
-    // Check if heading is within 90 degrees of bearing to airport
-    const heading = aircraft.heading;
-    const diff = Math.abs(heading - bearing);
-    const minDiff = Math.min(diff, 360 - diff);
-
-    return minDiff < 90;
-}
-
-/**
- * Estimate runway based on aircraft heading
- * Runway 04: heading ~40° (0-90°)
- * Runway 22: heading ~220° (180-270°)
- */
-function estimateRunway(aircraft) {
-    if (aircraft.heading === null) {
-        // If no heading, use random runway
-        return Math.random() < 0.5 ? '04' : '22';
-    }
-
-    const heading = aircraft.heading;
-
-    // Determine if landing on 04 or 22 based on heading
-    if ((heading >= 0 && heading < 90) || (heading >= 270 && heading <= 360)) {
-        return '04';
-    } else {
-        return '22';
-    }
-}
 
 /**
  * Fetch aircraft data from the local API
@@ -151,16 +52,7 @@ async function fetchAircraftData() {
 
         const data = await response.json();
 
-        const landings = [];
-        if (Array.isArray(data.aircraft)) {
-            data.aircraft.forEach(aircraft => {
-                if (isLanding(aircraft) && aircraft.callsign) {
-                    landings.push(aircraft);
-                }
-            });
-        }
-
-        aircraftData = landings;
+        aircraftData = Array.isArray(data.aircraft) ? data.aircraft : [];
         updateUI();
         updateLastUpdated();
         isFetching = false;
@@ -203,8 +95,8 @@ function updateUI() {
  * Update runway status cards
  */
 function updateRunwayCards() {
-    const runway04 = aircraftData.filter(a => estimateRunway(a) === '04');
-    const runway22 = aircraftData.filter(a => estimateRunway(a) === '22');
+    const runway04 = aircraftData.filter(a => a.approachDirection === '04');
+    const runway22 = aircraftData.filter(a => a.approachDirection === '22');
 
     // Determine active runway (the one with most incoming aircraft, or first with any)
     let activeRunway, activeAircraft;
@@ -245,14 +137,12 @@ function updateAircraftList() {
     }
 
     // Sort by altitude (ascending = closest to landing)
-    const sorted = [...aircraftData].sort((a, b) =>
-        (a.altitude || 999999) - (b.altitude || 999999)
-    );
+    const sorted = [...aircraftData];
 
     listDiv.innerHTML = sorted.map(aircraft => {
         const distance = aircraft.distanceKm;
 
-        const runway = estimateRunway(aircraft);
+        const runway = aircraft.approachDirection === 'unknown' ? 'Unknown' : aircraft.approachDirection;
         const isDescending = aircraft.verticalRate && aircraft.verticalRate < 0;
         const verticalRateClass = isDescending ? 'descending' : 'approaching';
 
@@ -321,8 +211,7 @@ function displayError(message) {
  */
 function init() {
     console.log('Geneva Airport Landing Tracker initialized');
-    console.log(`Airport coordinates: ${GENEVA_AIRPORT.lat}°N, ${GENEVA_AIRPORT.lon}°E`);
-    console.log(`Search radius: ${GENEVA_AIRPORT.radius_km} km`);
+    console.log('The backend provides ADSBdb-confirmed arrivals within 80 km of Geneva.');
 
     // Fetch immediately
     fetchAircraftData();
