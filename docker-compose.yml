@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3000}:3000"
+    restart: unless-stopped
