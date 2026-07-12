@@ -45,7 +45,7 @@ Completed:
    - Commit: `76ba108 Add non-root Docker deployment`
    - Result: Docker runs the app as the unprivileged `node` user, listens on
      `0.0.0.0:3000` inside the container, and uses `.env` without copying it
-     into the image. Docker Compose publishes the service only on host loopback.
+     into the image. Docker Compose publishes the service on the home network.
 
 ## Next Steps
 
