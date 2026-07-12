@@ -151,31 +151,9 @@ async function fetchAircraftData() {
 
         const data = await response.json();
 
-        // Process states array
         const landings = [];
-        if (data.states) {
-            data.states.forEach(state => {
-                const aircraft = {
-                    icao24: state[0],
-                    callsign: (state[1] || '').trim(),
-                    country: state[2],
-                    timestamp: state[3],
-                    lastPositionUpdate: state[4],
-                    longitude: state[5],
-                    latitude: state[6],
-                    altitude: state[7],
-                    onGround: state[8],
-                    velocity: state[9],
-                    heading: state[10],
-                    verticalRate: state[11],
-                    sensors: state[12],
-                    geoAltitude: state[13],
-                    squawk: state[14],
-                    spi: state[15],
-                    positionSource: state[16]
-                };
-
-                // Check if aircraft is landing
+        if (Array.isArray(data.aircraft)) {
+            data.aircraft.forEach(aircraft => {
                 if (isLanding(aircraft) && aircraft.callsign) {
                     landings.push(aircraft);
                 }
@@ -192,6 +170,25 @@ async function fetchAircraftData() {
         displayError('Failed to fetch aircraft data. Please check the console.');
         isFetching = false;
     }
+}
+
+function aircraftCategoryLabel(category) {
+    const labels = {
+        2: 'Light',
+        3: 'Small',
+        4: 'Large',
+        5: 'High vortex large',
+        6: 'Heavy',
+        7: 'High performance',
+        8: 'Rotorcraft',
+        9: 'Glider',
+        10: 'Lighter-than-air',
+        14: 'Unmanned',
+        16: 'Emergency vehicle',
+        17: 'Service vehicle'
+    };
+
+    return labels[category] || 'Unknown category';
 }
 
 /**
@@ -253,12 +250,7 @@ function updateAircraftList() {
     );
 
     listDiv.innerHTML = sorted.map(aircraft => {
-        const distance = calculateDistance(
-            GENEVA_AIRPORT.lat,
-            GENEVA_AIRPORT.lon,
-            aircraft.latitude,
-            aircraft.longitude
-        );
+        const distance = aircraft.distanceKm;
 
         const runway = estimateRunway(aircraft);
         const isDescending = aircraft.verticalRate && aircraft.verticalRate < 0;
@@ -268,7 +260,7 @@ function updateAircraftList() {
             <div class="aircraft-item">
                 <div class="aircraft-header">
                     <span class="aircraft-callsign">${aircraft.callsign}</span>
-                    <span class="aircraft-type">${runway}</span>
+                    <span class="aircraft-type">${aircraftCategoryLabel(aircraft.category)}</span>
                 </div>
                 <div class="aircraft-details">
                     <div class="detail">
@@ -292,6 +284,10 @@ function updateAircraftList() {
                     <div class="detail">
                         <div class="detail-label">Heading</div>
                         <div class="detail-value">${aircraft.heading ? Math.round(aircraft.heading) + '°' : 'N/A'}</div>
+                    </div>
+                    <div class="detail">
+                        <div class="detail-label">Approach</div>
+                        <div class="detail-value">Runway ${runway}</div>
                     </div>
                     <div class="detail">
                         <div class="detail-label">Country</div>
