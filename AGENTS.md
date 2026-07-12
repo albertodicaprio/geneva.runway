@@ -15,12 +15,9 @@ direction is active before going plane spotting.
 - `public/app.js` contains all browser-side state, OpenSky response parsing,
   landing filtering, runway estimation, sorting, and DOM updates.
 - `public/style.css` contains the current visual styling.
-- `api/aircraft.js` is a Vercel-style Node serverless function that fetches
-  OpenSky state vectors with OAuth client credentials and caches responses.
-- `api/health-opensky.js` is a Vercel-style diagnostic endpoint for DNS, TCP,
+- `api/aircraft.js` is an HTTP adapter for the OpenSky aircraft service.
+- `api/health-opensky.js` is an HTTP adapter for diagnostics covering DNS, TCP,
   TLS, egress IP, anonymous states access, and token access.
-- `vercel.json` configures Vercel function regions. This is legacy for the
-  original cloud deployment attempt.
 
 There is currently no `package.json`, build step, test runner, Dockerfile, or
 README.
@@ -28,8 +25,7 @@ README.
 ## Runtime Constraints
 
 OpenSky access is the key deployment constraint. The project should be designed
-to run from a local home-network machine instead of a public cloud host such as
-Vercel/AWS.
+to run from a local home-network machine instead of a public cloud host.
 
 Expected runtime secrets:
 

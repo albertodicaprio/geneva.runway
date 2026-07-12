@@ -62,7 +62,7 @@ function loadLocalEnv() {
     }
 }
 
-function createVercelResponseAdapter(res) {
+function createApiResponseAdapter(res) {
     return {
         setHeader(name, value) {
             res.setHeader(name, value);
@@ -85,7 +85,7 @@ function createVercelResponseAdapter(res) {
 
 async function handleApi(handler, req, res) {
     try {
-        await handler(req, createVercelResponseAdapter(res));
+        await handler(req, createApiResponseAdapter(res));
     } catch (error) {
         console.error('Unhandled API error:', error);
         if (!res.headersSent) {

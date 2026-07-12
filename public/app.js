@@ -13,9 +13,7 @@ const RUNWAYS = {
     '04R/22L': 40
 };
 
-// API endpoint (local Vercel function or direct if available)
-// In development, this will be /api/aircraft (Vercel serverless function)
-// In production on Vercel, same endpoint works
+// Local API endpoint
 const API_ENDPOINT = '/api/aircraft';
 
 // Fetch interval (60 seconds = once per minute to respect OpenSky rate limits)
@@ -117,7 +115,7 @@ function estimateRunway(aircraft) {
 }
 
 /**
- * Fetch aircraft data from local API (Vercel serverless function)
+ * Fetch aircraft data from the local API
  */
 async function fetchAircraftData() {
     // Prevent concurrent requests

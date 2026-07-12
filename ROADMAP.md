@@ -35,10 +35,11 @@ Completed:
      variables are not already set. Docker-provided environment variables still
      take precedence.
 
-5. Refactor API logic out of Vercel handlers.
+5. Refactor API logic out of deployment-specific handlers.
    - Commit: `eb15afc Refactor OpenSky API services`
    - Result: OpenSky aircraft caching/fetching and connectivity diagnostics live
-     in reusable service modules; the Vercel handlers are now HTTP adapters.
+     in reusable service modules; the route handlers are now HTTP adapters.
+     Legacy cloud-deployment configuration and references have been removed.
 
 ## Next Steps
 
