@@ -1,5 +1,5 @@
 const API_ENDPOINT = '/api/aircraft';
-const FETCH_INTERVAL = 60000;
+const FETCH_INTERVAL = 10000;
 
 let aircraftData = [];
 let isFetching = false;
@@ -73,7 +73,7 @@ async function fetchAircraftData() {
     isFetching = true;
 
     try {
-        const response = await fetch(API_ENDPOINT);
+        const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
         if (response.status === 503 || response.status === 429) {
             const errorData = await response.json().catch(() => ({}));
             const retryAfter = errorData.retryAfter || 120;

@@ -65,6 +65,8 @@ Completed:
    - Result: the mobile-friendly interface shows the lowest-altitude confirmed
      arrival first, with ADSBdb origin, airline, aircraft identity, thumbnail
      when available, approach direction, distance, descent, and cache status.
+     The browser polls every 10 seconds while the server refreshes OpenSky data
+     no more often than once per minute.
 
 ## Next Steps
 
