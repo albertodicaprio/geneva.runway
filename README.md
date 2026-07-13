@@ -1,0 +1,72 @@
+# Geneva Runway
+
+A small, self-hosted Geneva Airport (LSGG/GVA) plane-spotting app. It shows
+nearby airborne flights whose ADSBdb route is confirmed to end at Geneva,
+along with the likely runway approach direction (`04`, `22`, or `unknown`).
+
+The app is intended to run on a home-network machine, rather than a public
+cloud host. It obtains live position data from OpenSky and route and aircraft
+details from ADSBdb.
+
+## Run with Docker Compose
+
+### Prerequisites
+
+- Docker Engine with Docker Compose v2 (`docker compose`)
+- OpenSky Network API credentials
+
+Create a `.env` file in the project root. It is ignored by Git and must not be
+committed:
+
+```dotenv
+OPENSKY_NETWORK_CLIENT_ID=your-client-id
+OPENSKY_NETWORK_CLIENT_SECRET=your-client-secret
+```
+
+Build and start the app:
+
+```sh
+docker compose up --build -d
+```
+
+Open `http://localhost:3000/` on the host, or replace `localhost` with the
+home-network machine's IP address from another device on that network.
+
+To use a different host port, set `HOST_PORT` when starting Compose:
+
+```sh
+HOST_PORT=8080 docker compose up --build -d
+```
+
+Useful commands:
+
+```sh
+docker compose logs -f
+docker compose down
+```
+
+The OpenSky connectivity diagnostic is available at
+`http://localhost:3000/api/health-opensky`. It reports whether credentials are
+present and whether OpenSky can be reached; it does not expose the credential
+values.
+
+## Run the unit tests
+
+The tests use Node's built-in test runner and do not require OpenSky
+credentials or network access. With Node.js 20 or newer installed, run:
+
+```sh
+npm test
+```
+
+There are no npm package dependencies to install for the current test suite.
+
+## Local development without Docker
+
+Use the same `.env` file described above, then run:
+
+```sh
+npm start
+```
+
+The app listens on `http://127.0.0.1:3000/` by default.

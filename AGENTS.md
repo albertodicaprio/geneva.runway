@@ -19,8 +19,8 @@ direction is active before going plane spotting.
 - `api/health-opensky.js` is an HTTP adapter for diagnostics covering DNS, TCP,
   TLS, egress IP, anonymous states access, and token access.
 
-There is currently no `package.json`, build step, test runner, Dockerfile, or
-README.
+The project uses a minimal Node server with no build step. It includes a
+`package.json`, Node's built-in test runner, Docker support, and a README.
 
 ## Runtime Constraints
 
