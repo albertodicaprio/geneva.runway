@@ -60,6 +60,11 @@ Completed:
      immediately. Arrivals are altitude-sorted and classified as approach
      `04`, `22`, or `unknown` from heading without randomness.
 
+9. Add focused tests.
+   - Result: `npm test` runs credential-free unit tests for distance, runway
+     bearing classification, OpenSky position filtering, GVA arrival filtering,
+     and altitude sorting. ADSBdb responses are mocked in the enrichment test.
+
 10. Improve the plane-spotting UI.
    - Commit: `5a67be6 Redesign Geneva arrivals interface`
    - Result: the mobile-friendly interface shows the lowest-altitude confirmed
@@ -67,13 +72,6 @@ Completed:
      when available, approach direction, distance, descent, and cache status.
      The browser polls every 10 seconds while the server refreshes OpenSky data
      no more often than once per minute.
-
-## Next Steps
-
-9. Add focused tests.
-    - Cover distance, bearing, landing candidate filtering, approach direction,
-      and sorting.
-    - Keep tests runnable without OpenSky credentials.
 
 ## Current Local Run Command
 
