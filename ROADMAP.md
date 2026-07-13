@@ -73,6 +73,45 @@ Completed:
      The browser polls every 10 seconds while the server refreshes OpenSky data
      no more often than once per minute.
 
+## Future: Public Internet Exposure Hardening
+
+The current Docker setup is intended for a trusted home network. Complete these
+steps, in order, before making the app reachable from the public internet.
+
+1. Restrict the OpenSky diagnostic endpoint.
+   - Remove `/api/health-opensky` from the public listener, or protect it with
+     authentication and an IP allowlist.
+   - Return a minimal health status only; do not disclose egress IP addresses,
+     DNS/TLS details, runtime versions, or raw upstream error messages.
+   - Rate-limit diagnostic requests and prevent overlapping diagnostic runs.
+
+2. Make aircraft refreshes resilient to abusive or slow traffic.
+   - Add timeouts to OpenSky token and state requests.
+   - Use one shared in-flight refresh for both cold-cache and stale-cache
+     requests, so concurrent clients cannot cause duplicate upstream fetches.
+   - Apply request rate and concurrency limits to the public API routes.
+
+3. Restrict browser access and add response hardening.
+   - Remove permissive CORS where the frontend and API share an origin, or
+     allow only the deployed frontend origin.
+   - Add a Content Security Policy, `X-Content-Type-Options: nosniff`, a
+     restrictive referrer policy, and clickjacking protection.
+
+4. Deploy behind an HTTPS reverse proxy.
+   - Use a maintained reverse proxy such as Caddy, nginx, or Traefik for TLS
+     termination, HTTP-to-HTTPS redirects, request/body time limits, and
+     edge rate limiting.
+   - Publish only ports 80 and 443 from the proxy; keep the Node service on a
+     private Docker network and do not port-forward port 3000 directly.
+
+5. Validate the public deployment.
+   - Confirm secrets and access tokens never appear in responses, logs, image
+     layers, or browser-visible configuration.
+   - Test that unauthenticated clients cannot use diagnostics, cause repeated
+     upstream refreshes, or bypass rate limits.
+   - Keep the host, container base image, Node runtime, and reverse proxy
+     patched.
+
 ## Current Local Run Command
 
 ```sh
