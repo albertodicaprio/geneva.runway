@@ -45,11 +45,6 @@ docker compose logs -f
 docker compose down
 ```
 
-The OpenSky connectivity diagnostic is available at
-`http://localhost:3000/api/health-opensky`. It reports whether credentials are
-present and whether OpenSky can be reached; it does not expose the credential
-values.
-
 ## Run the unit tests
 
 The tests use Node's built-in test runner and do not require OpenSky

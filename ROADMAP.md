@@ -26,8 +26,7 @@ Completed:
 
 3. Add a local Node server.
    - Commit: `ae2d110 Add local Node server`
-   - Result: `npm start` serves `public/` and exposes `/api/aircraft` plus
-     `/api/health-opensky`.
+   - Result: `npm start` serves `public/` and exposes `/api/aircraft`.
 
 4. Load `.env` for local development.
    - Commit: `85a7a43 Load local environment variables`
@@ -37,8 +36,8 @@ Completed:
 
 5. Refactor API logic out of deployment-specific handlers.
    - Commit: `eb15afc Refactor OpenSky API services`
-   - Result: OpenSky aircraft caching/fetching and connectivity diagnostics live
-     in reusable service modules; the route handlers are now HTTP adapters.
+   - Result: OpenSky aircraft caching/fetching lives in reusable service
+     modules; the route handler is now an HTTP adapter.
      Legacy cloud-deployment configuration and references have been removed.
 
 6. Add Docker support.
@@ -73,42 +72,40 @@ Completed:
      The browser polls every 10 seconds while the server refreshes OpenSky data
      no more often than once per minute.
 
+11. Remove the public OpenSky diagnostic endpoint.
+   - Result: the network-diagnostic route and its implementation have been
+     removed. The app exposes no route that discloses runtime or network
+     connectivity details or triggers token diagnostics.
+
 ## Future: Public Internet Exposure Hardening
 
 The current Docker setup is intended for a trusted home network. Complete these
 steps, in order, before making the app reachable from the public internet.
 
-1. Restrict the OpenSky diagnostic endpoint.
-   - Remove `/api/health-opensky` from the public listener, or protect it with
-     authentication and an IP allowlist.
-   - Return a minimal health status only; do not disclose egress IP addresses,
-     DNS/TLS details, runtime versions, or raw upstream error messages.
-   - Rate-limit diagnostic requests and prevent overlapping diagnostic runs.
-
-2. Make aircraft refreshes resilient to abusive or slow traffic.
+1. Make aircraft refreshes resilient to abusive or slow traffic.
    - Add timeouts to OpenSky token and state requests.
    - Use one shared in-flight refresh for both cold-cache and stale-cache
      requests, so concurrent clients cannot cause duplicate upstream fetches.
    - Apply request rate and concurrency limits to the public API routes.
 
-3. Restrict browser access and add response hardening.
+2. Restrict browser access and add response hardening.
    - Remove permissive CORS where the frontend and API share an origin, or
      allow only the deployed frontend origin.
    - Add a Content Security Policy, `X-Content-Type-Options: nosniff`, a
      restrictive referrer policy, and clickjacking protection.
 
-4. Deploy behind an HTTPS reverse proxy.
+3. Deploy behind an HTTPS reverse proxy.
    - Use a maintained reverse proxy such as Caddy, nginx, or Traefik for TLS
      termination, HTTP-to-HTTPS redirects, request/body time limits, and
      edge rate limiting.
    - Publish only ports 80 and 443 from the proxy; keep the Node service on a
      private Docker network and do not port-forward port 3000 directly.
 
-5. Validate the public deployment.
+4. Validate the public deployment.
    - Confirm secrets and access tokens never appear in responses, logs, image
      layers, or browser-visible configuration.
-   - Test that unauthenticated clients cannot use diagnostics, cause repeated
-     upstream refreshes, or bypass rate limits.
+   - Test that unauthenticated clients cannot cause repeated upstream refreshes
+     or bypass rate limits.
    - Keep the host, container base image, Node runtime, and reverse proxy
      patched.
 
@@ -124,4 +121,3 @@ persistent cache path is out of scope.
 Then open:
 
 - `http://127.0.0.1:3000/`
-- `http://127.0.0.1:3000/api/health-opensky`

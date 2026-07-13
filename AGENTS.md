@@ -16,8 +16,6 @@ direction is active before going plane spotting.
   landing filtering, runway estimation, sorting, and DOM updates.
 - `public/style.css` contains the current visual styling.
 - `api/aircraft.js` is an HTTP adapter for the OpenSky aircraft service.
-- `api/health-opensky.js` is an HTTP adapter for diagnostics covering DNS, TCP,
-  TLS, egress IP, anonymous states access, and token access.
 
 The project uses a minimal Node server with no build step. It includes a
 `package.json`, Node's built-in test runner, Docker support, and a README.
@@ -95,5 +93,4 @@ Before considering a deployment-related step complete:
 - `npm start` or equivalent runs the app locally.
 - `GET /` serves the frontend.
 - `GET /api/aircraft` returns JSON without exposing OpenSky secrets.
-- `GET /api/health-opensky` reports credential presence and connectivity.
 - Browser polling does not cause multiple OpenSky upstream requests per minute.

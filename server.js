@@ -6,7 +6,6 @@ const path = require('path');
 loadLocalEnv();
 
 const aircraftHandler = require('./api/aircraft');
-const healthOpenSkyHandler = require('./api/health-opensky');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -155,11 +154,6 @@ const server = http.createServer((req, res) => {
 
     if (url.pathname === '/api/aircraft') {
         handleApi(aircraftHandler, req, res);
-        return;
-    }
-
-    if (url.pathname === '/api/health-opensky') {
-        handleApi(healthOpenSkyHandler, req, res);
         return;
     }
 
