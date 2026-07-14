@@ -77,6 +77,11 @@ Completed:
      removed. The app exposes no route that discloses runtime or network
      connectivity details or triggers token diagnostics.
 
+12. Deploy behind a Caddy HTTPS reverse proxy.
+   - Result: Caddy publishes ports 80 and 443 for
+     `gva-runway.duckdns.org`, automatically manages its Let's Encrypt
+     certificate, and proxies to the un-published Node app service.
+
 ## Future: Public Internet Exposure Hardening
 
 The current Docker setup is intended for a trusted home network. Complete these
@@ -94,14 +99,7 @@ steps, in order, before making the app reachable from the public internet.
    - Add a Content Security Policy, `X-Content-Type-Options: nosniff`, a
      restrictive referrer policy, and clickjacking protection.
 
-3. Deploy behind an HTTPS reverse proxy.
-   - Use a maintained reverse proxy such as Caddy, nginx, or Traefik for TLS
-     termination, HTTP-to-HTTPS redirects, request/body time limits, and
-     edge rate limiting.
-   - Publish only ports 80 and 443 from the proxy; keep the Node service on a
-     private Docker network and do not port-forward port 3000 directly.
-
-4. Validate the public deployment.
+3. Validate the public deployment.
    - Confirm secrets and access tokens never appear in responses, logs, image
      layers, or browser-visible configuration.
    - Test that unauthenticated clients cannot cause repeated upstream refreshes

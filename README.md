@@ -14,6 +14,9 @@ details from ADSBdb.
 
 - Docker Engine with Docker Compose v2 (`docker compose`)
 - OpenSky Network API credentials
+- A DuckDNS record for `gva-runway.duckdns.org` pointing to the home-network
+  public IP address
+- Router port-forwarding for TCP ports 80 and 443 to this Docker host
 
 Create a `.env` file in the project root. It is ignored by Git and must not be
 committed:
@@ -29,14 +32,14 @@ Build and start the app:
 docker compose up --build -d
 ```
 
-Open `http://localhost:3000/` on the host, or replace `localhost` with the
-home-network machine's IP address from another device on that network.
+Open `https://gva-runway.duckdns.org/`. Caddy is the only published service:
+it redirects HTTP to HTTPS, obtains and renews the Let's Encrypt certificate,
+and proxies requests to the Node app over Docker's private network. The app's
+port 3000 is not reachable from the host network.
 
-To use a different host port, set `HOST_PORT` when starting Compose:
-
-```sh
-HOST_PORT=8080 docker compose up --build -d
-```
+The DuckDNS record and port forwarding must be in place before the first
+startup so Let's Encrypt can validate the domain. Keep the named Caddy volumes;
+they contain its certificate and renewal state.
 
 Useful commands:
 
