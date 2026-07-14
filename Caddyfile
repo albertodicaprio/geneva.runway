@@ -9,7 +9,12 @@
 	}
 }
 
-gva-runway.duckdns.org {
+{$CADDY_SITE_ADDRESS} {
+	log {
+		output stdout
+		format console
+	}
+
 	request_body {
 		max_size 1MB
 	}

@@ -80,7 +80,9 @@ Completed:
 12. Deploy behind a Caddy HTTPS reverse proxy.
    - Result: Caddy publishes ports 80 and 443 for
      `gva-runway.duckdns.org`, automatically manages its Let's Encrypt
-     certificate, and proxies to the un-published Node app service.
+     certificate, proxies to the un-published Node app service, and emits
+     access logs to the container log stream. A development override supports
+     HTTP-only operation without certificate issuance.
 
 ## Future: Public Internet Exposure Hardening
 
