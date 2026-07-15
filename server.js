@@ -6,10 +6,12 @@ const path = require('path');
 loadLocalEnv();
 
 const aircraftHandler = require('./api/aircraft');
+const { ApiRateLimiter, getClientIp } = require('./lib/api-rate-limiter');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const apiRateLimiter = new ApiRateLimiter();
 
 const CONTENT_TYPES = {
     '.css': 'text/css; charset=utf-8',
@@ -153,12 +155,27 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
     if (url.pathname === '/api/aircraft') {
+        const permit = apiRateLimiter.acquire(getClientIp(req));
+        if (!permit.allowed) {
+            res.statusCode = permit.status;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            if (permit.retryAfterSeconds) res.setHeader('Retry-After', String(permit.retryAfterSeconds));
+            res.end(JSON.stringify({ error: permit.status === 429 ? 'Too many requests' : 'Service temporarily busy' }));
+            return;
+        }
+        res.once('finish', permit.release);
+        res.once('close', permit.release);
         handleApi(aircraftHandler, req, res);
         return;
     }
 
     serveStatic(req, res, url.pathname);
 });
+
+server.headersTimeout = 10_000;
+server.requestTimeout = 15_000;
+server.keepAliveTimeout = 5_000;
+setInterval(() => apiRateLimiter.prune(), 60_000).unref();
 
 server.listen(PORT, HOST, () => {
     console.log(`Geneva Runway app listening on http://${HOST}:${PORT}`);

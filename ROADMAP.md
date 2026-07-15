@@ -89,19 +89,23 @@ Completed:
 The current Docker setup is intended for a trusted home network. Complete these
 steps, in order, before making the app reachable from the public internet.
 
+Completed:
+
 1. Make aircraft refreshes resilient to abusive or slow traffic.
    - Add timeouts to OpenSky token and state requests.
    - Use one shared in-flight refresh for both cold-cache and stale-cache
      requests, so concurrent clients cannot cause duplicate upstream fetches.
    - Apply request rate and concurrency limits to the public API routes.
 
-2. Restrict browser access and add response hardening.
+Remaining:
+
+1. Restrict browser access and add response hardening.
    - Remove permissive CORS where the frontend and API share an origin, or
      allow only the deployed frontend origin.
    - Add a Content Security Policy, `X-Content-Type-Options: nosniff`, a
      restrictive referrer policy, and clickjacking protection.
 
-3. Validate the public deployment.
+2. Validate the public deployment.
    - Confirm secrets and access tokens never appear in responses, logs, image
      layers, or browser-visible configuration.
    - Test that unauthenticated clients cannot cause repeated upstream refreshes
