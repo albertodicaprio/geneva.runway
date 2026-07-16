@@ -1,7 +1,4 @@
 {
-	# Defender must label matching requests before caddy-ratelimit evaluates them.
-	order defender before rate_limit
-
 	servers {
 		timeouts {
 			read_body 10s
@@ -24,7 +21,8 @@
 
 	# All aircraft API clients are limited independently. Group IPv6 privacy
 	# addresses by /64 so changing addresses cannot evade the limit.
-	defender ratelimit {
+	# This service is intended for direct human use, not cloud-hosted clients.
+	defender block {
 		ranges aws azurepubliccloud deepseek gcloud githubcopilot openai
 	}
 
@@ -35,18 +33,6 @@
 			}
 			key {remote_host}
 			events 30
-			window 1m
-			ipv6_prefix 64
-		}
-
-		# Automated-cloud ranges marked by Defender get a lower allowance.
-		zone automated_aircraft_api {
-			match {
-				path /api/aircraft
-				header X-RateLimit-Apply true
-			}
-			key {remote_host}
-			events 10
 			window 1m
 			ipv6_prefix 64
 		}

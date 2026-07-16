@@ -96,8 +96,8 @@ Completed:
    - Use one shared in-flight refresh for both cold-cache and stale-cache
      requests, so concurrent clients cannot cause duplicate upstream fetches.
    - Apply public API request-rate limits at the Caddy boundary, rather than
-     in the Node application. Known automated-cloud ranges have a stricter
-     limit via Caddy Defender.
+     in the Node application. Caddy Defender blocks known automated-cloud
+     ranges before they reach the application.
 
 Remaining:
 

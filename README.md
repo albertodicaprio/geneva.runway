@@ -53,8 +53,8 @@ Node app, manages the production TLS certificate, and writes request logs to
 its container log stream. It is built locally with Caddy Defender and
 `caddy-ratelimit`; `/api/aircraft` is limited to 30 requests per minute per
 client IP (IPv6 addresses are grouped by `/64`). Defender applies a stricter
-10 requests per minute to known automated-cloud ranges. Caddy returns `429`
-and `Retry-After` when a limit is reached.
+policy to known automated-cloud ranges by blocking them with `403`. Caddy
+returns `429` and `Retry-After` when the API rate limit is reached.
 
 `CADDY_SITE_ADDRESS` configures Caddy's site address:
 - In dev we use `http://`
