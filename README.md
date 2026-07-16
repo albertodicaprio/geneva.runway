@@ -50,7 +50,11 @@ they contain its certificate and renewal state.
 Docker Compose runs Caddy as the public-facing service. It is the only
 container that publishes ports 80 and 443; it forwards traffic to the internal
 Node app, manages the production TLS certificate, and writes request logs to
-its container log stream.
+its container log stream. It is built locally with Caddy Defender and
+`caddy-ratelimit`; `/api/aircraft` is limited to 30 requests per minute per
+client IP (IPv6 addresses are grouped by `/64`). Defender applies a stricter
+10 requests per minute to known automated-cloud ranges. Caddy returns `429`
+and `Retry-After` when a limit is reached.
 
 `CADDY_SITE_ADDRESS` configures Caddy's site address:
 - In dev we use `http://`
@@ -62,6 +66,9 @@ Useful commands:
 docker compose logs -f
 docker compose down
 ```
+
+The first `docker compose up --build` also downloads and compiles the two
+Caddy plugins, so it takes longer than rebuilding the Node app alone.
 
 ### Development VM: HTTP only
 

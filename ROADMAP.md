@@ -95,7 +95,9 @@ Completed:
    - Add timeouts to OpenSky token and state requests.
    - Use one shared in-flight refresh for both cold-cache and stale-cache
      requests, so concurrent clients cannot cause duplicate upstream fetches.
-   - Apply request rate and concurrency limits to the public API routes.
+   - Apply public API request-rate limits at the Caddy boundary, rather than
+     in the Node application. Known automated-cloud ranges have a stricter
+     limit via Caddy Defender.
 
 Remaining:
 

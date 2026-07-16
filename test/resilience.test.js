@@ -1,6 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { ApiRateLimiter } = require('../lib/api-rate-limiter');
 const { fetchWithTimeout, refreshAircraftDataOnce } = require('../lib/aircraft-service');
 
 test('fetchWithTimeout aborts a stalled upstream request', async () => {
@@ -15,27 +14,6 @@ test('fetchWithTimeout aborts a stalled upstream request', async () => {
     } finally {
         global.fetch = originalFetch;
     }
-});
-
-test('rate limiter allows a burst, returns Retry-After, and releases concurrency slots once', () => {
-    let now = 0;
-    const limiter = new ApiRateLimiter({ capacity: 2, requestsPerMinute: 60, maxConcurrent: 1, now: () => now });
-    const first = limiter.acquire('127.0.0.1');
-    assert.equal(first.allowed, true);
-    assert.equal(limiter.acquire('127.0.0.2').status, 503);
-    first.release();
-    first.release();
-    const second = limiter.acquire('127.0.0.2');
-    assert.equal(second.allowed, true);
-    second.release();
-    const third = limiter.acquire('127.0.0.1');
-    assert.equal(third.allowed, true);
-    third.release();
-    const limited = limiter.acquire('127.0.0.1');
-    assert.equal(limited.status, 429);
-    assert.equal(limited.retryAfterSeconds, 1);
-    now += 1000;
-    assert.equal(limiter.acquire('127.0.0.1').allowed, true);
 });
 
 test('concurrent refresh callers share one in-flight refresh', async () => {
