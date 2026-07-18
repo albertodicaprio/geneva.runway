@@ -106,6 +106,13 @@ Completed:
    - Confirmed the public HTTPS homepage returns the response-hardening
      headers and `/api/aircraft` returns `200`.
 
+16. Estimate positions between OpenSky refreshes.
+   - Each API response projects aircraft position and altitude from the last
+     reported coordinates, ground speed, heading, and vertical rate for up to
+     60 seconds without changing the cached source data.
+   - The UI labels projected values as estimated and keeps the last reported
+     timestamp visible.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

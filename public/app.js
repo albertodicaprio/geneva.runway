@@ -105,6 +105,11 @@ function updateStatus() {
     const updatedAt = latestData?.updatedAt ? new Date(latestData.updatedAt * 1000) : null;
     document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
 
+    if (latestData?.positionEstimate?.isEstimated) {
+        document.getElementById('dataStatus').textContent = `Estimated positions · up to ${latestData.positionEstimate.maximumSecondsAhead}s ahead`;
+        return;
+    }
+
     const labels = {
         HIT: 'Live cache',
         MISS: 'Freshly updated',

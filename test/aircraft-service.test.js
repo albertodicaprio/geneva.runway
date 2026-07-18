@@ -4,7 +4,8 @@ const {
     classifyApproachDirection,
     distanceInKm,
     enrichGvaArrivals,
-    normalizeOpenSkyData
+    normalizeOpenSkyData,
+    projectAircraftData
 } = require('../lib/aircraft-service');
 
 test('classifies approach direction from runway-aligned heading', () => {
@@ -28,6 +29,28 @@ test('calculates distance from Geneva using aircraft coordinates', () => {
     assert.equal(distanceInKm(46.2381, 6.1093), 0);
     assert.ok(distanceInKm(46.7381, 6.1093) > 55);
     assert.ok(distanceInKm(46.7381, 6.1093) < 56);
+});
+
+test('projects aircraft position, altitude, and distance for up to one minute without changing cached data', () => {
+    const cached = {
+        updatedAt: 1_000,
+        aircraft: [{
+            callsign: 'TEST123', latitude: 46.2381, longitude: 6.1093,
+            altitude: 1_000, velocity: 100, heading: 90, verticalRate: -2
+        }]
+    };
+
+    const result = projectAircraftData(cached, 1_100_000);
+    const aircraft = result.aircraft[0];
+
+    assert.equal(aircraft.positionEstimated, true);
+    assert.equal(aircraft.projectionSeconds, 60);
+    assert.equal(aircraft.altitude, 880);
+    assert.ok(aircraft.longitude > cached.aircraft[0].longitude);
+    assert.ok(aircraft.distanceKm > 5.9 && aircraft.distanceKm < 6.1);
+    assert.equal(cached.aircraft[0].altitude, 1_000);
+    assert.equal(cached.aircraft[0].longitude, 6.1093);
+    assert.deepEqual(result.positionEstimate, { isEstimated: true, estimatedAt: 1_100, maximumSecondsAhead: 60 });
 });
 
 test('normalization keeps only valid OpenSky positions within 80 km of Geneva', () => {
