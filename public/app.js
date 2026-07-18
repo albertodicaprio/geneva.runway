@@ -94,10 +94,10 @@ function mapMarker(aircraft) {
     const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
     const label = `${callsign}, ${altitude}`;
     const icon = Number.isFinite(aircraft.heading)
-        ? `<path class="map-aircraft-icon" d="M 0 -12 L 7 8 L -7 8 Z" transform="rotate(${heading})"></path>`
-        : '<circle class="map-aircraft-icon" r="7"></circle>';
+        ? `<path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path>`
+        : '<circle class="map-aircraft-icon" r="8"></circle>';
     return `<g class="map-aircraft${headingClass}" transform="translate(${position.x} ${position.y})" role="img" aria-label="${escapeHtml(label)}">
-        <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="10" y="4">${escapeHtml(callsign)}</text>
+        <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
     </g>`;
 }
 
