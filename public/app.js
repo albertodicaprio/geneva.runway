@@ -5,7 +5,6 @@ let aircraftData = [];
 let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
-let latestCacheStatus = null;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, character => ({
@@ -84,7 +83,6 @@ async function fetchAircraftData() {
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
 
         latestData = await response.json();
-        latestCacheStatus = response.headers.get('X-Cache');
         aircraftData = Array.isArray(latestData.aircraft) ? latestData.aircraft : [];
         updateUI();
     } catch (error) {
@@ -104,19 +102,18 @@ function updateUI() {
 function updateStatus() {
     const updatedAt = latestData?.updatedAt ? new Date(latestData.updatedAt * 1000) : null;
     document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
+    const estimatedAt = latestData?.positionEstimate?.estimatedAt || Math.floor(Date.now() / 1000);
+    const secondsSinceUpdate = Number.isFinite(latestData?.updatedAt)
+        ? Math.max(0, estimatedAt - latestData.updatedAt)
+        : null;
+    const updateAge = secondsSinceUpdate === null ? 'Update time unavailable' : `${secondsSinceUpdate}s since last update`;
 
     if (latestData?.positionEstimate?.isEstimated) {
-        document.getElementById('dataStatus').textContent = `Estimated positions · up to ${latestData.positionEstimate.maximumSecondsAhead}s ahead`;
+        document.getElementById('dataStatus').textContent = `Estimated positions · ${updateAge}`;
         return;
     }
 
-    const labels = {
-        HIT: 'Live cache',
-        MISS: 'Freshly updated',
-        'STALE-REFRESHING': 'Refreshing in background'
-    };
-    const status = labels[latestCacheStatus] || 'Live data';
-    document.getElementById('dataStatus').textContent = status;
+    document.getElementById('dataStatus').textContent = updateAge;
 }
 
 function updateNextArrival() {

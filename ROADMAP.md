@@ -111,7 +111,7 @@ Completed:
      reported coordinates, ground speed, heading, and vertical rate for up to
      60 seconds without changing the cached source data.
    - The UI labels projected values as estimated and keeps the last reported
-     timestamp visible.
+     timestamp visible, including the number of seconds since the last update.
 
 Remaining:
 
