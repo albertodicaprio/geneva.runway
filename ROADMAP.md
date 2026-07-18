@@ -113,6 +113,12 @@ Completed:
    - The UI labels projected values as estimated and keeps the last reported
      timestamp visible, including the number of seconds since the last update.
 
+17. Show arrivals on a calibrated Geneva map.
+   - Added the provided Geneva map asset and calibrated its Web Mercator
+     projection using airport, Mont Blanc, and Noirmont reference points.
+   - Displays in-bounds arrivals as heading-oriented markers with callsigns,
+     alongside a fixed Geneva Airport marker.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

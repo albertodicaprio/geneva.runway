@@ -1,5 +1,11 @@
 const API_ENDPOINT = '/api/aircraft';
 const FETCH_INTERVAL = 10000;
+const MAP_WIDTH = 1748;
+const MAP_HEIGHT = 1747;
+const MAP_X_SCALE = 1023.9218009042783;
+const MAP_X_OFFSET = -5412.222393087557;
+const MAP_Y_SCALE = -58671.31391937124;
+const MAP_Y_OFFSET = 54495.2374689763;
 
 let aircraftData = [];
 let isFetching = false;
@@ -67,6 +73,31 @@ function aircraftPhotoFrame(aircraft, frameClass, imageClass) {
     return photo ? `<div class="${frameClass}">${photo}</div>` : '';
 }
 
+function webMercatorLatitude(latitude) {
+    return Math.log(Math.tan(Math.PI / 4 + latitude * Math.PI / 360));
+}
+
+function mapPosition(latitude, longitude) {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude <= -85 || latitude >= 85) return null;
+    const x = MAP_X_SCALE * longitude + MAP_X_OFFSET;
+    const y = MAP_Y_SCALE * webMercatorLatitude(latitude) + MAP_Y_OFFSET;
+    if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) return null;
+    return { left: x / MAP_WIDTH * 100, top: y / MAP_HEIGHT * 100 };
+}
+
+function mapMarker(aircraft) {
+    const position = mapPosition(aircraft.latitude, aircraft.longitude);
+    if (!position) return '';
+    const callsign = aircraft.callsign || 'Unknown aircraft';
+    const altitude = formatAltitude(aircraft.altitude);
+    const heading = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
+    const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
+    const label = `${callsign}, ${altitude}`;
+    return `<button class="map-aircraft${headingClass}" style="left: ${position.left}%; top: ${position.top}%; --heading: ${heading}deg;" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+        <span class="map-aircraft-icon" aria-hidden="true">▲</span><span class="map-aircraft-label" aria-hidden="true">${escapeHtml(callsign)}</span>
+    </button>`;
+}
+
 async function fetchAircraftData() {
     if (isFetching || rateLimitResetTime > Date.now()) return;
     isFetching = true;
@@ -96,6 +127,7 @@ async function fetchAircraftData() {
 function updateUI() {
     updateStatus();
     updateNextArrival();
+    updateMap();
     updateAircraftList();
 }
 
@@ -145,6 +177,12 @@ function updateNextArrival() {
                 <div><span>Rough ETA</span><strong>${formatEta(aircraft)}</strong></div>
             </div>
         </div>`;
+}
+
+function updateMap() {
+    const markers = document.getElementById('mapMarkers');
+    const markerMarkup = aircraftData.map(mapMarker).filter(Boolean).join('');
+    markers.innerHTML = markerMarkup || '<p class="map-empty">No tracked aircraft are within this map area.</p>';
 }
 
 function updateAircraftList() {

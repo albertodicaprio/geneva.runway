@@ -31,6 +31,18 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .section-heading { margin-bottom: 20px; align-items: end; }
 .last-updated, .arrival-count { margin-bottom: 3px; font-size: .86rem; font-weight: 650; }
 .arrival-count { color: #47637f; }
+.map-note { margin-bottom: 3px; color: #63758a; font-size: .86rem; font-weight: 650; text-align: right; }
+
+.aircraft-map { position: relative; overflow: hidden; border: 1px solid #d4e1ea; border-radius: 12px; background: #d8edf1; aspect-ratio: 1748 / 1747; }
+.aircraft-map > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.map-markers { position: absolute; inset: 0; }
+.map-aircraft, .map-airport { position: absolute; z-index: 1; transform: translate(-50%, -50%); }
+.map-aircraft { display: inline-flex; align-items: center; gap: 3px; border: 0; padding: 0; color: #102d48; background: transparent; font: inherit; cursor: default; filter: drop-shadow(0 1px 1px rgba(255,255,255,.92)); }
+.map-aircraft-icon { display: block; color: #d8394b; font-size: 1.08rem; line-height: 1; transform: rotate(var(--heading)); }
+.map-aircraft.heading-unknown .map-aircraft-icon { color: #596e80; transform: none; }
+.map-aircraft-label { padding: 1px 3px; border-radius: 3px; color: #102d48; background: rgba(255,255,255,.78); font-size: .63rem; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.map-airport { z-index: 2; border: 2px solid #102d48; border-radius: 999px; padding: 3px 4px; color: #fff; background: #102d48; font-size: .6rem; font-weight: 850; line-height: 1; box-shadow: 0 1px 3px rgba(16,45,72,.45); }
+.map-empty { position: absolute; top: 50%; left: 50%; margin: 0; transform: translate(-50%, -50%); border-radius: 999px; padding: 7px 10px; color: #31516e; background: rgba(255,255,255,.88); font-size: .78rem; font-weight: 700; white-space: nowrap; }
 
 .next-arrival { min-height: 165px; display: flex; gap: 24px; align-items: center; border-radius: 14px; padding: 22px; color: white; background: linear-gradient(120deg, #123c64, #165f7a); }
 .next-photo-wrap, .card-photo-wrap { flex: none; width: 126px; height: 96px; overflow: hidden; border-radius: 11px; background: rgba(255,255,255,.12); }
@@ -79,6 +91,7 @@ footer a:hover { text-decoration: underline; }
 
 @media (max-width: 440px) {
     .page-header, .section-heading { flex-direction: column; align-items: flex-start; gap: 11px; }
+    .map-note { text-align: left; }
     .next-arrival { gap: 12px; }
     .next-photo-wrap { width: 65px; height: 65px; }
     .callsign { font-size: 1.35rem; }
