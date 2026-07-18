@@ -33,6 +33,13 @@ Expected runtime secrets:
 Do not put these values in source control. Prefer `.env` for local development
 and Docker Compose `env_file` or environment variables for deployment.
 
+## Local Proxy Testing
+
+Local Docker Compose uses the `.env` value `CADDY_SITE_ADDRESS=http://:80`.
+When testing the containerized app locally, start both `app` and `caddy` and
+use `http://127.0.0.1/` through Caddy. Do not assume HTTPS or use the public
+hostname for local checks; HTTPS is only for the public deployment setting.
+
 ## Recommended Direction
 
 Use `ROADMAP.md` for the current step-by-step implementation plan and progress.
