@@ -105,15 +105,17 @@ Completed:
      restrictive referrer policy, and clickjacking protection on all responses.
    - Added integration coverage for the security headers and API behavior.
 
+3. Validate the public deployment.
+   - Confirmed credentials are excluded from Git, Docker build context, and
+     app image metadata and layers.
+   - Built both deployment images and verified Caddy returns `429` for the
+     31st API request in an isolated local proxy test.
+   - Confirmed the public HTTPS homepage returns the response-hardening
+     headers and `/api/aircraft` returns `200`.
+
 Remaining:
 
-1. Validate the public deployment.
-   - Confirm secrets and access tokens never appear in responses, logs, image
-     layers, or browser-visible configuration.
-   - Test that unauthenticated clients cannot cause repeated upstream refreshes
-     or bypass rate limits.
-   - Keep the host, container base image, Node runtime, and reverse proxy
-     patched.
+- Keep the host, container base image, Node runtime, and reverse proxy patched.
 
 ## Current Local Run Command
 
