@@ -84,14 +84,7 @@ Completed:
      access logs to the container log stream. A development override supports
      HTTP-only operation without certificate issuance.
 
-## Future: Public Internet Exposure Hardening
-
-The current Docker setup is intended for a trusted home network. Complete these
-steps, in order, before making the app reachable from the public internet.
-
-Completed:
-
-1. Make aircraft refreshes resilient to abusive or slow traffic.
+13. Make aircraft refreshes resilient to abusive or slow traffic.
    - Add timeouts to OpenSky token and state requests.
    - Use one shared in-flight refresh for both cold-cache and stale-cache
      requests, so concurrent clients cannot cause duplicate upstream fetches.
@@ -99,13 +92,13 @@ Completed:
      in the Node application. Caddy Defender blocks known automated-cloud
      ranges before they reach the application.
 
-2. Restrict browser access and add response hardening.
+14. Restrict browser access and add response hardening.
    - Removed permissive CORS and preflight handling from the same-origin API.
    - Added a Content Security Policy, `X-Content-Type-Options: nosniff`, a
      restrictive referrer policy, and clickjacking protection on all responses.
    - Added integration coverage for the security headers and API behavior.
 
-3. Validate the public deployment.
+15. Validate the public deployment.
    - Confirmed credentials are excluded from Git, Docker build context, and
      app image metadata and layers.
    - Built both deployment images and verified Caddy returns `429` for the
