@@ -21,6 +21,24 @@ const CONTENT_TYPES = {
     '.ico': 'image/x-icon'
 };
 
+const SECURITY_HEADERS = {
+    'Content-Security-Policy': [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' https: http:",
+        "connect-src 'self'",
+        "font-src 'self'",
+        "form-action 'self'"
+    ].join('; '),
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY'
+};
+
 function parseEnvValue(value) {
     const trimmed = value.trim();
     const quote = trimmed[0];
@@ -150,6 +168,10 @@ async function serveStatic(req, res, urlPathname) {
 }
 
 const server = http.createServer((req, res) => {
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+        res.setHeader(name, value);
+    }
+
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
     if (url.pathname === '/api/aircraft') {
@@ -165,5 +187,7 @@ server.requestTimeout = 15_000;
 server.keepAliveTimeout = 5_000;
 
 server.listen(PORT, HOST, () => {
-    console.log(`Geneva Runway app listening on http://${HOST}:${PORT}`);
+    const address = server.address();
+    const listeningPort = typeof address === 'object' && address ? address.port : PORT;
+    console.log(`Geneva Runway app listening on http://${HOST}:${listeningPort}`);
 });

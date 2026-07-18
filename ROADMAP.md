@@ -99,15 +99,15 @@ Completed:
      in the Node application. Caddy Defender blocks known automated-cloud
      ranges before they reach the application.
 
+2. Restrict browser access and add response hardening.
+   - Removed permissive CORS and preflight handling from the same-origin API.
+   - Added a Content Security Policy, `X-Content-Type-Options: nosniff`, a
+     restrictive referrer policy, and clickjacking protection on all responses.
+   - Added integration coverage for the security headers and API behavior.
+
 Remaining:
 
-1. Restrict browser access and add response hardening.
-   - Remove permissive CORS where the frontend and API share an origin, or
-     allow only the deployed frontend origin.
-   - Add a Content Security Policy, `X-Content-Type-Options: nosniff`, a
-     restrictive referrer policy, and clickjacking protection.
-
-2. Validate the public deployment.
+1. Validate the public deployment.
    - Confirm secrets and access tokens never appear in responses, logs, image
      layers, or browser-visible configuration.
    - Test that unauthenticated clients cannot cause repeated upstream refreshes
