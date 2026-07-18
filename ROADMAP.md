@@ -117,7 +117,8 @@ Completed:
    - Added the provided Geneva map asset and calibrated its Web Mercator
      projection using airport, Mont Blanc, and Noirmont reference points.
    - Displays in-bounds arrivals as heading-oriented markers with callsigns,
-     alongside a fixed Geneva Airport marker.
+     alongside a fixed Geneva Airport marker, using SVG attributes that remain
+     compatible with the restrictive Content Security Policy.
 
 Remaining:
 

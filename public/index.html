@@ -44,8 +44,14 @@
                 </div>
                 <div class="aircraft-map" id="aircraftMap">
                     <img src="geneva_map.png" alt="Map of the Geneva region" width="1748" height="1747">
-                    <div class="map-airport" style="left: 48.23%; top: 55.64%;" aria-label="Geneva Airport">GVA</div>
-                    <div class="map-markers" id="mapMarkers" aria-live="polite"></div>
+                    <svg class="map-markers" viewBox="0 0 1748 1747" role="img" aria-label="Tracked aircraft positions on the Geneva map">
+                        <g class="map-airport" transform="translate(843 972)">
+                            <title>Geneva Airport</title>
+                            <circle r="16"></circle>
+                            <text y="4" text-anchor="middle">GVA</text>
+                        </g>
+                        <g id="mapMarkers" aria-live="polite"></g>
+                    </svg>
                 </div>
             </section>
 

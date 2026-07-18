@@ -82,7 +82,7 @@ function mapPosition(latitude, longitude) {
     const x = MAP_X_SCALE * longitude + MAP_X_OFFSET;
     const y = MAP_Y_SCALE * webMercatorLatitude(latitude) + MAP_Y_OFFSET;
     if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) return null;
-    return { left: x / MAP_WIDTH * 100, top: y / MAP_HEIGHT * 100 };
+    return { x, y };
 }
 
 function mapMarker(aircraft) {
@@ -93,9 +93,12 @@ function mapMarker(aircraft) {
     const heading = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
     const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
     const label = `${callsign}, ${altitude}`;
-    return `<button class="map-aircraft${headingClass}" style="left: ${position.left}%; top: ${position.top}%; --heading: ${heading}deg;" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
-        <span class="map-aircraft-icon" aria-hidden="true">▲</span><span class="map-aircraft-label" aria-hidden="true">${escapeHtml(callsign)}</span>
-    </button>`;
+    const icon = Number.isFinite(aircraft.heading)
+        ? `<path class="map-aircraft-icon" d="M 0 -12 L 7 8 L -7 8 Z" transform="rotate(${heading})"></path>`
+        : '<circle class="map-aircraft-icon" r="7"></circle>';
+    return `<g class="map-aircraft${headingClass}" transform="translate(${position.x} ${position.y})" role="img" aria-label="${escapeHtml(label)}">
+        <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="10" y="4">${escapeHtml(callsign)}</text>
+    </g>`;
 }
 
 async function fetchAircraftData() {
@@ -182,7 +185,7 @@ function updateNextArrival() {
 function updateMap() {
     const markers = document.getElementById('mapMarkers');
     const markerMarkup = aircraftData.map(mapMarker).filter(Boolean).join('');
-    markers.innerHTML = markerMarkup || '<p class="map-empty">No tracked aircraft are within this map area.</p>';
+    markers.innerHTML = markerMarkup || '<text class="map-empty" x="874" y="874" text-anchor="middle">No tracked aircraft are within this map area.</text>';
 }
 
 function updateAircraftList() {
