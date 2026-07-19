@@ -54,14 +54,21 @@ test('projects aircraft position, altitude, and distance for up to one minute wi
 });
 
 test('normalization keeps only valid OpenSky positions within 80 km of Geneva', () => {
+    const diagnostics = {};
     const data = normalizeOpenSkyData({ time: 1, states: [
         ['near', ' NEAR ', 'Switzerland', null, 1, 6.1093, 46.2381, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4],
         ['far', ' FAR ', 'France', null, 1, 8, 48, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4],
         ['invalid', ' INVALID ', 'France', null, 1, null, 46.2381, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4]
-    ] });
+    ] }, diagnostics);
     assert.equal(data.maxDistanceKm, 80);
     assert.deepEqual(data.aircraft.map(aircraft => aircraft.icao24), ['near']);
     assert.equal(data.aircraft[0].callsign, 'NEAR');
+    assert.deepEqual(diagnostics, {
+        stateCount: 3,
+        nearbyAircraftCount: 1,
+        outsideRangeCount: 1,
+        invalidPositionCount: 1
+    });
 });
 
 test('enrichment retains only airborne, identified flights whose route ends at Geneva and sorts them by altitude', async () => {
