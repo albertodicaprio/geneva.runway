@@ -134,6 +134,12 @@ Completed:
    - When an arrival disappears from the confirmed list, its recorded trail
      remains marker-free for 10 minutes to support approach comparisons.
 
+20. Smooth arrival trail rendering.
+   - Commit: `00965dc Smooth arrival trail rendering`
+   - Renders recorded map points with Catmull–Rom-derived cubic Bézier curves
+     for rounded turns while retaining every sampled point and the final
+     estimated-position segment.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
