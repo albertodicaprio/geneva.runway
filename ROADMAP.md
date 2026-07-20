@@ -120,6 +120,20 @@ Completed:
      alongside a fixed Geneva Airport marker, using SVG attributes that remain
      compatible with the restrictive Content Security Policy.
 
+18. Improve refresh timing and cache-status reporting.
+   - Commit: `e83411e Adjust aircraft refresh timing`
+   - The browser polls the app every two seconds while OpenSky data becomes
+     eligible for refresh every 30 seconds. The UI calculates cache age from
+     the cache refresh timestamp instead of the upstream epoch timestamp.
+
+19. Add and refine arrival trails on the map.
+   - Commits: `991b3a8`, `4722fda`, `38d13aa`, `8cdca5e`, `373abe0`
+   - Confirmed arrivals retain a cached, up-to-60-minute OpenSky position
+     trail with a vibrant per-arrival color. The final segment reaches the
+     estimated position and renders beneath enlarged aircraft markers.
+   - When an arrival disappears from the confirmed list, its recorded trail
+     remains marker-free for 10 minutes to support approach comparisons.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
