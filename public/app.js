@@ -92,12 +92,14 @@ function mapPosition(latitude, longitude) {
     return position;
 }
 
-function mapPath(aircraft) {
+function mapPath(aircraft, includeEstimatedPosition = true) {
     const points = (aircraft.track?.points || [])
         .map(point => mapCoordinates(point.latitude, point.longitude))
         .filter(Boolean);
-    const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
-    if (estimatedPosition) points.push(estimatedPosition);
+    if (includeEstimatedPosition) {
+        const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
+        if (estimatedPosition) points.push(estimatedPosition);
+    }
     if (points.length < 2 || !aircraft.track?.color) return '';
     const path = points.map(({ x, y }, index) => `${index ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
     return `<path class="map-flight-path" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
@@ -203,7 +205,11 @@ function updateNextArrival() {
 function updateMap() {
     const paths = document.getElementById('mapPaths');
     const markers = document.getElementById('mapMarkers');
-    paths.innerHTML = aircraftData.map(mapPath).filter(Boolean).join('');
+    const recentTracks = Array.isArray(latestData?.recentTracks) ? latestData.recentTracks : [];
+    paths.innerHTML = [
+        ...recentTracks.map(track => mapPath(track, false)),
+        ...aircraftData.map(aircraft => mapPath(aircraft, true))
+    ].filter(Boolean).join('');
     const markerMarkup = aircraftData.map(mapMarker).filter(Boolean).join('');
     markers.innerHTML = markerMarkup || '<text class="map-empty" x="874" y="874" text-anchor="middle">No tracked aircraft are within this map area.</text>';
 }
