@@ -15,6 +15,7 @@ test('keeps an arrival trail and its color for up to one hour, then removes abse
             icao24: 'tracked',
             track: {
                 color: 'hsl(20 65% 32%)',
+                colorVersion: 2,
                 points: [
                     { latitude: 46.1, longitude: 6.0, timestamp: 99 },
                     { latitude: 46.2, longitude: 6.1, timestamp: 100 }
@@ -22,7 +23,7 @@ test('keeps an arrival trail and its color for up to one hour, then removes abse
             }
         }, {
             icao24: 'landed',
-            track: { color: 'hsl(40 65% 32%)', points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] }
+            track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] }
         }]
     };
 
@@ -33,6 +34,7 @@ test('keeps an arrival trail and its color for up to one hour, then removes abse
 
     assert.equal(result.aircraft.length, 1);
     assert.equal(result.aircraft[0].track.color, 'hsl(20 65% 32%)');
+    assert.equal(result.aircraft[0].track.colorVersion, 2);
     assert.deepEqual(result.aircraft[0].track.points, [
         { latitude: 46.2, longitude: 6.1, timestamp: 100 },
         { latitude: 46.4, longitude: 6.3, timestamp: 3_700 }
