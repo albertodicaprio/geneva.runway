@@ -142,10 +142,10 @@ Completed:
      estimated-position segment.
 
 21. Broaden Caddy request-rate limiting.
-   - Caddy now applies a per-client limit of 90 requests per minute to every
-     path, including arbitrary bot probes. This leaves headroom above the
-     browser's 30 aircraft requests per minute for page assets, retries, and
-     occasional additional viewing.
+   - Caddy now applies a per-client limit of 24 requests per 15-second sliding
+     window to every path, including arbitrary bot probes. This leaves headroom
+     for normal two-second browser polling, page assets, and retries while
+     limiting short request bursts.
 
 Remaining:
 

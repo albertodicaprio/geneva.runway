@@ -51,12 +51,12 @@ Docker Compose runs Caddy as the public-facing service. It is the only
 container that publishes ports 80 and 443; it forwards traffic to the internal
 Node app, manages the production TLS certificate, and writes request logs to
 its container log stream. It is built locally with Caddy Defender and
-`caddy-ratelimit`; every path is limited to 90 requests per minute per client
-IP (IPv6 addresses are grouped by `/64`), including arbitrary bot probes.
-Defender applies a stricter policy to known automated-cloud ranges by blocking
-them with `403`. Caddy returns `429` and `Retry-After` when the limit is
-reached. The allowance accommodates the browser's 2-second aircraft polling
-cadence plus page loads and retries.
+`caddy-ratelimit`; every path is limited to 24 requests per 15-second sliding
+window per client IP (IPv6 addresses are grouped by `/64`), including arbitrary
+bot probes. Defender applies a stricter policy to known automated-cloud ranges
+by blocking them with `403`. Caddy returns `429` and `Retry-After` when the
+limit is reached. The allowance accommodates the browser's 2-second aircraft
+polling cadence plus page loads and retries while limiting short request bursts.
 
 `CADDY_SITE_ADDRESS` configures Caddy's site address:
 - In dev we use `http://`
