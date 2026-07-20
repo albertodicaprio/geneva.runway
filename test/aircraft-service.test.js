@@ -91,20 +91,21 @@ test('projects aircraft position, altitude, and distance for up to one minute wi
     assert.deepEqual(result.positionEstimate, { isEstimated: true, estimatedAt: 1_100, maximumSecondsAhead: 60 });
 });
 
-test('normalization keeps only valid OpenSky positions within 80 km of Geneva', () => {
+test('normalization keeps valid OpenSky positions inside the configured search square, including its corners', () => {
     const diagnostics = {};
     const data = normalizeOpenSkyData({ time: 1, states: [
         ['near', ' NEAR ', 'Switzerland', null, 1, 6.1093, 46.2381, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4],
+        ['corner', ' CORNER ', 'France', null, 1, 7.16, 46.97, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4],
         ['far', ' FAR ', 'France', null, 1, 8, 48, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4],
         ['invalid', ' INVALID ', 'France', null, 1, null, 46.2381, 1000, false, 100, 40, -1, null, 1000, null, false, 0, 4]
     ] }, diagnostics);
-    assert.equal(data.maxDistanceKm, 80);
-    assert.deepEqual(data.aircraft.map(aircraft => aircraft.icao24), ['near']);
+    assert.deepEqual(data.searchBounds, { lamin: 45.51, lomin: 5.06, lamax: 46.97, lomax: 7.16 });
+    assert.deepEqual(data.aircraft.map(aircraft => aircraft.icao24), ['near', 'corner']);
     assert.equal(data.aircraft[0].callsign, 'NEAR');
     assert.deepEqual(diagnostics, {
-        stateCount: 3,
-        nearbyAircraftCount: 1,
-        outsideRangeCount: 1,
+        stateCount: 4,
+        inBoundsAircraftCount: 2,
+        outsideBoundsCount: 1,
         invalidPositionCount: 1
     });
 });

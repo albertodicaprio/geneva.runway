@@ -53,11 +53,12 @@ Completed:
 
 8. Improve arrival and runway-direction classification.
    - Commit: `5376e44 Enrich Geneva arrivals with ADSBdb`
-   - Result: only airborne aircraft within 80 km whose ADSBdb route ends at GVA
-     are returned. The temporary-file cache stores the exact displayed arrival
-     payload and only its ADSBdb enrichment, which a restarted server serves
-     immediately. Arrivals are altitude-sorted and classified as approach
-     `04`, `22`, or `unknown` from heading without randomness.
+   - Result: only airborne aircraft inside the configured Geneva-area search
+     bounds whose ADSBdb route ends at GVA are returned. The temporary-file
+     cache stores the exact displayed arrival payload and only its ADSBdb
+     enrichment, which a restarted server serves immediately. Arrivals are
+     altitude-sorted and classified as approach `04`, `22`, or `unknown` from
+     heading without randomness.
 
 9. Add focused tests.
    - Result: `npm test` runs credential-free unit tests for distance, runway
