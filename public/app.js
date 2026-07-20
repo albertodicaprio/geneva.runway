@@ -92,6 +92,30 @@ function mapPosition(latitude, longitude) {
     return position;
 }
 
+function smoothMapPath(points) {
+    if (points.length < 2) return '';
+    const coordinate = value => value.toFixed(1);
+    let path = `M ${coordinate(points[0].x)} ${coordinate(points[0].y)}`;
+
+    for (let index = 0; index < points.length - 1; index += 1) {
+        const previous = points[index - 1] || points[index];
+        const current = points[index];
+        const next = points[index + 1];
+        const following = points[index + 2] || next;
+        const firstControl = {
+            x: current.x + (next.x - previous.x) / 6,
+            y: current.y + (next.y - previous.y) / 6
+        };
+        const secondControl = {
+            x: next.x - (following.x - current.x) / 6,
+            y: next.y - (following.y - current.y) / 6
+        };
+        path += ` C ${coordinate(firstControl.x)} ${coordinate(firstControl.y)} ${coordinate(secondControl.x)} ${coordinate(secondControl.y)} ${coordinate(next.x)} ${coordinate(next.y)}`;
+    }
+
+    return path;
+}
+
 function mapPath(aircraft, includeEstimatedPosition = true) {
     const points = (aircraft.track?.points || [])
         .map(point => mapCoordinates(point.latitude, point.longitude))
@@ -101,7 +125,7 @@ function mapPath(aircraft, includeEstimatedPosition = true) {
         if (estimatedPosition) points.push(estimatedPosition);
     }
     if (points.length < 2 || !aircraft.track?.color) return '';
-    const path = points.map(({ x, y }, index) => `${index ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    const path = smoothMapPath(points);
     return `<path class="map-flight-path" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
 }
 
