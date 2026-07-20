@@ -1,5 +1,5 @@
 const API_ENDPOINT = '/api/aircraft';
-const FETCH_INTERVAL = 10000;
+const FETCH_INTERVAL = 2000;
 const MAP_WIDTH = 1748;
 const MAP_HEIGHT = 1747;
 const MAP_X_SCALE = 1023.9218009042783;
@@ -137,9 +137,9 @@ function updateUI() {
 function updateStatus() {
     const updatedAt = latestData?.updatedAt ? new Date(latestData.updatedAt * 1000) : null;
     document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
-    const estimatedAt = latestData?.positionEstimate?.estimatedAt || Math.floor(Date.now() / 1000);
-    const secondsSinceUpdate = Number.isFinite(latestData?.updatedAt)
-        ? Math.max(0, estimatedAt - latestData.updatedAt)
+    const now = Math.floor(Date.now() / 1000);
+    const secondsSinceUpdate = Number.isFinite(latestData?.cacheUpdatedAt)
+        ? Math.max(0, now - latestData.cacheUpdatedAt)
         : null;
     const updateAge = secondsSinceUpdate === null ? 'Update time unavailable' : `${secondsSinceUpdate}s since last update`;
 
