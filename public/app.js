@@ -77,12 +77,30 @@ function webMercatorLatitude(latitude) {
     return Math.log(Math.tan(Math.PI / 4 + latitude * Math.PI / 360));
 }
 
-function mapPosition(latitude, longitude) {
+function mapCoordinates(latitude, longitude) {
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude <= -85 || latitude >= 85) return null;
     const x = MAP_X_SCALE * longitude + MAP_X_OFFSET;
     const y = MAP_Y_SCALE * webMercatorLatitude(latitude) + MAP_Y_OFFSET;
-    if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) return null;
     return { x, y };
+}
+
+function mapPosition(latitude, longitude) {
+    const position = mapCoordinates(latitude, longitude);
+    if (!position) return null;
+    const { x, y } = position;
+    if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) return null;
+    return position;
+}
+
+function mapPath(aircraft) {
+    const points = (aircraft.track?.points || [])
+        .map(point => mapCoordinates(point.latitude, point.longitude))
+        .filter(Boolean);
+    const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
+    if (estimatedPosition) points.push(estimatedPosition);
+    if (points.length < 2 || !aircraft.track?.color) return '';
+    const path = points.map(({ x, y }, index) => `${index ? 'L' : 'M'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    return `<path class="map-flight-path" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
 }
 
 function mapMarker(aircraft) {
@@ -183,7 +201,9 @@ function updateNextArrival() {
 }
 
 function updateMap() {
+    const paths = document.getElementById('mapPaths');
     const markers = document.getElementById('mapMarkers');
+    paths.innerHTML = aircraftData.map(mapPath).filter(Boolean).join('');
     const markerMarkup = aircraftData.map(mapMarker).filter(Boolean).join('');
     markers.innerHTML = markerMarkup || '<text class="map-empty" x="874" y="874" text-anchor="middle">No tracked aircraft are within this map area.</text>';
 }

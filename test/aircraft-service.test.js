@@ -1,12 +1,43 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+    addArrivalTracks,
     classifyApproachDirection,
     distanceInKm,
     enrichGvaArrivals,
     normalizeOpenSkyData,
     projectAircraftData
 } = require('../lib/aircraft-service');
+
+test('keeps an arrival trail and its color for up to one hour, then removes absent arrivals', () => {
+    const previous = {
+        aircraft: [{
+            icao24: 'tracked',
+            track: {
+                color: 'hsl(20 65% 32%)',
+                points: [
+                    { latitude: 46.1, longitude: 6.0, timestamp: 99 },
+                    { latitude: 46.2, longitude: 6.1, timestamp: 100 }
+                ]
+            }
+        }, {
+            icao24: 'landed',
+            track: { color: 'hsl(40 65% 32%)', points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] }
+        }]
+    };
+
+    const result = addArrivalTracks({
+        updatedAt: 3_700,
+        aircraft: [{ icao24: 'TRACKED', latitude: 46.4, longitude: 6.3 }]
+    }, previous);
+
+    assert.equal(result.aircraft.length, 1);
+    assert.equal(result.aircraft[0].track.color, 'hsl(20 65% 32%)');
+    assert.deepEqual(result.aircraft[0].track.points, [
+        { latitude: 46.2, longitude: 6.1, timestamp: 100 },
+        { latitude: 46.4, longitude: 6.3, timestamp: 3_700 }
+    ]);
+});
 
 test('classifies approach direction from runway-aligned heading', () => {
     assert.equal(classifyApproachDirection(42).direction, '04');
