@@ -141,6 +141,12 @@ Completed:
      for rounded turns while retaining every sampled point and the final
      estimated-position segment.
 
+21. Broaden Caddy request-rate limiting.
+   - Caddy now applies a per-client limit of 90 requests per minute to every
+     path, including arbitrary bot probes. This leaves headroom above the
+     browser's 30 aircraft requests per minute for page assets, retries, and
+     occasional additional viewing.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

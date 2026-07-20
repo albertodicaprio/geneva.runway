@@ -19,20 +19,20 @@
 		max_size 1MB
 	}
 
-	# All aircraft API clients are limited independently. Group IPv6 privacy
-	# addresses by /64 so changing addresses cannot evade the limit.
+	# Limit every client request, including unknown paths probed by bots. A normal
+	# viewer polls the aircraft API 30 times per minute, so 90 requests per minute
+	# leaves room for initial page assets, retries, and occasional extra viewing.
+	# Group IPv6 privacy addresses by /64 so changing addresses cannot evade the
+	# limit.
 	# This service is intended for direct human use, not cloud-hosted clients.
 	defender block {
 		ranges aws azurepubliccloud deepseek gcloud githubcopilot openai
 	}
 
 	rate_limit {
-		zone aircraft_api {
-			match {
-				path /api/aircraft
-			}
+		zone site_requests {
 			key {remote_host}
-			events 30
+			events 90
 			window 1m
 			ipv6_prefix 64
 		}
