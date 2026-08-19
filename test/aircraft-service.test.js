@@ -9,7 +9,7 @@ const {
     projectAircraftData
 } = require('../lib/aircraft-service');
 
-test('keeps an arrival trail and color for up to one hour, then retains it for ten minutes after it disappears', () => {
+test('keeps an arrival trail and color for up to one hour, then retains it for two hours after it disappears', () => {
     const previous = {
         aircraft: [{
             icao24: 'tracked',
@@ -42,8 +42,20 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
     assert.deepEqual(result.recentTracks, [{
         icao24: 'landed',
         track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
-        expiresAt: 4_300
+        expiresAt: 10_900
     }]);
+});
+
+test('removes a disappeared arrival trail after its two-hour retention window', () => {
+    const result = addArrivalTracks({ updatedAt: 10_901, aircraft: [] }, {
+        recentTracks: [{
+            icao24: 'landed',
+            track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
+            expiresAt: 10_900
+        }]
+    });
+
+    assert.deepEqual(result.recentTracks, []);
 });
 
 test('classifies approach direction from runway-aligned heading', () => {

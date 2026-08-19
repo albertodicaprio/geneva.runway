@@ -147,6 +147,12 @@ Completed:
      for normal two-second browser polling, page assets, and retries while
      limiting short request bursts.
 
+22. Keep aircraft tracks updating without an open browser.
+   - The Node server refreshes aircraft data at the existing 30-second cache
+     cadence from startup, independently of API or page requests.
+   - When a confirmed arrival disappears from the live list, its marker-free
+     recorded path remains on the map for two hours.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

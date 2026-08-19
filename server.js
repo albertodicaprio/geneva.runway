@@ -6,6 +6,7 @@ const path = require('path');
 loadLocalEnv();
 
 const aircraftHandler = require('./api/aircraft');
+const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -190,4 +191,5 @@ server.listen(PORT, HOST, () => {
     const address = server.address();
     const listeningPort = typeof address === 'object' && address ? address.port : PORT;
     console.log(`Geneva Runway app listening on http://${HOST}:${listeningPort}`);
+    startAircraftRefreshScheduler();
 });
