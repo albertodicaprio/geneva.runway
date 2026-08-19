@@ -5,6 +5,7 @@ const {
     classifyApproachDirection,
     distanceInKm,
     enrichGvaArrivals,
+    isAircraftRefreshPaused,
     normalizeOpenSkyData,
     projectAircraftData
 } = require('../lib/aircraft-service');
@@ -56,6 +57,13 @@ test('removes a disappeared arrival trail after its two-hour retention window', 
     });
 
     assert.deepEqual(result.recentTracks, []);
+});
+
+test('pauses OpenSky refreshes from 01:00 until 05:00 Geneva time', () => {
+    assert.equal(isAircraftRefreshPaused(Date.parse('2026-01-01T00:00:00Z')), true);
+    assert.equal(isAircraftRefreshPaused(Date.parse('2026-01-01T03:59:59Z')), true);
+    assert.equal(isAircraftRefreshPaused(Date.parse('2026-01-01T04:00:00Z')), false);
+    assert.equal(isAircraftRefreshPaused(Date.parse('2025-12-31T23:59:59Z')), false);
 });
 
 test('classifies approach direction from runway-aligned heading', () => {

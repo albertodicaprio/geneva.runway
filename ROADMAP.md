@@ -153,6 +153,11 @@ Completed:
    - When a confirmed arrival disappears from the live list, its marker-free
      recorded path remains on the map for two hours.
 
+23. Pause overnight upstream aircraft refreshes.
+   - Automatic and request-triggered OpenSky refreshes pause from 01:00 until
+     05:00 Europe/Zurich time to conserve OpenSky tokens. Cached paths remain
+     available during the pause and refreshes resume at 05:00.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
