@@ -130,7 +130,7 @@ test('normalization keeps valid OpenSky positions inside the configured search s
     });
 });
 
-test('enrichment retains only airborne, identified flights whose route ends at Geneva and sorts them by altitude', async () => {
+test('enrichment retains only airborne, identified flights at or below 7000 m whose route ends at Geneva and sorts them by altitude', async () => {
     const originalFetch = global.fetch;
     const requestedUrls = [];
     global.fetch = async url => {
@@ -155,6 +155,9 @@ test('enrichment retains only airborne, identified flights whose route ends at G
                 { icao24: 'high01', callsign: 'ARRHIGH', altitude: 2000, onGround: false },
                 { icao24: 'low001', callsign: 'ARRLOW', altitude: 900, onGround: false },
                 { icao24: 'other1', callsign: 'NOTGVA', altitude: 500, onGround: false },
+                { icao24: 'limit1', callsign: 'ATLIMIT', altitude: 7000, onGround: false },
+                { icao24: 'above1', callsign: 'TOOHIGH', altitude: 7000.1, onGround: false },
+                { icao24: 'noalt1', callsign: 'NOALT', altitude: null, onGround: false },
                 { icao24: 'ground', callsign: 'GROUND', altitude: 10, onGround: true },
                 { icao24: 'nocall', callsign: null, altitude: 10, onGround: false }
             ]
@@ -163,6 +166,9 @@ test('enrichment retains only airborne, identified flights whose route ends at G
         assert.deepEqual(result.aircraft.map(aircraft => aircraft.callsign), ['ARRLOW', 'ARRHIGH']);
         assert.deepEqual(result.aircraft.map(aircraft => aircraft.aircraftDetails.registration), ['HB-TEST', 'HB-TEST']);
         assert.equal(requestedUrls.some(url => url.includes('/callsign/GROUND')), false);
+        assert.equal(requestedUrls.some(url => url.includes('/callsign/ATLIMIT')), true);
+        assert.equal(requestedUrls.some(url => url.includes('/callsign/TOOHIGH')), false);
+        assert.equal(requestedUrls.some(url => url.includes('/callsign/NOALT')), false);
         assert.equal(requestedUrls.some(url => url.includes('/callsign/NOTGVA')), true);
         assert.equal(requestedUrls.filter(url => url.includes('/aircraft/')).length, 2);
     } finally {
