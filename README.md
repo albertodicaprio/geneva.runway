@@ -26,7 +26,7 @@ committed:
 OPENSKY_NETWORK_CLIENT_ID=your-client-id
 OPENSKY_NETWORK_CLIENT_SECRET=your-client-secret
 
-# How to expose the site via Caddy. Use https://gva-runway.duckdns.org in prod.
+# How to expose the site via Caddy. Use both public domains in production.
 CADDY_SITE_ADDRESS=http://:80
 ```
 
@@ -36,14 +36,14 @@ Build and start the app:
 docker compose up --build -d
 ```
 
-Open `https://gva-runway.duckdns.org`. Caddy is the only published service:
+Open `https://gva-runway.duckdns.org` or `https://gva-runway.ahpc.ch`. Caddy is the only published service:
 it redirects HTTP to HTTPS, obtains and renews the Let's Encrypt certificate,
 and proxies requests to the Node app over Docker's private network. The app's
 port 3000 is not reachable from the host network.
 
-The DuckDNS record and port forwarding must be in place before the first
-startup so Let's Encrypt can validate the domain. Keep the named Caddy volumes;
-they contain its certificate and renewal state.
+Both public DNS records and port forwarding must be in place before the first
+startup so Let's Encrypt can validate each domain. Keep the named Caddy volumes;
+they contain Caddy's certificate and renewal state.
 
 ### Caddy reverse proxy
 
@@ -60,7 +60,8 @@ polling cadence plus page loads and retries while limiting short request bursts.
 
 `CADDY_SITE_ADDRESS` configures Caddy's site address:
 - In dev we use `http://`
-- In prod we use `https://gva-runway.duckdns.org`
+- In prod the default serves both `https://gva-runway.duckdns.org` and
+  `https://gva-runway.ahpc.ch`.
 
 Useful commands:
 

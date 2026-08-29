@@ -17,7 +17,7 @@ services:
     depends_on:
       - app
     environment:
-      CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:-https://gva-runway.duckdns.org}
+      CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS:-https://gva-runway.duckdns.org, https://gva-runway.ahpc.ch}
     ports:
       - "80:80"
       - "443:443"
