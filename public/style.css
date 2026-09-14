@@ -74,6 +74,14 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .card-photo-wrap { width: 100px; height: 76px; background: #e7eef5; }
 .loading, .no-aircraft { margin: 0; padding: 32px; color: #687c91; text-align: center; }
 .error { border-radius: 10px; padding: 14px; color: #8e1f35; background: #fce8ec; }
+.history-note { color: #536c83; font-size: .86rem; line-height: 1.5; }
+.history-table-wrap { overflow-x: auto; border: 1px solid #dce5ee; border-radius: 12px; background: #fff; }
+.history-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .86rem; }
+.history-table th, .history-table td { padding: 14px 12px; border-bottom: 1px solid #e0e8f0; }
+.history-table thead { color: #47637f; background: #eef4f8; }
+.history-table th { font-weight: 750; }
+.history-table td:nth-child(n+3) { white-space: nowrap; }
+.history-table tbody tr:last-child > * { border-bottom: 0; }
 footer { padding: 22px 5px 0; font-size: .8rem; text-align: center; }
 footer a { color: #eaf7ff; font-weight: 700; text-decoration: none; }
 footer a:hover { text-decoration: underline; }

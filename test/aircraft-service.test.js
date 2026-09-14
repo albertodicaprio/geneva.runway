@@ -43,6 +43,7 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
     assert.deepEqual(result.recentTracks, [{
         icao24: 'landed',
         track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
+        disappearedAt: 3_700,
         expiresAt: 10_900
     }]);
 });
@@ -67,7 +68,7 @@ test('retains flight and aircraft details with a disappeared trail across cached
         }
     };
     const disappeared = addArrivalTracks({ updatedAt: 130, aircraft: [] }, { aircraft: [aircraft] });
-    const expected = { ...aircraft, icao24: 'abc123', expiresAt: 7_330 };
+    const expected = { ...aircraft, icao24: 'abc123', disappearedAt: 130, expiresAt: 7_330 };
     assert.deepEqual(disappeared.recentTracks, [expected]);
 
     // The on-disk cache uses JSON; retained details must survive that round trip.

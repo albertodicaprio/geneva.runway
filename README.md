@@ -14,6 +14,9 @@ remain together in the cache and the API's `recentTracks` for two hours. These
 are last observed values; leaving the list does not confirm touchdown. The map
 continues to show the retained trail without an aircraft marker. Older cached
 trails that already lost their details remain usable but cannot recover them.
+The Recent landings box below the live arrivals lists unexpired flights, newest
+first, with aircraft type, registration, estimated landing time in Geneva time,
+and the last likely runway and heading. Unavailable details are shown as unknown.
 
 ## Run with Docker Compose
 

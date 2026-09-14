@@ -176,6 +176,46 @@ function updateUI() {
     updateNextArrival();
     updateMap();
     updateAircraftList();
+    updateFlightHistory();
+}
+
+function unexpiredTracks() {
+    const tracks = Array.isArray(latestData?.recentTracks) ? latestData.recentTracks : [];
+    return tracks.filter(aircraft => Number.isFinite(aircraft.expiresAt) && aircraft.expiresAt > Date.now() / 1000);
+}
+
+function historyTime(aircraft) {
+    // Older cached records predate disappearedAt and use the same two-hour retention.
+    return Number.isFinite(aircraft.disappearedAt) ? aircraft.disappearedAt : aircraft.expiresAt - 2 * 60 * 60;
+}
+
+function updateFlightHistory() {
+    const history = unexpiredTracks().sort((first, second) => historyTime(second) - historyTime(first));
+    document.getElementById('historyCount').textContent = `${history.length} flight${history.length === 1 ? '' : 's'}`;
+    const container = document.getElementById('flightHistory');
+    if (!history.length) {
+        container.innerHTML = '<p class="no-aircraft">No recent landings in the retained history.</p>';
+        return;
+    }
+    const rows = history.map(aircraft => {
+        const details = aircraft.aircraftDetails || {};
+        const time = new Date(historyTime(aircraft) * 1000);
+        const runway = ['04', '22'].includes(aircraft.approachDirection) ? `Likely ${aircraft.approachDirection}` : 'Unknown';
+        const heading = Number.isFinite(aircraft.heading) ? ` · ${Math.round(aircraft.heading)}°` : '';
+        return `<tr>
+            <th scope="row">${escapeHtml(aircraft.callsign || aircraft.icao24 || 'Unknown')}</th>
+            <td>${escapeHtml(details.type || details.icao_type || '—')}</td>
+            <td>${escapeHtml(details.registration || '—')}</td>
+            <td><time datetime="${time.toISOString()}">${escapeHtml(time.toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }))}</time></td>
+            <td>${escapeHtml(runway + heading)}</td>
+        </tr>`;
+    }).join('');
+    container.innerHTML = `<div class="history-table-wrap" role="region" aria-label="Recent landings" tabindex="0">
+        <table class="history-table">
+            <thead><tr><th scope="col">Flight</th><th scope="col">Plane type</th><th scope="col">Registration</th><th scope="col">Landing (est.)</th><th scope="col">Last runway / heading</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
 }
 
 function updateStatus() {
@@ -229,7 +269,7 @@ function updateNextArrival() {
 function updateMap() {
     const paths = document.getElementById('mapPaths');
     const markers = document.getElementById('mapMarkers');
-    const recentTracks = Array.isArray(latestData?.recentTracks) ? latestData.recentTracks : [];
+    const recentTracks = unexpiredTracks();
     paths.innerHTML = [
         ...recentTracks.map(track => mapPath(track, false)),
         ...aircraftData.map(aircraft => mapPath(aircraft, true))
@@ -275,11 +315,18 @@ function updateAircraftList() {
 
 function displayError(message) {
     document.getElementById('aircraftList').innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
+    if (!latestData) document.getElementById('flightHistory').innerHTML = '<p class="no-aircraft">Flight history is currently unavailable.</p>';
 }
 
 function init() {
     fetchAircraftData();
     setInterval(fetchAircraftData, FETCH_INTERVAL);
+    setInterval(() => {
+        if (latestData) {
+            updateFlightHistory();
+            updateMap();
+        }
+    }, FETCH_INTERVAL);
 }
 
 if (document.readyState === 'loading') {

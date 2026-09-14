@@ -165,6 +165,13 @@ Completed:
    - Added coverage for detail retention across refreshes, cache serialization,
      position projection, and expiration.
 
+25. Display retained flight history below the live arrivals.
+   - Shows aircraft type, registration, estimated landing time in Geneva time,
+     and last likely runway / heading, newest first, with missing-data fallbacks.
+   - Records disappearance time explicitly; older records use their expiry time
+     minus the existing two-hour retention window.
+   - Removes expired history and map paths even when polling is interrupted.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
