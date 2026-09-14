@@ -80,7 +80,7 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .history-table th, .history-table td { padding: 14px 12px; border-bottom: 1px solid #e0e8f0; }
 .history-table thead { color: #47637f; background: #eef4f8; }
 .history-table th { font-weight: 750; }
-.history-table td:nth-child(n+3) { white-space: nowrap; }
+.history-table td:nth-child(n+4) { white-space: nowrap; }
 .history-table tbody tr:last-child > * { border-bottom: 0; }
 footer { padding: 22px 5px 0; font-size: .8rem; text-align: center; }
 footer a { color: #eaf7ff; font-weight: 700; text-decoration: none; }

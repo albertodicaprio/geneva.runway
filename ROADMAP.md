@@ -172,6 +172,9 @@ Completed:
      minus the existing two-hour retention window.
    - Removes expired history and map paths even when polling is interrupted.
 
+26. Add airline to the flight history table.
+   - Shows the retained airline name beside the flight, or a dash if unavailable.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

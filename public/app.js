@@ -204,6 +204,7 @@ function updateFlightHistory() {
         const heading = Number.isFinite(aircraft.heading) ? ` · ${Math.round(aircraft.heading)}°` : '';
         return `<tr>
             <th scope="row">${escapeHtml(aircraft.callsign || aircraft.icao24 || 'Unknown')}</th>
+            <td>${escapeHtml(aircraft.route?.airline?.name || '—')}</td>
             <td>${escapeHtml(details.type || details.icao_type || '—')}</td>
             <td>${escapeHtml(details.registration || '—')}</td>
             <td><time datetime="${time.toISOString()}">${escapeHtml(time.toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }))}</time></td>
@@ -212,7 +213,7 @@ function updateFlightHistory() {
     }).join('');
     container.innerHTML = `<div class="history-table-wrap" role="region" aria-label="Recent landings" tabindex="0">
         <table class="history-table">
-            <thead><tr><th scope="col">Flight</th><th scope="col">Plane type</th><th scope="col">Registration</th><th scope="col">Landing (est.)</th><th scope="col">Last runway / heading</th></tr></thead>
+            <thead><tr><th scope="col">Flight</th><th scope="col">Airline</th><th scope="col">Plane type</th><th scope="col">Registration</th><th scope="col">Landing (est.)</th><th scope="col">Last runway / heading</th></tr></thead>
             <tbody>${rows}</tbody>
         </table>
     </div>`;
