@@ -47,6 +47,39 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
     }]);
 });
 
+test('retains flight and aircraft details with a disappeared trail across cached refreshes', () => {
+    const aircraft = {
+        icao24: 'ABC123', callsign: 'SWR123', country: 'Switzerland',
+        latitude: 46.24, longitude: 6.11, altitude: 450, velocity: 70,
+        heading: 220, verticalRate: -2, onGround: false,
+        approachDirection: '22', approachConfidence: 'high',
+        route: {
+            callsign: 'SWR123', airline: { name: 'Swiss' },
+            origin: { iata_code: 'LHR' }, destination: { iata_code: 'GVA' }
+        },
+        aircraftDetails: {
+            registration: 'HB-TEST', type: 'Airbus A320', icao_type: 'A320',
+            url_photo_thumbnail: 'https://example.com/aircraft.jpg'
+        },
+        track: {
+            color: 'hsl(40 65% 32%)', colorVersion: 2,
+            points: [{ latitude: 46.24, longitude: 6.11, timestamp: 100 }]
+        }
+    };
+    const disappeared = addArrivalTracks({ updatedAt: 130, aircraft: [] }, { aircraft: [aircraft] });
+    const expected = { ...aircraft, icao24: 'abc123', expiresAt: 7_330 };
+    assert.deepEqual(disappeared.recentTracks, [expected]);
+
+    // The on-disk cache uses JSON; retained details must survive that round trip.
+    const restored = JSON.parse(JSON.stringify(disappeared));
+    const refreshed = addArrivalTracks({ updatedAt: 160, aircraft: [] }, restored);
+    assert.deepEqual(refreshed.recentTracks, [expected]);
+    assert.deepEqual(projectAircraftData(refreshed, 200_000).recentTracks, [expected]);
+    assert.deepEqual(addArrivalTracks({ updatedAt: 7_330, aircraft: [] }, refreshed).recentTracks, []);
+    assert.equal(aircraft.icao24, 'ABC123');
+    assert.equal(aircraft.expiresAt, undefined);
+});
+
 test('removes a disappeared arrival trail after its two-hour retention window', () => {
     const result = addArrivalTracks({ updatedAt: 10_901, aircraft: [] }, {
         recentTracks: [{

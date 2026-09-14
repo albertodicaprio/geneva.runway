@@ -158,6 +158,13 @@ Completed:
      05:00 Europe/Zurich time to conserve OpenSky tokens. Cached paths remain
      available during the pause and refreshes resume at 05:00.
 
+24. Preserve aircraft details with flight history.
+   - Retained trails now include the full last-known arrival record, including
+     callsign, route, airline, and aircraft details, in the cache and API.
+   - The existing two-hour retention window and marker-free map display remain.
+   - Added coverage for detail retention across refreshes, cache serialization,
+     position projection, and expiration.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

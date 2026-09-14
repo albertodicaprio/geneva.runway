@@ -8,6 +8,13 @@ The app is intended to run on a home-network machine, rather than a public
 cloud host. It obtains live position data from OpenSky and route and aircraft
 details from ADSBdb.
 
+When an arrival leaves the live list, its recorded track and full last-known
+details (including callsign, route, airline, registration, and aircraft type)
+remain together in the cache and the API's `recentTracks` for two hours. These
+are last observed values; leaving the list does not confirm touchdown. The map
+continues to show the retained trail without an aircraft marker. Older cached
+trails that already lost their details remain usable but cannot recover them.
+
 ## Run with Docker Compose
 
 ### Prerequisites
