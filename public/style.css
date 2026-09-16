@@ -6,7 +6,7 @@
 
 * { box-sizing: border-box; }
 
-body { margin: 0; min-width: 320px; background: linear-gradient(120deg, #123c64, #165f7a); }
+body { margin: 0; min-width: 320px; background: inherit; }
 
 .container { width: min(1040px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 48px; }
 
