@@ -18,6 +18,14 @@ The Recent landings box below the live arrivals lists unexpired flights, newest
 first, with aircraft type, registration, estimated landing time in Geneva time,
 and the last likely runway and heading. Unavailable details are shown as unknown.
 
+The map has independent toggles for landing traffic (including retained paths)
+and general traffic. Landing traffic starts visible; general traffic starts hidden,
+and the browser remembers both choices. General traffic includes other airborne
+OpenSky aircraft in the area, including flights with unknown destinations and
+high-altitude overflights. Its trails are neon green at 80% opacity, accumulate
+up to one hour of positions, and disappear when the aircraft leaves the live
+data. Both layers share the existing upstream refresh and cache.
+
 ## Run with Docker Compose
 
 ### Prerequisites

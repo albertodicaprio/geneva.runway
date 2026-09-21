@@ -175,6 +175,13 @@ Completed:
 26. Add airline to the flight history table.
    - Shows the retained airline name beside the flight, or a dash if unavailable.
 
+27. Add optional general traffic and independent map layers.
+   - Includes other airborne OpenSky traffic using the existing cached refresh,
+     with one-hour trails drawn in neon green at 80% opacity.
+   - Separate remembered toggles hide markers and paths for landing traffic
+     and general traffic; general traffic starts hidden.
+   - General traffic stays out of the arrivals and landing history tables.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

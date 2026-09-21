@@ -11,6 +11,25 @@ let aircraftData = [];
 let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
+const mapLayers = { arrivals: true, general: false };
+
+function initMapLayers() {
+    try {
+        const saved = JSON.parse(localStorage.getItem('geneva-map-layers'));
+        for (const key of Object.keys(mapLayers)) {
+            if (typeof saved?.[key] === 'boolean') mapLayers[key] = saved[key];
+        }
+    } catch { /* Storage may be unavailable. Use the default layers. */ }
+    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic']]) {
+        const input = document.getElementById(id);
+        input.checked = mapLayers[key];
+        input.addEventListener('change', () => {
+            mapLayers[key] = input.checked;
+            try { localStorage.setItem('geneva-map-layers', JSON.stringify(mapLayers)); } catch { /* Keep the choice for this page. */ }
+            updateMap();
+        });
+    }
+}
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, character => ({
@@ -116,7 +135,7 @@ function smoothMapPath(points) {
     return path;
 }
 
-function mapPath(aircraft, includeEstimatedPosition = true) {
+function mapPath(aircraft, includeEstimatedPosition = true, general = false) {
     const points = (aircraft.track?.points || [])
         .map(point => mapCoordinates(point.latitude, point.longitude))
         .filter(Boolean);
@@ -126,13 +145,13 @@ function mapPath(aircraft, includeEstimatedPosition = true) {
     }
     if (points.length < 2 || !aircraft.track?.color) return '';
     const path = smoothMapPath(points);
-    return `<path class="map-flight-path" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
+    return `<path class="map-flight-path${general ? ' map-general-path' : ''}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
 }
 
-function mapMarker(aircraft) {
+function mapMarker(aircraft, general = false) {
     const position = mapPosition(aircraft.latitude, aircraft.longitude);
     if (!position) return '';
-    const callsign = aircraft.callsign || 'Unknown aircraft';
+    const callsign = aircraft.callsign || aircraft.icao24 || 'Unknown aircraft';
     const altitude = formatAltitude(aircraft.altitude);
     const heading = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
     const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
@@ -140,7 +159,7 @@ function mapMarker(aircraft) {
     const icon = Number.isFinite(aircraft.heading)
         ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
         : '<circle class="map-aircraft-icon" r="12"></circle>';
-    return `<g class="map-aircraft${headingClass}" transform="translate(${position.x} ${position.y})" role="img" aria-label="${escapeHtml(label)}">
+    return `<g class="map-aircraft${headingClass}${general ? ' map-general-aircraft' : ''}" transform="translate(${position.x} ${position.y})" role="img" aria-label="${escapeHtml(label)}">
         <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
     </g>`;
 }
@@ -270,13 +289,22 @@ function updateNextArrival() {
 function updateMap() {
     const paths = document.getElementById('mapPaths');
     const markers = document.getElementById('mapMarkers');
-    const recentTracks = unexpiredTracks();
+    const recentTracks = mapLayers.arrivals ? unexpiredTracks() : [];
+    const arrivals = mapLayers.arrivals ? aircraftData : [];
+    const general = mapLayers.general && Array.isArray(latestData?.generalTraffic) ? latestData.generalTraffic : [];
     paths.innerHTML = [
+        ...general.map(aircraft => mapPath(aircraft, true, true)),
         ...recentTracks.map(track => mapPath(track, false)),
-        ...aircraftData.map(aircraft => mapPath(aircraft, true))
+        ...arrivals.map(aircraft => mapPath(aircraft, true))
     ].filter(Boolean).join('');
-    const markerMarkup = aircraftData.map(mapMarker).filter(Boolean).join('');
-    markers.innerHTML = markerMarkup || '<text class="map-empty" x="874" y="874" text-anchor="middle">No tracked aircraft are within this map area.</text>';
+    const markerMarkup = [
+        ...general.map(aircraft => mapMarker(aircraft, true)),
+        ...arrivals.map(aircraft => mapMarker(aircraft))
+    ].filter(Boolean).join('');
+    const emptyMessage = !mapLayers.arrivals && !mapLayers.general
+        ? 'Select a traffic layer to show aircraft.'
+        : 'No aircraft in the selected layers are within this map area.';
+    markers.innerHTML = markerMarkup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${emptyMessage}</text>`;
 }
 
 function updateAircraftList() {
@@ -320,6 +348,7 @@ function displayError(message) {
 }
 
 function init() {
+    initMapLayers();
     fetchAircraftData();
     setInterval(fetchAircraftData, FETCH_INTERVAL);
     setInterval(() => {

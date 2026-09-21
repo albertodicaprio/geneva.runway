@@ -38,10 +38,15 @@
                 <div class="section-heading">
                     <div>
                         <p class="eyebrow">LIVE POSITION</p>
-                        <h2 id="mapHeading">Arrivals near Geneva</h2>
+                        <h2 id="mapHeading">Traffic near Geneva</h2>
                     </div>
-                    <p class="map-note">Aircraft positions may be estimated for up to 30 seconds.</p>
+                    <p class="map-note">Aircraft positions may be estimated for up to 60 seconds.</p>
                 </div>
+                <fieldset class="map-controls">
+                    <legend>Show on map</legend>
+                    <label><input type="checkbox" id="showArrivals" checked> Landing traffic and paths</label>
+                    <label><input type="checkbox" id="showGeneralTraffic"> <span class="general-traffic-swatch" aria-hidden="true"></span> General traffic and paths</label>
+                </fieldset>
                 <div class="aircraft-map" id="aircraftMap">
                     <img src="geneva_map.png" alt="Map of the Geneva region" width="1748" height="1747">
                     <svg class="map-markers" viewBox="0 0 1748 1747" role="img"
