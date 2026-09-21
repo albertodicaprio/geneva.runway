@@ -12,7 +12,7 @@ let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
 let selectedAircraftId = null;
-const mapLayers = { arrivals: true, general: false };
+const mapLayers = { arrivals: true, general: false, departuresOnly: false };
 
 function initMapLayers() {
     try {
@@ -21,15 +21,17 @@ function initMapLayers() {
             if (typeof saved?.[key] === 'boolean') mapLayers[key] = saved[key];
         }
     } catch { /* Storage may be unavailable. Use the default layers. */ }
-    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic']]) {
+    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic'], ['departuresOnly', 'showDeparturesOnly']]) {
         const input = document.getElementById(id);
         input.checked = mapLayers[key];
         input.addEventListener('change', () => {
             mapLayers[key] = input.checked;
+            document.getElementById('showDeparturesOnly').disabled = !mapLayers.general;
             try { localStorage.setItem('geneva-map-layers', JSON.stringify(mapLayers)); } catch { /* Keep the choice for this page. */ }
             updateMap();
         });
     }
+    document.getElementById('showDeparturesOnly').disabled = !mapLayers.general;
 }
 
 function escapeHtml(value) {
@@ -289,10 +291,19 @@ function updateNextArrival() {
         </div>`;
 }
 
+function visibleGeneralTraffic() {
+    if (!mapLayers.general || !Array.isArray(latestData?.generalTraffic)) return [];
+    return latestData.generalTraffic.filter(aircraft => {
+        if (!mapLayers.departuresOnly) return true;
+        const origin = aircraft.route?.origin;
+        return origin?.iata_code?.toUpperCase() === 'GVA' || origin?.icao_code?.toUpperCase() === 'LSGG';
+    });
+}
+
 function visibleMapAircraft() {
     return [
         ...(mapLayers.arrivals ? aircraftData : []),
-        ...(mapLayers.general ? latestData?.generalTraffic || [] : [])
+        ...visibleGeneralTraffic()
     ].filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
 }
 
@@ -364,7 +375,7 @@ function updateMap() {
     const markers = document.getElementById('mapMarkers');
     const recentTracks = mapLayers.arrivals ? unexpiredTracks() : [];
     const arrivals = mapLayers.arrivals ? aircraftData : [];
-    const general = mapLayers.general && Array.isArray(latestData?.generalTraffic) ? latestData.generalTraffic : [];
+    const general = visibleGeneralTraffic();
     paths.innerHTML = [
         ...general.map(aircraft => mapPath(aircraft, true, true)),
         ...recentTracks.map(track => mapPath(track, false)),

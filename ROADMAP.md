@@ -199,6 +199,12 @@ Completed:
      and route, with a fallback when no photo is available or loading fails.
    - Selected map icons turn bright yellow for both traffic layers.
 
+31. Filter general traffic to Geneva departures.
+   - Adds a remembered departures-only filter using GVA/LSGG route origins.
+   - Filters general traffic icons and paths, excluding unknown origins, and
+     closes details when a selected aircraft is filtered out.
+   - Existing landing traffic remains independently toggleable.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

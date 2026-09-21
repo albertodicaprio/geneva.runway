@@ -29,7 +29,10 @@ data. Both layers share the existing upstream refresh and cache. Click a plane i
 to expand its photo, model, and full origin/destination airport names below the map.
 The selected icon turns bright yellow; unavailable photos show a placeholder.
 Click it again, use Close, or press Escape to dismiss the details. Aircraft
-models for general traffic use cached ADSBdb lookups.
+models for general traffic use cached ADSBdb lookups. With general traffic enabled,
+select Departures from Geneva only to filter its icons and paths to airborne
+flights whose reported origin is GVA/LSGG. Unknown origins are excluded. This
+choice is remembered; turn off landing traffic to view departures alone.
 
 ## Run with Docker Compose
 

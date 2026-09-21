@@ -46,7 +46,9 @@
                     <legend>Show on map</legend>
                     <label><input type="checkbox" id="showArrivals" checked> Landing traffic and paths</label>
                     <label><input type="checkbox" id="showGeneralTraffic"> <span class="general-traffic-swatch" aria-hidden="true"></span> General traffic and paths</label>
+                    <label><input type="checkbox" id="showDeparturesOnly" aria-describedby="departuresNote" disabled> Departures from Geneva only (general traffic)</label>
                 </fieldset>
+                <p id="departuresNote" class="history-note">Departure filtering shows airborne flights whose reported origin is Geneva. Flights with unknown origins are excluded.</p>
                 <div class="aircraft-map" id="aircraftMap">
                     <img src="geneva_map.png" alt="Map of the Geneva region" width="1748" height="1747">
                     <svg class="map-markers" viewBox="0 0 1748 1747" role="group"

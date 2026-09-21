@@ -34,7 +34,7 @@ test('general traffic includes high and unidentified airborne traffic without du
 });
 
 test('map toggles hide paths and markers independently, persist choices and tolerate unavailable storage', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDeparturesOnly', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
         addEventListener(event, handler) { this.change = handler; }
     }]));
     let saved;
@@ -56,7 +56,7 @@ test('map toggles hide paths and markers independently, persist choices and tole
     elements.showArrivals.change();
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /ARRIVAL/);
     assert.doesNotMatch(elements.mapPaths.innerHTML, /stroke="red"/);
-    assert.deepEqual(JSON.parse(saved), { arrivals: false, general: true });
+    assert.deepEqual(JSON.parse(saved), { arrivals: false, general: true, departuresOnly: false });
     vm.runInContext('mapLayers.arrivals = true; mapLayers.general = false; initMapLayers();', context);
     assert.equal(elements.showArrivals.checked, false);
     assert.equal(elements.showGeneralTraffic.checked, true);
@@ -145,4 +145,47 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     assert.equal(elements.mapDetailsOrigin.textContent, 'Unknown airport');
     vm.runInContext('mapLayers.general = false; updateMap();', context);
     assert.equal(elements.mapAircraftDetails.hidden, true);
+});
+
+test('departure filter keeps GVA and LSGG origins, hides other and unknown traffic, and preserves arrival layers', () => {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDeparturesOnly', 'mapAircraftDetails'].map(id => [id, {
+        addEventListener(event, handler) { this.change = handler; }
+    }]));
+    let saved;
+    const context = vm.createContext({
+        document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] },
+        localStorage: { getItem: () => saved || null, setItem: (key, value) => { saved = value; } }
+    });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
+    const track = { color: '#00bfff', points: [{ latitude: 46.2, longitude: 6.1 }, { latitude: 46.3, longitude: 6.2 }] };
+    context.fixture = {
+        aircraft: [aircraft('ARRIVAL')],
+        generalTraffic: [
+            aircraft('DEPART1', { track, route: { origin: { iata_code: 'GVA' } } }),
+            aircraft('DEPART2', { track, route: { origin: { icao_code: 'lsgg' } } }),
+            aircraft('OVERFLIGHT', { track, route: { origin: { iata_code: 'LHR' } } }),
+            aircraft('UNKNOWN', { track })
+        ]
+    };
+    vm.runInContext('latestData = fixture; aircraftData = fixture.aircraft; initMapLayers();', context);
+    assert.equal(elements.showDeparturesOnly.disabled, true);
+    elements.showGeneralTraffic.checked = true;
+    elements.showGeneralTraffic.change();
+    assert.equal(elements.showDeparturesOnly.disabled, false);
+    elements.showDeparturesOnly.checked = true;
+    vm.runInContext("selectedAircraftId = 'OVERFLIGHT';", context);
+    elements.showDeparturesOnly.change();
+    assert.match(elements.mapMarkers.innerHTML, /DEPART1/);
+    assert.match(elements.mapMarkers.innerHTML, /DEPART2/);
+    assert.match(elements.mapMarkers.innerHTML, /ARRIVAL/);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /OVERFLIGHT|UNKNOWN/);
+    assert.equal((elements.mapPaths.innerHTML.match(/<path /g) || []).length, 2);
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    assert.equal(JSON.parse(saved).departuresOnly, true);
+    vm.runInContext('mapLayers.departuresOnly = false; initMapLayers();', context);
+    assert.equal(elements.showDeparturesOnly.checked, true);
+    elements.showDeparturesOnly.checked = false;
+    elements.showDeparturesOnly.change();
+    assert.match(elements.mapMarkers.innerHTML, /OVERFLIGHT/);
+    assert.match(elements.mapMarkers.innerHTML, /UNKNOWN/);
 });
