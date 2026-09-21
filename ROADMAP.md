@@ -177,13 +177,13 @@ Completed:
 
 27. Add optional general traffic and independent map layers.
    - Includes other airborne OpenSky traffic using the existing cached refresh,
-     with one-hour trails drawn in neon green at 40% opacity.
+     with one-hour trails drawn in neon blue at 40% opacity.
    - Separate remembered toggles hide markers and paths for landing traffic
      and general traffic; general traffic starts hidden.
    - General traffic stays out of the arrivals and landing history tables.
 
 28. Add route tooltips and lighten general traffic icons.
-   - General traffic uses light green icons; map tooltips show origin and
+   - General traffic uses light navy blue icons; map tooltips show origin and
      destination on their second line, with explicit unknown fallbacks.
    - General traffic routes use cached ADSBdb lookups, including overflights,
      without changing arrival classification or OpenSky refresh frequency.

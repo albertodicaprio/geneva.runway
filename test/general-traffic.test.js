@@ -20,7 +20,7 @@ test('general traffic includes high and unidentified airborne traffic without du
     const result = addGeneralTraffic({ aircraft: [arrival] }, data, previous);
     assert.deepEqual(result.aircraft, [arrival]);
     assert.deepEqual(result.generalTraffic.map(a => a.icao24), ['general']);
-    assert.equal(result.generalTraffic[0].track.color, '#39ff14');
+    assert.equal(result.generalTraffic[0].track.color, '#00bfff');
     assert.deepEqual(result.generalTraffic[0].track.points.map(p => p.timestamp), [400, 4000]);
     const restored = JSON.parse(JSON.stringify(result));
     const repeated = addGeneralTraffic({ aircraft: [arrival] }, data, restored);
@@ -30,7 +30,7 @@ test('general traffic includes high and unidentified airborne traffic without du
     assert.equal(restored.generalTraffic[0].longitude, 6.2);
     const promoted = addArrivalTracks({ updatedAt: 4030, aircraft: [aircraft('general')] }, restored);
     assert.deepEqual(promoted.aircraft[0].track.points.map(p => p.timestamp), [4000, 4030]);
-    assert.notEqual(promoted.aircraft[0].track.color, '#39ff14');
+    assert.notEqual(promoted.aircraft[0].track.color, '#00bfff');
 });
 
 test('map toggles hide paths and markers independently, persist choices and tolerate unavailable storage', () => {
@@ -44,7 +44,7 @@ test('map toggles hide paths and markers independently, persist choices and tole
     });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
     const track = { color: 'red', points: [{ latitude: 46.2, longitude: 6.1 }, { latitude: 46.3, longitude: 6.2 }] };
-    context.fixture = { aircraft: [aircraft('ARRIVAL', { track })], generalTraffic: [aircraft('GENERAL', { track: { ...track, color: '#39ff14' } })], recentTracks: [{ track, expiresAt: Date.now() / 1000 + 500 }] };
+    context.fixture = { aircraft: [aircraft('ARRIVAL', { track })], generalTraffic: [aircraft('GENERAL', { track: { ...track, color: '#00bfff' } })], recentTracks: [{ track, expiresAt: Date.now() / 1000 + 500 }] };
     vm.runInContext('latestData = fixture; aircraftData = fixture.aircraft; initMapLayers(); updateMap();', context);
     assert.match(elements.mapMarkers.innerHTML, /ARRIVAL/);
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /GENERAL/);

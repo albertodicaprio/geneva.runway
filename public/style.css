@@ -113,6 +113,6 @@ footer a:hover { text-decoration: underline; }
 .map-controls legend { margin-bottom: 8px; color: #47637f; font-size: .86rem; font-weight: 750; }
 .map-controls label { display: flex; align-items: center; gap: 8px; min-height: 32px; cursor: pointer; font-size: .86rem; }
 .map-controls input { width: 18px; height: 18px; accent-color: #165f7a; }
-.general-traffic-swatch { width: 22px; height: 5px; border-radius: 3px; background: #39ff14; opacity: .4; }
-.map-general-path { stroke: #39ff14; opacity: .4; }
-.map-general-aircraft .map-aircraft-icon { fill: #8eae65; }
+.general-traffic-swatch { width: 22px; height: 5px; border-radius: 3px; background: #00bfff; opacity: .4; }
+.map-general-path { stroke: #00bfff; opacity: .4; }
+.map-general-aircraft .map-aircraft-icon { fill: #607fa6; }
