@@ -116,6 +116,9 @@ footer a:hover { text-decoration: underline; }
 .general-traffic-swatch { width: 22px; height: 5px; border-radius: 3px; background: #00bfff; opacity: .55; }
 .map-general-path { stroke: #00bfff; opacity: .55; }
 .map-general-aircraft .map-aircraft-icon { fill: #607fa6; }
+.departure-traffic-swatch { width: 22px; height: 5px; border-radius: 3px; background: #ff0000; opacity: .55; }
+.map-departure-path { stroke: #ff0000; opacity: .55; }
+.map-departure-aircraft .map-aircraft-icon { fill: #8a0303; }
 
 .map-aircraft:focus-visible .map-aircraft-icon, .map-aircraft[aria-expanded="true"] .map-aircraft-icon { stroke: #102d48; stroke-width: 4px; }
 .map-details { margin-top: 12px; padding: 18px; border: 1px solid #d4e1ea; border-radius: 12px; background: #fff; }

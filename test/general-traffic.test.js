@@ -34,7 +34,7 @@ test('general traffic includes high and unidentified airborne traffic without du
 });
 
 test('map toggles hide paths and markers independently, persist choices and tolerate unavailable storage', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDeparturesOnly', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDepartures', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
         addEventListener(event, handler) { this.change = handler; }
     }]));
     let saved;
@@ -56,7 +56,7 @@ test('map toggles hide paths and markers independently, persist choices and tole
     elements.showArrivals.change();
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /ARRIVAL/);
     assert.doesNotMatch(elements.mapPaths.innerHTML, /stroke="red"/);
-    assert.deepEqual(JSON.parse(saved), { arrivals: false, general: true, departuresOnly: false });
+    assert.deepEqual(JSON.parse(saved), { arrivals: false, general: true, departures: false });
     vm.runInContext('mapLayers.arrivals = true; mapLayers.general = false; initMapLayers();', context);
     assert.equal(elements.showArrivals.checked, false);
     assert.equal(elements.showGeneralTraffic.checked, true);
@@ -101,11 +101,11 @@ test('map tooltips show route on a second line with escaped airport names and un
     const context = vm.createContext({ URL, document: { readyState: 'loading', addEventListener() {} } });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
     const plane = aircraft('GENERAL', { route: { origin: { iata_code: 'LHR' }, destination: { icao_code: 'LSGG' } } });
-    assert.match(context.mapMarker(plane, true), /<title>GENERAL, [^\n]+\nLHR → LSGG<\/title>/);
+    assert.match(context.mapMarker(plane, 'general'), /<title>GENERAL, [^\n]+\nLHR → LSGG<\/title>/);
     plane.route = { origin: { name: '<Airport>' } };
-    assert.match(context.mapMarker(plane, true), /\n&lt;Airport&gt; → Unknown<\/title>/);
+    assert.match(context.mapMarker(plane, 'general'), /\n&lt;Airport&gt; → Unknown<\/title>/);
     delete plane.route;
-    assert.match(context.mapMarker(plane, true), /\nUnknown → Unknown<\/title>/);
+    assert.match(context.mapMarker(plane, 'general'), /\nUnknown → Unknown<\/title>/);
 });
 
 test('clicking and keyboard-selecting aircraft opens full details and hides them when the layer is disabled', () => {
@@ -147,8 +147,8 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     assert.equal(elements.mapAircraftDetails.hidden, true);
 });
 
-test('departure filter keeps GVA and LSGG origins, hides other and unknown traffic, and preserves arrival layers', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDeparturesOnly', 'mapAircraftDetails'].map(id => [id, {
+test('departures form an independent layer without duplicates and migrate the old filter preference', () => {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDepartures', 'mapAircraftDetails'].map(id => [id, {
         addEventListener(event, handler) { this.change = handler; }
     }]));
     let saved;
@@ -168,24 +168,34 @@ test('departure filter keeps GVA and LSGG origins, hides other and unknown traff
         ]
     };
     vm.runInContext('latestData = fixture; aircraftData = fixture.aircraft; initMapLayers();', context);
-    assert.equal(elements.showDeparturesOnly.disabled, true);
-    elements.showGeneralTraffic.checked = true;
-    elements.showGeneralTraffic.change();
-    assert.equal(elements.showDeparturesOnly.disabled, false);
-    elements.showDeparturesOnly.checked = true;
+    elements.showDepartures.checked = true;
     vm.runInContext("selectedAircraftId = 'OVERFLIGHT';", context);
-    elements.showDeparturesOnly.change();
+    elements.showDepartures.change();
     assert.match(elements.mapMarkers.innerHTML, /DEPART1/);
     assert.match(elements.mapMarkers.innerHTML, /DEPART2/);
     assert.match(elements.mapMarkers.innerHTML, /ARRIVAL/);
+    assert.match(elements.mapMarkers.innerHTML, /map-departure-aircraft/);
+    assert.match(elements.mapPaths.innerHTML, /map-departure-path/);
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /OVERFLIGHT|UNKNOWN/);
     assert.equal((elements.mapPaths.innerHTML.match(/<path /g) || []).length, 2);
     assert.equal(elements.mapAircraftDetails.hidden, true);
-    assert.equal(JSON.parse(saved).departuresOnly, true);
-    vm.runInContext('mapLayers.departuresOnly = false; initMapLayers();', context);
-    assert.equal(elements.showDeparturesOnly.checked, true);
-    elements.showDeparturesOnly.checked = false;
-    elements.showDeparturesOnly.change();
+    assert.equal(JSON.parse(saved).departures, true);
+    vm.runInContext('mapLayers.departures = false; initMapLayers();', context);
+    assert.equal(elements.showDepartures.checked, true);
+    elements.showGeneralTraffic.checked = true;
+    elements.showGeneralTraffic.change();
     assert.match(elements.mapMarkers.innerHTML, /OVERFLIGHT/);
     assert.match(elements.mapMarkers.innerHTML, /UNKNOWN/);
+    assert.equal((elements.mapMarkers.innerHTML.match(/data-aircraft-id="DEPART1"/g) || []).length, 1);
+    assert.equal((elements.mapPaths.innerHTML.match(/<path /g) || []).length, 4);
+    elements.showDepartures.checked = false;
+    elements.showDepartures.change();
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /DEPART1|DEPART2/);
+    assert.match(elements.mapMarkers.innerHTML, /OVERFLIGHT/);
+    saved = JSON.stringify({ arrivals: false, general: true, departuresOnly: true });
+    vm.runInContext('initMapLayers(); updateMap();', context);
+    assert.equal(elements.showDepartures.checked, true);
+    assert.equal(elements.showGeneralTraffic.checked, false);
+    assert.match(elements.mapMarkers.innerHTML, /DEPART1/);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /OVERFLIGHT/);
 });

@@ -12,26 +12,28 @@ let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
 let selectedAircraftId = null;
-const mapLayers = { arrivals: true, general: false, departuresOnly: false };
+const mapLayers = { arrivals: true, general: false, departures: false };
 
 function initMapLayers() {
     try {
         const saved = JSON.parse(localStorage.getItem('geneva-map-layers'));
+        if (typeof saved?.departures !== 'boolean' && saved?.departuresOnly === true) {
+            mapLayers.departures = saved.general === true;
+        }
         for (const key of Object.keys(mapLayers)) {
             if (typeof saved?.[key] === 'boolean') mapLayers[key] = saved[key];
         }
+        if (saved?.departuresOnly === true && typeof saved?.departures !== 'boolean') mapLayers.general = false;
     } catch { /* Storage may be unavailable. Use the default layers. */ }
-    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic'], ['departuresOnly', 'showDeparturesOnly']]) {
+    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic'], ['departures', 'showDepartures']]) {
         const input = document.getElementById(id);
         input.checked = mapLayers[key];
         input.addEventListener('change', () => {
             mapLayers[key] = input.checked;
-            document.getElementById('showDeparturesOnly').disabled = !mapLayers.general;
             try { localStorage.setItem('geneva-map-layers', JSON.stringify(mapLayers)); } catch { /* Keep the choice for this page. */ }
             updateMap();
         });
     }
-    document.getElementById('showDeparturesOnly').disabled = !mapLayers.general;
 }
 
 function escapeHtml(value) {
@@ -138,7 +140,7 @@ function smoothMapPath(points) {
     return path;
 }
 
-function mapPath(aircraft, includeEstimatedPosition = true, general = false) {
+function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals') {
     const points = (aircraft.track?.points || [])
         .map(point => mapCoordinates(point.latitude, point.longitude))
         .filter(Boolean);
@@ -148,10 +150,10 @@ function mapPath(aircraft, includeEstimatedPosition = true, general = false) {
     }
     if (points.length < 2 || !aircraft.track?.color) return '';
     const path = smoothMapPath(points);
-    return `<path class="map-flight-path${general ? ' map-general-path' : ''}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
+    return `<path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
 }
 
-function mapMarker(aircraft, general = false) {
+function mapMarker(aircraft, layer = 'arrivals') {
     const position = mapPosition(aircraft.latitude, aircraft.longitude);
     if (!position) return '';
     const callsign = aircraft.callsign || aircraft.icao24 || 'Unknown aircraft';
@@ -164,7 +166,7 @@ function mapMarker(aircraft, general = false) {
     const icon = Number.isFinite(aircraft.heading)
         ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
         : '<circle class="map-aircraft-icon" r="12"></circle>';
-    return `<g class="map-aircraft${headingClass}${general ? ' map-general-aircraft' : ''}" transform="translate(${position.x} ${position.y})" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
+    return `<g class="map-aircraft${headingClass}${layer === 'arrivals' ? '' : ` map-${layer}-aircraft`}" transform="translate(${position.x} ${position.y})" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
         <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
     </g>`;
 }
@@ -291,19 +293,26 @@ function updateNextArrival() {
         </div>`;
 }
 
+function isGenevaDeparture(aircraft) {
+    const origin = aircraft.route?.origin;
+    return origin?.iata_code?.toUpperCase() === 'GVA' || origin?.icao_code?.toUpperCase() === 'LSGG';
+}
+
 function visibleGeneralTraffic() {
     if (!mapLayers.general || !Array.isArray(latestData?.generalTraffic)) return [];
-    return latestData.generalTraffic.filter(aircraft => {
-        if (!mapLayers.departuresOnly) return true;
-        const origin = aircraft.route?.origin;
-        return origin?.iata_code?.toUpperCase() === 'GVA' || origin?.icao_code?.toUpperCase() === 'LSGG';
-    });
+    return latestData.generalTraffic.filter(aircraft => !isGenevaDeparture(aircraft));
+}
+
+function visibleDepartures() {
+    if (!mapLayers.departures || !Array.isArray(latestData?.generalTraffic)) return [];
+    return latestData.generalTraffic.filter(isGenevaDeparture);
 }
 
 function visibleMapAircraft() {
     return [
         ...(mapLayers.arrivals ? aircraftData : []),
-        ...visibleGeneralTraffic()
+        ...visibleGeneralTraffic(),
+        ...visibleDepartures()
     ].filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
 }
 
@@ -376,16 +385,19 @@ function updateMap() {
     const recentTracks = mapLayers.arrivals ? unexpiredTracks() : [];
     const arrivals = mapLayers.arrivals ? aircraftData : [];
     const general = visibleGeneralTraffic();
+    const departures = visibleDepartures();
     paths.innerHTML = [
-        ...general.map(aircraft => mapPath(aircraft, true, true)),
+        ...general.map(aircraft => mapPath(aircraft, true, 'general')),
+        ...departures.map(aircraft => mapPath(aircraft, true, 'departure')),
         ...recentTracks.map(track => mapPath(track, false)),
         ...arrivals.map(aircraft => mapPath(aircraft, true))
     ].filter(Boolean).join('');
     const markerMarkup = [
-        ...general.map(aircraft => mapMarker(aircraft, true)),
+        ...general.map(aircraft => mapMarker(aircraft, 'general')),
+        ...departures.map(aircraft => mapMarker(aircraft, 'departure')),
         ...arrivals.map(aircraft => mapMarker(aircraft))
     ].filter(Boolean).join('');
-    const emptyMessage = !mapLayers.arrivals && !mapLayers.general
+    const emptyMessage = !mapLayers.arrivals && !mapLayers.general && !mapLayers.departures
         ? 'Select a traffic layer to show aircraft.'
         : 'No aircraft in the selected layers are within this map area.';
     markers.innerHTML = markerMarkup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${emptyMessage}</text>`;

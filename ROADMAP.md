@@ -205,6 +205,11 @@ Completed:
      closes details when a selected aircraft is filtered out.
    - Existing landing traffic remains independently toggleable.
 
+32. Separate Geneva departures into an independent map layer.
+   - Departures have bright red trails at 55% opacity and blood red icons.
+   - General traffic excludes departures, so enabling both avoids duplicates.
+   - Migrates the old departures-only preference; selected icons stay yellow.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

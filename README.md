@@ -18,21 +18,22 @@ The Recent landings box below the live arrivals lists unexpired flights, newest
 first, with aircraft type, registration, estimated landing time in Geneva time,
 and the last likely runway and heading. Unavailable details are shown as unknown.
 
-The map has independent toggles for landing traffic (including retained paths)
-and general traffic. Landing traffic starts visible; general traffic starts hidden,
+The map has independent toggles for landing traffic (including retained paths),
+general traffic, and Geneva departures. Landing traffic starts visible; general traffic starts hidden,
 and the browser remembers both choices. General traffic includes other airborne
 OpenSky aircraft in the area, including flights with unknown destinations and
 high-altitude overflights. Its aircraft icons are light navy blue, with origin and destination on the second
 line of each map tooltip (or Unknown when unavailable). Its trails are neon blue at 55% opacity, accumulate
 up to one hour of positions, and disappear when the aircraft leaves the live
-data. Both layers share the existing upstream refresh and cache. Click a plane icon
+data. All layers share the existing upstream refresh and cache. Click a plane icon
 to expand its photo, model, and full origin/destination airport names below the map.
 The selected icon turns bright yellow; unavailable photos show a placeholder.
 Click it again, use Close, or press Escape to dismiss the details. Aircraft
-models for general traffic use cached ADSBdb lookups. With general traffic enabled,
-select Departures from Geneva only to filter its icons and paths to airborne
-flights whose reported origin is GVA/LSGG. Unknown origins are excluded. This
-choice is remembered; turn off landing traffic to view departures alone.
+models for general traffic use cached ADSBdb lookups. Geneva departures has its
+own independent toggle for airborne flights whose reported origin is GVA/LSGG,
+with bright red trails at 55% opacity and blood red icons. These flights are
+excluded from general traffic to avoid duplicates. Unknown origins stay in
+general traffic. All three layer choices are remembered.
 
 ## Run with Docker Compose
 
