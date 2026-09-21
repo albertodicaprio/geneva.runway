@@ -97,19 +97,17 @@ test('general routes are cached for overflights and tolerate missing identities 
     } finally { global.fetch = originalFetch; }
 });
 
-test('map tooltips show route on a second line with escaped airport names and unknown fallbacks', () => {
+test('map markers keep accessible labels without hover tooltips', () => {
     const context = vm.createContext({ URL, document: { readyState: 'loading', addEventListener() {} } });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
-    const plane = aircraft('GENERAL', { route: { origin: { iata_code: 'LHR' }, destination: { icao_code: 'LSGG' } } });
-    assert.match(context.mapMarker(plane, 'general'), /<title>GENERAL, [^\n]+\nLHR → LSGG<\/title>/);
-    plane.route = { origin: { name: '<Airport>' } };
-    assert.match(context.mapMarker(plane, 'general'), /\n&lt;Airport&gt; → Unknown<\/title>/);
-    delete plane.route;
-    assert.match(context.mapMarker(plane, 'general'), /\nUnknown → Unknown<\/title>/);
+    const markup = context.mapMarker(aircraft('<GENERAL>'), 'general');
+    assert.doesNotMatch(markup, /<title| title=/);
+    assert.match(markup, /aria-label="&lt;GENERAL&gt;/);
+    assert.match(markup, /Show aircraft details/);
 });
 
 test('clicking and keyboard-selecting aircraft opens full details and hides them when the layer is disabled', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination', 'closeMapDetails', 'mapSection'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination', 'mapDetailsSpeed', 'mapDetailsAltitude', 'mapDetailsBearing', 'closeMapDetails', 'mapSection'].map(id => [id, {
         dataset: {}, handlers: {}, addEventListener(event, handler) { this.handlers[event] = handler; }, querySelectorAll() { return []; }
     }]));
     const context = vm.createContext({ URL, document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] } });
@@ -123,6 +121,13 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     elements.mapMarkers.handlers.click(event);
     assert.equal(elements.mapAircraftDetails.hidden, false);
     assert.equal(elements.mapDetailsModel.textContent, 'Airbus A320');
+    assert.equal(elements.mapDetailsSpeed.textContent, '720 km/h');
+    assert.equal(elements.mapDetailsAltitude.textContent, `${(10000).toLocaleString()} m`);
+    assert.equal(elements.mapDetailsBearing.textContent, '90°');
+    vm.runInContext('fixture.velocity = 0; fixture.altitude = 0; fixture.heading = 359.9; updateMap();', context);
+    assert.equal(elements.mapDetailsSpeed.textContent, '0 km/h');
+    assert.equal(elements.mapDetailsAltitude.textContent, '0 m');
+    assert.equal(elements.mapDetailsBearing.textContent, '0°');
     assert.match(elements.mapDetailsPhoto.innerHTML, /https:\/\/example.com\/plane.jpg/);
     assert.equal(elements.mapDetailsOrigin.textContent, 'London Heathrow Airport (LHR)');
     assert.equal(elements.mapDetailsDestination.textContent, 'Geneva Cointrin International Airport (GVA)');
@@ -139,8 +144,11 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     elements.closeMapDetails.handlers.click();
     assert.equal(elements.mapAircraftDetails.hidden, true);
     elements.mapMarkers.handlers.click(event);
-    vm.runInContext('fixture.route = null; fixture.aircraftDetails = null; updateMap();', context);
+    vm.runInContext('fixture.route = null; fixture.aircraftDetails = null; fixture.velocity = null; fixture.altitude = null; fixture.heading = null; updateMap();', context);
     assert.equal(elements.mapDetailsModel.textContent, 'Unknown model');
+    assert.equal(elements.mapDetailsSpeed.textContent, '—');
+    assert.equal(elements.mapDetailsAltitude.textContent, '—');
+    assert.equal(elements.mapDetailsBearing.textContent, '—');
     assert.match(elements.mapDetailsPhoto.innerHTML, /Photo unavailable/);
     assert.equal(elements.mapDetailsOrigin.textContent, 'Unknown airport');
     vm.runInContext('mapLayers.general = false; updateMap();', context);

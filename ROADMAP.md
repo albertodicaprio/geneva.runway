@@ -210,6 +210,11 @@ Completed:
    - General traffic excludes departures, so enabling both avoids duplicates.
    - Migrates the old departures-only preference; selected icons stay yellow.
 
+33. Add live measurements to selected aircraft details.
+   - Shows ground speed in km/h, altitude in metres, and heading in degrees.
+   - Updates the values during polling and shows dashes for missing data.
+   - Removes aircraft hover tooltips while keeping accessible icon labels.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
