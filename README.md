@@ -22,7 +22,7 @@ The map has independent toggles for landing traffic (including retained paths)
 and general traffic. Landing traffic starts visible; general traffic starts hidden,
 and the browser remembers both choices. General traffic includes other airborne
 OpenSky aircraft in the area, including flights with unknown destinations and
-high-altitude overflights. Its trails are neon green at 80% opacity, accumulate
+high-altitude overflights. Its aircraft icons are army green. Its trails are neon green at 40% opacity, accumulate
 up to one hour of positions, and disappear when the aircraft leaves the live
 data. Both layers share the existing upstream refresh and cache.
 
