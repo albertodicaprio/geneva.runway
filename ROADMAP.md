@@ -194,6 +194,11 @@ Completed:
    - Selection survives polling and closes when its aircraft is no longer visible.
    - General traffic aircraft models use cached ADSBdb enrichment.
 
+30. Add photos and a bright yellow selection highlight.
+   - The selected plane details include its ADSBdb thumbnail beside the model
+     and route, with a fallback when no photo is available or loading fails.
+   - Selected map icons turn bright yellow for both traffic layers.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

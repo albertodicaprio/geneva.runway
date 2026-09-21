@@ -308,6 +308,14 @@ function updateMapDetails() {
         const code = airport?.iata_code || airport?.icao_code;
         return airport?.name ? `${airport.name}${code ? ` (${code})` : ''}` : code || 'Unknown airport';
     };
+    const photo = document.getElementById('mapDetailsPhoto');
+    const photoUrl = safeImageUrl(aircraft.aircraftDetails?.url_photo_thumbnail) || '';
+    if (photo.dataset.photoUrl !== photoUrl) {
+        photo.dataset.photoUrl = photoUrl;
+        photo.innerHTML = photoUrl
+            ? `<img src="${photoUrl}" alt="Selected aircraft" loading="lazy">`
+            : '<p>Photo unavailable</p>';
+    }
     document.getElementById('mapDetailsHeading').textContent = aircraft.callsign || aircraft.icao24;
     document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
     document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
@@ -315,6 +323,11 @@ function updateMapDetails() {
 }
 
 function initMapDetails() {
+    document.getElementById('mapDetailsPhoto').addEventListener('error', event => {
+        if (event.target.tagName === 'IMG') {
+            document.getElementById('mapDetailsPhoto').innerHTML = '<p>Photo unavailable</p>';
+        }
+    }, true);
     const markers = document.getElementById('mapMarkers');
     const select = event => {
         const marker = event.target.closest('[data-aircraft-id]');

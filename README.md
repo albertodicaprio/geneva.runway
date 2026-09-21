@@ -26,7 +26,8 @@ high-altitude overflights. Its aircraft icons are light navy blue, with origin a
 line of each map tooltip (or Unknown when unavailable). Its trails are neon blue at 55% opacity, accumulate
 up to one hour of positions, and disappear when the aircraft leaves the live
 data. Both layers share the existing upstream refresh and cache. Click a plane icon
-to expand its model and full origin/destination airport names below the map.
+to expand its photo, model, and full origin/destination airport names below the map.
+The selected icon turns bright yellow; unavailable photos show a placeholder.
 Click it again, use Close, or press Escape to dismiss the details. Aircraft
 models for general traffic use cached ADSBdb lookups.
 
