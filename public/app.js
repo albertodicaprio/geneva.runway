@@ -373,7 +373,7 @@ function initMapDetails() {
         const id = selectedAircraftId;
         selectedAircraftId = null;
         updateMap();
-        [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === id)?.focus();
+        [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === id)?.focus({ preventScroll: true });
     };
     document.getElementById('closeMapDetails').addEventListener('click', close);
     document.getElementById('mapSection').addEventListener('keydown', event => {
@@ -405,7 +405,7 @@ function updateMap() {
         ? 'Select a traffic layer to show aircraft.'
         : 'No aircraft in the selected layers are within this map area.';
     markers.innerHTML = markerMarkup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${emptyMessage}</text>`;
-    if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === focusedId)?.focus();
+    if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === focusedId)?.focus({ preventScroll: true });
 }
 
 function updateAircraftList() {

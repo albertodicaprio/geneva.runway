@@ -215,6 +215,11 @@ Completed:
    - Updates the values during polling and shows dashes for missing data.
    - Removes aircraft hover tooltips while keeping accessible icon labels.
 
+34. Preserve scroll position during live map updates.
+   - Restores focused aircraft icons without scrolling them into view after
+     polling redraws the map; closing details also preserves the viewport.
+   - Verified with a Chrome reproduction and a focused regression test.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

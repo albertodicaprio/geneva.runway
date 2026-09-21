@@ -207,3 +207,29 @@ test('departures form an independent layer without duplicates and migrate the ol
     assert.match(elements.mapMarkers.innerHTML, /DEPART1/);
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /OVERFLIGHT/);
 });
+
+test('live map refresh restores keyboard focus without scrolling back to the plane', () => {
+    let scrollY = 1600;
+    let focusRestored = false;
+    const marker = {
+        dataset: { aircraftId: 'general' },
+        focus(options) {
+            focusRestored = true;
+            if (!options?.preventScroll) scrollY = 880;
+        }
+    };
+    const elements = {
+        mapPaths: {},
+        mapMarkers: { querySelectorAll: () => [marker] },
+        mapAircraftDetails: {}
+    };
+    const context = vm.createContext({ document: {
+        readyState: 'loading', addEventListener() {}, activeElement: marker,
+        getElementById: id => elements[id]
+    } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
+    context.fixture = aircraft('general');
+    vm.runInContext('latestData = { generalTraffic: [fixture] }; mapLayers.general = true; updateMap();', context);
+    assert.equal(focusRestored, true);
+    assert.equal(scrollY, 1600);
+});
