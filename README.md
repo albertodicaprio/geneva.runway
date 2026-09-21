@@ -25,7 +25,10 @@ OpenSky aircraft in the area, including flights with unknown destinations and
 high-altitude overflights. Its aircraft icons are light navy blue, with origin and destination on the second
 line of each map tooltip (or Unknown when unavailable). Its trails are neon blue at 55% opacity, accumulate
 up to one hour of positions, and disappear when the aircraft leaves the live
-data. Both layers share the existing upstream refresh and cache.
+data. Both layers share the existing upstream refresh and cache. Click a plane icon
+to expand its model and full origin/destination airport names below the map.
+Click it again, use Close, or press Escape to dismiss the details. Aircraft
+models for general traffic use cached ADSBdb lookups.
 
 ## Run with Docker Compose
 

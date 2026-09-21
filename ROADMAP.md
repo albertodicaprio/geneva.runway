@@ -188,6 +188,12 @@ Completed:
    - General traffic routes use cached ADSBdb lookups, including overflights,
      without changing arrival classification or OpenSky refresh frequency.
 
+29. Show aircraft details when a map icon is selected.
+   - Clicking or keyboard-selecting a plane expands its model and full airport
+     names below the map, with unknown fallbacks and a close control.
+   - Selection survives polling and closes when its aircraft is no longer visible.
+   - General traffic aircraft models use cached ADSBdb enrichment.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

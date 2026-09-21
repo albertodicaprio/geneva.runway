@@ -11,6 +11,7 @@ let aircraftData = [];
 let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
+let selectedAircraftId = null;
 const mapLayers = { arrivals: true, general: false };
 
 function initMapLayers() {
@@ -161,7 +162,7 @@ function mapMarker(aircraft, general = false) {
     const icon = Number.isFinite(aircraft.heading)
         ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
         : '<circle class="map-aircraft-icon" r="12"></circle>';
-    return `<g class="map-aircraft${headingClass}${general ? ' map-general-aircraft' : ''}" transform="translate(${position.x} ${position.y})" role="img" aria-label="${escapeHtml(label)}">
+    return `<g class="map-aircraft${headingClass}${general ? ' map-general-aircraft' : ''}" transform="translate(${position.x} ${position.y})" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
         <title>${escapeHtml(label)}</title>${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
     </g>`;
 }
@@ -288,7 +289,64 @@ function updateNextArrival() {
         </div>`;
 }
 
+function visibleMapAircraft() {
+    return [
+        ...(mapLayers.arrivals ? aircraftData : []),
+        ...(mapLayers.general ? latestData?.generalTraffic || [] : [])
+    ].filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
+}
+
+function updateMapDetails() {
+    const panel = document.getElementById('mapAircraftDetails');
+    const aircraft = visibleMapAircraft().find(aircraft => aircraft.icao24 === selectedAircraftId);
+    panel.hidden = !aircraft;
+    if (!aircraft) {
+        selectedAircraftId = null;
+        return;
+    }
+    const fullAirport = airport => {
+        const code = airport?.iata_code || airport?.icao_code;
+        return airport?.name ? `${airport.name}${code ? ` (${code})` : ''}` : code || 'Unknown airport';
+    };
+    document.getElementById('mapDetailsHeading').textContent = aircraft.callsign || aircraft.icao24;
+    document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
+    document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
+    document.getElementById('mapDetailsDestination').textContent = fullAirport(aircraft.route?.destination);
+}
+
+function initMapDetails() {
+    const markers = document.getElementById('mapMarkers');
+    const select = event => {
+        const marker = event.target.closest('[data-aircraft-id]');
+        if (!marker) return;
+        selectedAircraftId = selectedAircraftId === marker.dataset.aircraftId ? null : marker.dataset.aircraftId;
+        updateMapDetails();
+        for (const item of markers.querySelectorAll('[data-aircraft-id]')) {
+            item.setAttribute('aria-expanded', String(item.dataset.aircraftId === selectedAircraftId));
+        }
+    };
+    markers.addEventListener('click', select);
+    markers.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            select(event);
+        }
+    });
+    const close = () => {
+        const id = selectedAircraftId;
+        selectedAircraftId = null;
+        updateMap();
+        [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === id)?.focus();
+    };
+    document.getElementById('closeMapDetails').addEventListener('click', close);
+    document.getElementById('mapSection').addEventListener('keydown', event => {
+        if (event.key === 'Escape' && selectedAircraftId) close();
+    });
+}
+
 function updateMap() {
+    const focusedId = document.activeElement?.dataset?.aircraftId;
+    updateMapDetails();
     const paths = document.getElementById('mapPaths');
     const markers = document.getElementById('mapMarkers');
     const recentTracks = mapLayers.arrivals ? unexpiredTracks() : [];
@@ -307,6 +365,7 @@ function updateMap() {
         ? 'Select a traffic layer to show aircraft.'
         : 'No aircraft in the selected layers are within this map area.';
     markers.innerHTML = markerMarkup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${emptyMessage}</text>`;
+    if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === focusedId)?.focus();
 }
 
 function updateAircraftList() {
@@ -351,6 +410,7 @@ function displayError(message) {
 
 function init() {
     initMapLayers();
+    initMapDetails();
     fetchAircraftData();
     setInterval(fetchAircraftData, FETCH_INTERVAL);
     setInterval(() => {

@@ -34,7 +34,7 @@ test('general traffic includes high and unidentified airborne traffic without du
 });
 
 test('map toggles hide paths and markers independently, persist choices and tolerate unavailable storage', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsDestination'].map(id => [id, {
         addEventListener(event, handler) { this.change = handler; }
     }]));
     let saved;
@@ -74,6 +74,7 @@ test('general routes are cached for overflights and tolerate missing identities 
     const requested = [];
     global.fetch = async url => {
         requested.push(String(url));
+        if (String(url).includes('/aircraft/')) return { ok: true, status: 200, json: async () => ({ response: { aircraft: { type: 'Airbus A320' } } }) };
         const found = String(url).endsWith('/callsign/OVERFLIGHT');
         return { ok: found, status: found ? 200 : 404, json: async () => found
             ? { response: { flightroute: { origin: { iata_code: 'LHR' }, destination: { iata_code: 'GVA' } } } }
@@ -90,7 +91,9 @@ test('general routes are cached for overflights and tolerate missing identities 
         assert.equal(result.generalTraffic[2].route, null);
         assert.deepEqual(result.aircraft, []);
         await enrichGeneralTraffic(data);
-        assert.equal(requested.length, 2);
+        assert.equal(requested.filter(url => url.includes('/callsign/')).length, 2);
+        assert.equal(requested.filter(url => url.includes('/aircraft/')).length, 3);
+        assert.equal(result.generalTraffic[0].aircraftDetails.type, 'Airbus A320');
     } finally { global.fetch = originalFetch; }
 });
 
@@ -103,4 +106,37 @@ test('map tooltips show route on a second line with escaped airport names and un
     assert.match(context.mapMarker(plane, true), /\n&lt;Airport&gt; → Unknown<\/title>/);
     delete plane.route;
     assert.match(context.mapMarker(plane, true), /\nUnknown → Unknown<\/title>/);
+});
+
+test('clicking and keyboard-selecting aircraft opens full details and hides them when the layer is disabled', () => {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsDestination', 'closeMapDetails', 'mapSection'].map(id => [id, {
+        handlers: {}, addEventListener(event, handler) { this.handlers[event] = handler; }, querySelectorAll() { return []; }
+    }]));
+    const context = vm.createContext({ document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
+    context.fixture = aircraft('general', {
+        aircraftDetails: { type: 'Airbus A320' },
+        route: { origin: { name: 'London Heathrow Airport', iata_code: 'LHR' }, destination: { name: 'Geneva Cointrin International Airport', iata_code: 'GVA' } }
+    });
+    vm.runInContext('latestData = { generalTraffic: [fixture] }; mapLayers.general = true; initMapDetails();', context);
+    const event = { target: { closest: () => ({ dataset: { aircraftId: 'general' } }) } };
+    elements.mapMarkers.handlers.click(event);
+    assert.equal(elements.mapAircraftDetails.hidden, false);
+    assert.equal(elements.mapDetailsModel.textContent, 'Airbus A320');
+    assert.equal(elements.mapDetailsOrigin.textContent, 'London Heathrow Airport (LHR)');
+    assert.equal(elements.mapDetailsDestination.textContent, 'Geneva Cointrin International Airport (GVA)');
+    vm.runInContext('updateMap();', context);
+    assert.equal(elements.mapAircraftDetails.hidden, false);
+    elements.mapMarkers.handlers.click(event);
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    elements.mapMarkers.handlers.keydown({ ...event, key: 'Enter', preventDefault() {} });
+    assert.equal(elements.mapAircraftDetails.hidden, false);
+    elements.closeMapDetails.handlers.click();
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    elements.mapMarkers.handlers.click(event);
+    vm.runInContext('fixture.route = null; fixture.aircraftDetails = null; updateMap();', context);
+    assert.equal(elements.mapDetailsModel.textContent, 'Unknown model');
+    assert.equal(elements.mapDetailsOrigin.textContent, 'Unknown airport');
+    vm.runInContext('mapLayers.general = false; updateMap();', context);
+    assert.equal(elements.mapAircraftDetails.hidden, true);
 });
