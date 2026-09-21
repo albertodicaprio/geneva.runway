@@ -166,7 +166,7 @@ function mapMarker(aircraft, layer = 'arrivals') {
     const icon = Number.isFinite(aircraft.heading)
         ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
         : '<circle class="map-aircraft-icon" r="12"></circle>';
-    return `<g class="map-aircraft${headingClass}${layer === 'arrivals' ? '' : ` map-${layer}-aircraft`}" transform="translate(${position.x} ${position.y})" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
+    return `<g class="map-aircraft${headingClass}${layer === 'arrivals' ? '' : ` map-${layer}-aircraft`}" transform="translate(${position.x} ${position.y})" fill="${escapeHtml(aircraft.track?.color || '#a020d0')}" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
         ${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
     </g>`;
 }

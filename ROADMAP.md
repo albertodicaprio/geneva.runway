@@ -220,6 +220,11 @@ Completed:
      polling redraws the map; closing details also preserves the viewport.
    - Verified with a Chrome reproduction and a focused regression test.
 
+35. Keep landing colors distinct from other traffic layers.
+   - Uses stable green, yellow, orange, and purple landing colors without blue
+     or red; landing icons match their trails.
+   - Migrates cached live and retained trail colors without deleting history.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

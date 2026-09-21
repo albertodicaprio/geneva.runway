@@ -38,7 +38,7 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .map-markers { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .map-flight-path { fill: none; stroke-width: 5px; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
 .map-aircraft { cursor: pointer; }
-.map-aircraft-icon { fill: #d8394b; stroke: #fff; stroke-width: 2px; paint-order: stroke; }
+.map-aircraft-icon { fill: inherit; stroke: #fff; stroke-width: 2px; paint-order: stroke; }
 .map-aircraft.heading-unknown .map-aircraft-icon { fill: #596e80; }
 .map-aircraft-label { fill: #102d48; stroke: rgba(255,255,255,.9); stroke-linejoin: round; stroke-width: 3px; paint-order: stroke; font-size: 13px; font-weight: 800; }
 .map-airport circle { fill: #102d48; stroke: #fff; stroke-width: 3px; }

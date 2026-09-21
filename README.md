@@ -28,6 +28,9 @@ data. All layers share the existing upstream refresh and cache. Click a plane ic
 to expand its photo, model, full origin/destination airport names, ground speed
 (km/h), altitude (metres), and heading (degrees) below the map. Aircraft hover
 tooltips are disabled; missing measurements appear as a dash.
+Landing icons match their trails, using a stable green/yellow/orange/purple
+palette that avoids the blue and red of other layers. Existing landing trails
+receive the updated palette without losing recorded positions.
 The selected icon turns bright yellow; unavailable photos show a placeholder.
 Click it again, use Close, or press Escape to dismiss the details. Aircraft
 models for general traffic use cached ADSBdb lookups. Geneva departures has its

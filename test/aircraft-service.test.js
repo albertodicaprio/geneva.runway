@@ -16,7 +16,7 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
             icao24: 'tracked',
             track: {
                 color: 'hsl(20 65% 32%)',
-                colorVersion: 2,
+                colorVersion: 3,
                 points: [
                     { latitude: 46.1, longitude: 6.0, timestamp: 99 },
                     { latitude: 46.2, longitude: 6.1, timestamp: 100 }
@@ -24,7 +24,7 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
             }
         }, {
             icao24: 'landed',
-            track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] }
+            track: { color: 'hsl(40 65% 32%)', colorVersion: 3, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] }
         }]
     };
 
@@ -35,14 +35,14 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
 
     assert.equal(result.aircraft.length, 1);
     assert.equal(result.aircraft[0].track.color, 'hsl(20 65% 32%)');
-    assert.equal(result.aircraft[0].track.colorVersion, 2);
+    assert.equal(result.aircraft[0].track.colorVersion, 3);
     assert.deepEqual(result.aircraft[0].track.points, [
         { latitude: 46.2, longitude: 6.1, timestamp: 100 },
         { latitude: 46.4, longitude: 6.3, timestamp: 3_700 }
     ]);
     assert.deepEqual(result.recentTracks, [{
         icao24: 'landed',
-        track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
+        track: { color: 'hsl(40 65% 32%)', colorVersion: 3, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
         disappearedAt: 3_700,
         expiresAt: 10_900
     }]);
@@ -63,7 +63,7 @@ test('retains flight and aircraft details with a disappeared trail across cached
             url_photo_thumbnail: 'https://example.com/aircraft.jpg'
         },
         track: {
-            color: 'hsl(40 65% 32%)', colorVersion: 2,
+            color: 'hsl(40 65% 32%)', colorVersion: 3,
             points: [{ latitude: 46.24, longitude: 6.11, timestamp: 100 }]
         }
     };
@@ -85,7 +85,7 @@ test('removes a disappeared arrival trail after its two-hour retention window', 
     const result = addArrivalTracks({ updatedAt: 10_901, aircraft: [] }, {
         recentTracks: [{
             icao24: 'landed',
-            track: { color: 'hsl(40 65% 32%)', colorVersion: 2, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
+            track: { color: 'hsl(40 65% 32%)', colorVersion: 3, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
             expiresAt: 10_900
         }]
     });
@@ -208,4 +208,29 @@ test('enrichment retains only airborne, identified flights at or below 7000 m wh
     } finally {
         global.fetch = originalFetch;
     }
+});
+
+test('landing colors avoid blue and red and migrate cached live and retained trails consistently', () => {
+    const allowedHues = new Set([35, 48, 65, 90, 120, 145, 280, 295]);
+    const aircraft = Array.from({ length: 64 }, (_, index) => ({
+        icao24: index.toString(16).padStart(6, '0'), latitude: 46.3, longitude: 6.2
+    }));
+    const fresh = addArrivalTracks({ updatedAt: 100, aircraft }, null);
+    for (const plane of fresh.aircraft) {
+        const hue = Number(plane.track.color.match(/^hsl\((\d+),/)[1]);
+        assert.ok(allowedHues.has(hue));
+        assert.equal(plane.track.colorVersion, 3);
+    }
+    const old = { ...fresh.aircraft[0], track: { ...fresh.aircraft[0].track, color: '#ff0000', colorVersion: 2 } };
+    const cached = { updatedAt: 100, aircraft: [old], recentTracks: [old], generalTraffic: [old] };
+    const projected = projectAircraftData(cached, 100000);
+    assert.equal(projected.aircraft[0].track.color, fresh.aircraft[0].track.color);
+    assert.equal(projected.recentTracks[0].track.color, fresh.aircraft[0].track.color);
+    assert.equal(projected.generalTraffic[0].track.color, '#ff0000');
+    assert.equal(cached.aircraft[0].track.color, '#ff0000');
+    assert.deepEqual(projected.aircraft[0].track.points, old.track.points);
+    const disappeared = addArrivalTracks({ updatedAt: 130, aircraft: [] }, cached);
+    assert.equal(disappeared.recentTracks.at(-1).track.color, fresh.aircraft[0].track.color);
+    const refreshed = addArrivalTracks({ updatedAt: 130, aircraft: [aircraft[0]] }, cached);
+    assert.equal(refreshed.aircraft[0].track.color, fresh.aircraft[0].track.color);
 });
