@@ -155,7 +155,9 @@ function mapMarker(aircraft, general = false) {
     const altitude = formatAltitude(aircraft.altitude);
     const heading = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
     const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
-    const label = `${callsign}, ${altitude}`;
+    const airportLabel = airport => airport?.iata_code || airport?.icao_code || airport?.name || 'Unknown';
+    const routeLabel = `${airportLabel(aircraft.route?.origin)} → ${airportLabel(aircraft.route?.destination)}`;
+    const label = `${callsign}, ${altitude}\n${routeLabel}`;
     const icon = Number.isFinite(aircraft.heading)
         ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
         : '<circle class="map-aircraft-icon" r="12"></circle>';

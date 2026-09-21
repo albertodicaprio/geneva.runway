@@ -67,3 +67,40 @@ test('map toggles hide paths and markers independently, persist choices and tole
     assert.equal(elements.mapPaths.innerHTML, '');
     assert.match(elements.mapMarkers.innerHTML, /Select a traffic layer/);
 });
+
+test('general routes are cached for overflights and tolerate missing identities and unknown routes', async () => {
+    const { enrichGeneralTraffic } = require('../lib/aircraft-service');
+    const originalFetch = global.fetch;
+    const requested = [];
+    global.fetch = async url => {
+        requested.push(String(url));
+        const found = String(url).endsWith('/callsign/OVERFLIGHT');
+        return { ok: found, status: found ? 200 : 404, json: async () => found
+            ? { response: { flightroute: { origin: { iata_code: 'LHR' }, destination: { iata_code: 'GVA' } } } }
+            : {} };
+    };
+    try {
+        const data = { updatedAt: 4000, aircraft: [], generalTraffic: [
+            aircraft('over01', { callsign: 'OVERFLIGHT' }), aircraft('noid'), aircraft('unknown', { callsign: 'NO_ROUTE' })
+        ] };
+        const result = await enrichGeneralTraffic(data);
+        assert.equal(result.generalTraffic[0].route.origin.iata_code, 'LHR');
+        assert.equal(result.generalTraffic[0].route.destination.iata_code, 'GVA');
+        assert.equal(result.generalTraffic[1].route, null);
+        assert.equal(result.generalTraffic[2].route, null);
+        assert.deepEqual(result.aircraft, []);
+        await enrichGeneralTraffic(data);
+        assert.equal(requested.length, 2);
+    } finally { global.fetch = originalFetch; }
+});
+
+test('map tooltips show route on a second line with escaped airport names and unknown fallbacks', () => {
+    const context = vm.createContext({ document: { readyState: 'loading', addEventListener() {} } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
+    const plane = aircraft('GENERAL', { route: { origin: { iata_code: 'LHR' }, destination: { icao_code: 'LSGG' } } });
+    assert.match(context.mapMarker(plane, true), /<title>GENERAL, [^\n]+\nLHR → LSGG<\/title>/);
+    plane.route = { origin: { name: '<Airport>' } };
+    assert.match(context.mapMarker(plane, true), /\n&lt;Airport&gt; → Unknown<\/title>/);
+    delete plane.route;
+    assert.match(context.mapMarker(plane, true), /\nUnknown → Unknown<\/title>/);
+});

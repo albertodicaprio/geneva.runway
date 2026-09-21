@@ -115,4 +115,4 @@ footer a:hover { text-decoration: underline; }
 .map-controls input { width: 18px; height: 18px; accent-color: #165f7a; }
 .general-traffic-swatch { width: 22px; height: 5px; border-radius: 3px; background: #39ff14; opacity: .4; }
 .map-general-path { stroke: #39ff14; opacity: .4; }
-.map-general-aircraft .map-aircraft-icon { fill: #4b5320; }
+.map-general-aircraft .map-aircraft-icon { fill: #8eae65; }
