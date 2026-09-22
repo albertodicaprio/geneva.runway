@@ -3,11 +3,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const AircraftCard = require('../public/aircraft-card');
+const AircraftMap = require('../public/aircraft-map');
 
 test('history renders retained details, Geneva times and unknown fields, newest first, and expires without a fetch', () => {
     const elements = { flightHistory: {}, historyCount: {} };
     let now = Date.parse('2026-01-01T12:00:00Z');
     const context = vm.createContext({
+        AircraftCard, AircraftMap,
         Date: class extends Date { static now() { return now; } },
         document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] }
     });

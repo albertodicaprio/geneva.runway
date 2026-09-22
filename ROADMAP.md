@@ -276,7 +276,7 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      startup refresh loads the saved snapshot before updating retained tracks.
      All 32 tests and a local frontend/API browser smoke check pass.
 
-3. [ ] Consolidate aircraft cards and map behavior.
+3. [x] Consolidate aircraft cards and map behavior.
    - Add `public/aircraft-card.js` for shared identity, route, photo fallback,
      and measurement presentation with featured/list/selected layouts.
    - Add `public/aircraft-map.js` to own projection, paths, markers, layer
@@ -285,6 +285,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      responsive dimensions, accessible routes, selection, focus, and scroll.
    - Move browser tests toward module interfaces instead of editing lexical
      globals through `vm`; verify desktop/mobile layouts and keyboard behavior.
+   - Completed: shared card presentation now lives in `public/aircraft-card.js`;
+     `public/aircraft-map.js` owns projection, paths, markers, layer preferences,
+     visible aircraft, selection, and focus restoration behind `update`.
+   - Validation: all 32 tests pass. Module tests cover featured/list/selected
+     presentation, layer migration, keyboard controls, photo fallback, and
+     scroll-preserving focus. Local `npm start` served the page, both modules,
+     and JSON; headless Chrome rendered desktop and mobile widths.
 
 4. [ ] Simplify browser state and update coordination.
    - Keep one snapshot instead of both `latestData` and `aircraftData`.

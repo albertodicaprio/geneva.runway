@@ -1,181 +1,12 @@
 const API_ENDPOINT = '/api/aircraft';
 const FETCH_INTERVAL = 2000;
-const MAP_WIDTH = 1748;
-const MAP_HEIGHT = 1747;
-const MAP_X_SCALE = 1023.9218009042783;
-const MAP_X_OFFSET = -5412.222393087557;
-const MAP_Y_SCALE = -58671.31391937124;
-const MAP_Y_OFFSET = 54495.2374689763;
-
+const card = AircraftCard;
+const aircraftMap = AircraftMap.create({ document, storage: typeof localStorage === 'undefined' ? null : localStorage });
 let aircraftData = [];
 let isFetching = false;
 let rateLimitResetTime = 0;
 let latestData = null;
-let selectedAircraftId = null;
-const mapLayers = { arrivals: true, general: false, departures: false };
-
-function initMapLayers() {
-    try {
-        const saved = JSON.parse(localStorage.getItem('geneva-map-layers'));
-        if (typeof saved?.departures !== 'boolean' && saved?.departuresOnly === true) {
-            mapLayers.departures = saved.general === true;
-        }
-        for (const key of Object.keys(mapLayers)) {
-            if (typeof saved?.[key] === 'boolean') mapLayers[key] = saved[key];
-        }
-        if (saved?.departuresOnly === true && typeof saved?.departures !== 'boolean') mapLayers.general = false;
-    } catch { /* Storage may be unavailable. Use the default layers. */ }
-    for (const [key, id] of [['arrivals', 'showArrivals'], ['general', 'showGeneralTraffic'], ['departures', 'showDepartures']]) {
-        const input = document.getElementById(id);
-        input.checked = mapLayers[key];
-        input.addEventListener('change', () => {
-            mapLayers[key] = input.checked;
-            try { localStorage.setItem('geneva-map-layers', JSON.stringify(mapLayers)); } catch { /* Keep the choice for this page. */ }
-            updateMap();
-        });
-    }
-}
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>'"]/g, character => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    })[character]);
-}
-
-function safeImageUrl(value) {
-    try {
-        const url = new URL(value);
-        return url.protocol === 'https:' || url.protocol === 'http:' ? escapeHtml(url.href) : null;
-    } catch {
-        return null;
-    }
-}
-
-function formatAirport(airport) {
-    if (!airport) return 'Origin unavailable';
-    const code = airport.iata_code || airport.icao_code || '—';
-    return [code, airport.municipality || airport.name].filter(Boolean).join(' · ');
-}
-
-function formatAltitude(altitude) {
-    return Number.isFinite(altitude) ? `${Math.round(altitude).toLocaleString()} m` : '—';
-}
-
-function formatSpeed(velocity) {
-    return Number.isFinite(velocity) ? `${Math.round(velocity * 3.6)} km/h` : '—';
-}
-
-function formatDescent(verticalRate) {
-    if (!Number.isFinite(verticalRate)) return '—';
-    return `${Math.round(verticalRate * 60).toLocaleString()} m/min`;
-}
-
-function formatEta(aircraft) {
-    if (!Number.isFinite(aircraft.distanceKm) || !Number.isFinite(aircraft.velocity) || aircraft.velocity <= 0) return '—';
-    const minutes = Math.max(1, Math.round((aircraft.distanceKm * 1000) / aircraft.velocity / 60));
-    return `~${minutes} min`;
-}
-
-function approachLabel(aircraft) {
-    return aircraft.approachDirection === 'unknown'
-        ? 'Approach unknown'
-        : `Likely runway ${aircraft.approachDirection}`;
-}
-
-function aircraftIdentity(aircraft) {
-    const details = aircraft.aircraftDetails || {};
-    return [details.type, details.icao_type, details.registration].filter(Boolean).join(' · ') || 'Aircraft details unavailable';
-}
-
-function aircraftPhoto(aircraft, className = 'aircraft-photo') {
-    const url = safeImageUrl(aircraft.aircraftDetails?.url_photo_thumbnail);
-    return url ? `<img class="${className}" src="${url}" alt="" loading="lazy">` : '';
-}
-
-function handleAircraftPhotoError(event) {
-    if (event.target.tagName !== 'IMG') return;
-    const frame = event.target.closest('.next-photo-wrap, .card-photo-wrap');
-    if (frame) frame.innerHTML = '<p class="photo-unavailable">Photo unavailable</p>';
-}
-
-function aircraftPhotoFrame(aircraft, frameClass, imageClass) {
-    const photo = aircraftPhoto(aircraft, imageClass);
-    return photo ? `<div class="${frameClass}">${photo}</div>` : '';
-}
-
-function webMercatorLatitude(latitude) {
-    return Math.log(Math.tan(Math.PI / 4 + latitude * Math.PI / 360));
-}
-
-function mapCoordinates(latitude, longitude) {
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude <= -85 || latitude >= 85) return null;
-    const x = MAP_X_SCALE * longitude + MAP_X_OFFSET;
-    const y = MAP_Y_SCALE * webMercatorLatitude(latitude) + MAP_Y_OFFSET;
-    return { x, y };
-}
-
-function mapPosition(latitude, longitude) {
-    const position = mapCoordinates(latitude, longitude);
-    if (!position) return null;
-    const { x, y } = position;
-    if (x < 0 || x > MAP_WIDTH || y < 0 || y > MAP_HEIGHT) return null;
-    return position;
-}
-
-function smoothMapPath(points) {
-    if (points.length < 2) return '';
-    const coordinate = value => value.toFixed(1);
-    let path = `M ${coordinate(points[0].x)} ${coordinate(points[0].y)}`;
-
-    for (let index = 0; index < points.length - 1; index += 1) {
-        const previous = points[index - 1] || points[index];
-        const current = points[index];
-        const next = points[index + 1];
-        const following = points[index + 2] || next;
-        const firstControl = {
-            x: current.x + (next.x - previous.x) / 6,
-            y: current.y + (next.y - previous.y) / 6
-        };
-        const secondControl = {
-            x: next.x - (following.x - current.x) / 6,
-            y: next.y - (following.y - current.y) / 6
-        };
-        path += ` C ${coordinate(firstControl.x)} ${coordinate(firstControl.y)} ${coordinate(secondControl.x)} ${coordinate(secondControl.y)} ${coordinate(next.x)} ${coordinate(next.y)}`;
-    }
-
-    return path;
-}
-
-function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals') {
-    const points = (aircraft.track?.points || [])
-        .map(point => mapCoordinates(point.latitude, point.longitude))
-        .filter(Boolean);
-    if (includeEstimatedPosition) {
-        const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
-        if (estimatedPosition) points.push(estimatedPosition);
-    }
-    if (points.length < 2 || !aircraft.track?.color) return '';
-    const path = smoothMapPath(points);
-    return `<path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
-}
-
-function mapMarker(aircraft, layer = 'arrivals') {
-    const position = mapPosition(aircraft.latitude, aircraft.longitude);
-    if (!position) return '';
-    const callsign = aircraft.callsign || aircraft.icao24 || 'Unknown aircraft';
-    const altitude = formatAltitude(aircraft.altitude);
-    const heading = Number.isFinite(aircraft.heading) ? aircraft.heading : 0;
-    const headingClass = Number.isFinite(aircraft.heading) ? '' : ' heading-unknown';
-    const airportLabel = airport => airport?.iata_code || airport?.icao_code || airport?.name || 'Unknown';
-    const routeLabel = `${airportLabel(aircraft.route?.origin)} → ${airportLabel(aircraft.route?.destination)}`;
-    const label = `${callsign}, ${altitude}\n${routeLabel}`;
-    const icon = Number.isFinite(aircraft.heading)
-        ? `<g transform="scale(1.5)"><path class="map-aircraft-icon" d="M 0 -15 L 3 -5 L 12 0 L 12 4 L 3 2 L 2 11 L 6 15 L 6 18 L 0 14 L -6 18 L -6 15 L -2 11 L -3 2 L -12 4 L -12 0 L -3 -5 Z" transform="rotate(${heading})"></path></g>`
-        : '<circle class="map-aircraft-icon" r="12"></circle>';
-    return `<g class="map-aircraft${headingClass}${layer === 'arrivals' ? '' : ` map-${layer}-aircraft`}" transform="translate(${position.x} ${position.y})" fill="${escapeHtml(aircraft.track?.color || '#a020d0')}" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}. Show aircraft details">
-        ${icon}<text class="map-aircraft-label" x="17" y="4">${escapeHtml(callsign)}</text>
-    </g>`;
-}
+const escapeHtml = card.escapeHtml;
 
 async function fetchAircraftData() {
     if (isFetching || rateLimitResetTime > Date.now()) return;
@@ -206,7 +37,7 @@ async function fetchAircraftData() {
 function updateUI() {
     updateStatus();
     updateNextArrival();
-    updateMap();
+    aircraftMap.update(latestData);
     updateAircraftList();
     updateFlightHistory();
 }
@@ -271,143 +102,8 @@ function updateStatus() {
 function updateNextArrival() {
     const container = document.getElementById('nextPlane');
     const aircraft = aircraftData[0];
-    if (!aircraft) {
-        container.innerHTML = '<p class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</p>';
-        return;
-    }
-
-    const airline = aircraft.route?.airline?.name || 'Airline unavailable';
-    const origin = formatAirport(aircraft.route?.origin);
-    container.innerHTML = `
-        ${aircraftPhotoFrame(aircraft, 'next-photo-wrap', 'next-photo')}
-        <div class="next-copy">
-            <div class="arrival-title-row">
-                <div>
-                    <p class="callsign">${escapeHtml(aircraft.callsign)}</p>
-                    <p class="airline">${escapeHtml(airline)}</p>
-                </div>
-                <span class="approach-badge ${escapeHtml(aircraft.approachConfidence)}">${escapeHtml(approachLabel(aircraft))}</span>
-            </div>
-            <p class="route">${escapeHtml(origin)} <span>→</span> GVA</p>
-            <p class="aircraft-model">${escapeHtml(aircraftIdentity(aircraft))}</p>
-            <div class="metrics hero-metrics">
-                <div><span>Altitude</span><strong>${formatAltitude(aircraft.altitude)}</strong></div>
-                <div><span>Distance</span><strong>${aircraft.distanceKm.toFixed(1)} km</strong></div>
-                <div><span>Descent</span><strong>${formatDescent(aircraft.verticalRate)}</strong></div>
-                <div><span>Rough ETA</span><strong>${formatEta(aircraft)}</strong></div>
-            </div>
-        </div>`;
-}
-
-function isGenevaDeparture(aircraft) {
-    const origin = aircraft.route?.origin;
-    return origin?.iata_code?.toUpperCase() === 'GVA' || origin?.icao_code?.toUpperCase() === 'LSGG';
-}
-
-function visibleGeneralTraffic() {
-    if (!mapLayers.general || !Array.isArray(latestData?.generalTraffic)) return [];
-    return latestData.generalTraffic.filter(aircraft => !isGenevaDeparture(aircraft));
-}
-
-function visibleDepartures() {
-    if (!mapLayers.departures || !Array.isArray(latestData?.generalTraffic)) return [];
-    return latestData.generalTraffic.filter(isGenevaDeparture);
-}
-
-function visibleMapAircraft() {
-    return [
-        ...(mapLayers.arrivals ? aircraftData : []),
-        ...visibleGeneralTraffic(),
-        ...visibleDepartures()
-    ].filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
-}
-
-function updateMapDetails() {
-    const panel = document.getElementById('mapAircraftDetails');
-    const aircraft = visibleMapAircraft().find(aircraft => aircraft.icao24 === selectedAircraftId);
-    panel.hidden = !aircraft;
-    if (!aircraft) {
-        selectedAircraftId = null;
-        return;
-    }
-    const fullAirport = airport => {
-        const code = airport?.iata_code || airport?.icao_code;
-        return airport?.name ? `${airport.name}${code ? ` (${code})` : ''}` : code || 'Unknown airport';
-    };
-    const photo = document.getElementById('mapDetailsPhoto');
-    const photoUrl = safeImageUrl(aircraft.aircraftDetails?.url_photo_thumbnail) || '';
-    if (photo.dataset.photoUrl !== photoUrl) {
-        photo.dataset.photoUrl = photoUrl;
-        photo.innerHTML = photoUrl
-            ? `<img src="${photoUrl}" alt="Selected aircraft" loading="lazy">`
-            : '<p>Photo unavailable</p>';
-    }
-    document.getElementById('mapDetailsHeading').textContent = aircraft.callsign || aircraft.icao24;
-    document.getElementById('mapDetailsAirline').textContent = aircraft.route?.airline?.name || 'Airline unavailable';
-    document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
-    document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
-    document.getElementById('mapDetailsDestination').textContent = fullAirport(aircraft.route?.destination);
-    document.getElementById('mapDetailsSpeed').textContent = formatSpeed(aircraft.velocity);
-    document.getElementById('mapDetailsAltitude').textContent = formatAltitude(aircraft.altitude);
-    document.getElementById('mapDetailsBearing').textContent = Number.isFinite(aircraft.heading)
-        ? `${((Math.round(aircraft.heading) % 360) + 360) % 360}°` : '—';
-}
-
-function initMapDetails() {
-    const markers = document.getElementById('mapMarkers');
-    const select = event => {
-        const marker = event.target.closest('[data-aircraft-id]');
-        if (!marker) return;
-        selectedAircraftId = selectedAircraftId === marker.dataset.aircraftId ? null : marker.dataset.aircraftId;
-        updateMapDetails();
-        for (const item of markers.querySelectorAll('[data-aircraft-id]')) {
-            item.setAttribute('aria-expanded', String(item.dataset.aircraftId === selectedAircraftId));
-        }
-    };
-    markers.addEventListener('click', select);
-    markers.addEventListener('keydown', event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            select(event);
-        }
-    });
-    const close = () => {
-        const id = selectedAircraftId;
-        selectedAircraftId = null;
-        updateMap();
-        [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === id)?.focus({ preventScroll: true });
-    };
-    document.getElementById('closeMapDetails').addEventListener('click', close);
-    document.getElementById('mapSection').addEventListener('keydown', event => {
-        if (event.key === 'Escape' && selectedAircraftId) close();
-    });
-}
-
-function updateMap() {
-    const focusedId = document.activeElement?.dataset?.aircraftId;
-    updateMapDetails();
-    const paths = document.getElementById('mapPaths');
-    const markers = document.getElementById('mapMarkers');
-    const recentTracks = mapLayers.arrivals ? unexpiredTracks() : [];
-    const arrivals = mapLayers.arrivals ? aircraftData : [];
-    const general = visibleGeneralTraffic();
-    const departures = visibleDepartures();
-    paths.innerHTML = [
-        ...general.map(aircraft => mapPath(aircraft, true, 'general')),
-        ...departures.map(aircraft => mapPath(aircraft, true, 'departure')),
-        ...recentTracks.map(track => mapPath(track, false)),
-        ...arrivals.map(aircraft => mapPath(aircraft, true))
-    ].filter(Boolean).join('');
-    const markerMarkup = [
-        ...general.map(aircraft => mapMarker(aircraft, 'general')),
-        ...departures.map(aircraft => mapMarker(aircraft, 'departure')),
-        ...arrivals.map(aircraft => mapMarker(aircraft))
-    ].filter(Boolean).join('');
-    const emptyMessage = !mapLayers.arrivals && !mapLayers.general && !mapLayers.departures
-        ? 'Select a traffic layer to show aircraft.'
-        : 'No aircraft in the selected layers are within this map area.';
-    markers.innerHTML = markerMarkup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${emptyMessage}</text>`;
-    if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')].find(marker => marker.dataset.aircraftId === focusedId)?.focus({ preventScroll: true });
+    container.innerHTML = aircraft ? card.featured(aircraft)
+        : '<p class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</p>';
 }
 
 function updateAircraftList() {
@@ -418,31 +114,7 @@ function updateAircraftList() {
         return;
     }
 
-    list.innerHTML = aircraftData.map(aircraft => {
-        const airline = aircraft.route?.airline?.name || 'Airline unavailable';
-        const origin = formatAirport(aircraft.route?.origin);
-        return `
-            <article class="arrival-card">
-                ${aircraftPhotoFrame(aircraft, 'card-photo-wrap', 'aircraft-photo')}
-                <div class="arrival-card-main">
-                    <div class="arrival-title-row">
-                        <div>
-                            <h3>${escapeHtml(aircraft.callsign)}</h3>
-                            <p class="airline">${escapeHtml(airline)}</p>
-                        </div>
-                        <span class="approach-badge ${escapeHtml(aircraft.approachConfidence)}">${escapeHtml(approachLabel(aircraft))}</span>
-                    </div>
-                    <p class="route">${escapeHtml(origin)} <span>→</span> GVA</p>
-                    <p class="aircraft-model">${escapeHtml(aircraftIdentity(aircraft))}</p>
-                    <div class="metrics">
-                        <div><span>Altitude</span><strong>${formatAltitude(aircraft.altitude)}</strong></div>
-                        <div><span>Distance</span><strong>${aircraft.distanceKm.toFixed(1)} km</strong></div>
-                        <div><span>Speed</span><strong>${formatSpeed(aircraft.velocity)}</strong></div>
-                        <div><span>Descent</span><strong>${formatDescent(aircraft.verticalRate)}</strong></div>
-                    </div>
-                </div>
-            </article>`;
-    }).join('');
+    list.innerHTML = aircraftData.map(card.list).join('');
 }
 
 function displayError(message) {
@@ -451,15 +123,14 @@ function displayError(message) {
 }
 
 function init() {
-    document.addEventListener('error', handleAircraftPhotoError, true);
-    initMapLayers();
-    initMapDetails();
+    document.addEventListener('error', card.handlePhotoError, true);
+    aircraftMap.init();
     fetchAircraftData();
     setInterval(fetchAircraftData, FETCH_INTERVAL);
     setInterval(() => {
         if (latestData) {
             updateFlightHistory();
-            updateMap();
+            aircraftMap.update(latestData);
         }
     }, FETCH_INTERVAL);
 }
