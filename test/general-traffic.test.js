@@ -34,7 +34,7 @@ test('general traffic includes high and unidentified airborne traffic without du
 });
 
 test('map toggles hide paths and markers independently, persist choices and tolerate unavailable storage', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDepartures', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'showArrivals', 'showGeneralTraffic', 'showDepartures', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsAirline', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination'].map(id => [id, {
         addEventListener(event, handler) { this.change = handler; }
     }]));
     let saved;
@@ -107,19 +107,20 @@ test('map markers keep accessible labels without hover tooltips', () => {
 });
 
 test('clicking and keyboard-selecting aircraft opens full details and hides them when the layer is disabled', () => {
-    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination', 'mapDetailsSpeed', 'mapDetailsAltitude', 'mapDetailsBearing', 'closeMapDetails', 'mapSection'].map(id => [id, {
+    const elements = Object.fromEntries(['mapPaths', 'mapMarkers', 'mapAircraftDetails', 'mapDetailsHeading', 'mapDetailsAirline', 'mapDetailsModel', 'mapDetailsOrigin', 'mapDetailsPhoto', 'mapDetailsDestination', 'mapDetailsSpeed', 'mapDetailsAltitude', 'mapDetailsBearing', 'closeMapDetails', 'mapSection'].map(id => [id, {
         dataset: {}, handlers: {}, addEventListener(event, handler) { this.handlers[event] = handler; }, querySelectorAll() { return []; }
     }]));
     const context = vm.createContext({ URL, document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] } });
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
     context.fixture = aircraft('general', {
         aircraftDetails: { type: 'Airbus A320', url_photo_thumbnail: 'https://example.com/plane.jpg' },
-        route: { origin: { name: 'London Heathrow Airport', iata_code: 'LHR' }, destination: { name: 'Geneva Cointrin International Airport', iata_code: 'GVA' } }
+        route: { airline: { name: 'Swiss & Partners' }, origin: { name: 'London Heathrow Airport', iata_code: 'LHR' }, destination: { name: 'Geneva Cointrin International Airport', iata_code: 'GVA' } }
     });
     vm.runInContext('latestData = { generalTraffic: [fixture] }; mapLayers.general = true; initMapDetails();', context);
     const event = { target: { closest: () => ({ dataset: { aircraftId: 'general' } }) } };
     elements.mapMarkers.handlers.click(event);
     assert.equal(elements.mapAircraftDetails.hidden, false);
+    assert.equal(elements.mapDetailsAirline.textContent, 'Swiss & Partners');
     assert.equal(elements.mapDetailsModel.textContent, 'Airbus A320');
     assert.equal(elements.mapDetailsSpeed.textContent, '720 km/h');
     assert.equal(elements.mapDetailsAltitude.textContent, `${(10000).toLocaleString()} m`);
@@ -145,6 +146,7 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     assert.equal(elements.mapAircraftDetails.hidden, true);
     elements.mapMarkers.handlers.click(event);
     vm.runInContext('fixture.route = null; fixture.aircraftDetails = null; fixture.velocity = null; fixture.altitude = null; fixture.heading = null; updateMap();', context);
+    assert.equal(elements.mapDetailsAirline.textContent, 'Airline unavailable');
     assert.equal(elements.mapDetailsModel.textContent, 'Unknown model');
     assert.equal(elements.mapDetailsSpeed.textContent, '—');
     assert.equal(elements.mapDetailsAltitude.textContent, '—');

@@ -337,6 +337,7 @@ function updateMapDetails() {
             : '<p>Photo unavailable</p>';
     }
     document.getElementById('mapDetailsHeading').textContent = aircraft.callsign || aircraft.icao24;
+    document.getElementById('mapDetailsAirline').textContent = aircraft.route?.airline?.name || 'Airline unavailable';
     document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
     document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
     document.getElementById('mapDetailsDestination').textContent = fullAirport(aircraft.route?.destination);

@@ -225,6 +225,10 @@ Completed:
      or red; landing icons match their trails.
    - Migrates cached live and retained trail colors without deleting history.
 
+36. Show the airline in selected aircraft details.
+   - Uses the existing route airline name for all map layers, with an explicit
+     unavailable fallback when the company is unknown.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
