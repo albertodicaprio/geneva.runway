@@ -320,8 +320,9 @@ Remaining maintenance:
 npm start
 ```
 
-The app intentionally keeps its cache in the system temporary directory; a
-persistent cache path is out of scope.
+The app uses the system temporary directory by default for local development.
+Docker Compose stores the cache in a named volume, and local development can
+set `AIRCRAFT_CACHE_FILE` to use a persistent path.
 
 Then open:
 

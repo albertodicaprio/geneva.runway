@@ -11,6 +11,7 @@ COPY --chown=node:node server.js ./
 COPY --chown=node:node api ./api
 COPY --chown=node:node lib ./lib
 COPY --chown=node:node public ./public
+RUN mkdir /app/data && chown node:node /app/data
 
 USER node
 

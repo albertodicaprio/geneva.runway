@@ -6,8 +6,11 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 3000
+      AIRCRAFT_CACHE_FILE: /app/data/aircraft-cache.json
     expose:
       - "3000"
+    volumes:
+      - aircraft_data:/app/data
     restart: unless-stopped
 
   caddy:
@@ -28,5 +31,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  aircraft_data:
   caddy_data:
   caddy_config:

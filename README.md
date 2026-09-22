@@ -10,7 +10,7 @@ refresh schedule, and stale fallback. `lib/opensky.js` fetches OpenSky data,
 and projects positions and retains tracks. The browser renders the resulting
 app-specific JSON. Tests create isolated service instances with supplied fetch,
 clock, and cache storage, so they do not need live credentials or the app's
-temporary cache file.
+cache file.
 
 The app is intended to run on a home-network machine, rather than a public
 cloud host. It obtains live position data from OpenSky and route and aircraft
@@ -84,6 +84,13 @@ Both public DNS records and port forwarding must be in place before the first
 startup so Let's Encrypt can validate each domain. Keep the named Caddy volumes;
 they contain Caddy's certificate and renewal state.
 
+The app stores its aircraft snapshot and ADSBdb enrichment in the named
+`aircraft_data` volume at `/app/data/aircraft-cache.json`. It survives container
+restarts, rebuilds, and `docker compose down`. Do not use `docker compose down -v`
+if you want to keep this data. An existing snapshot in a previous container's
+`/tmp` is not moved automatically; the app will fetch a new snapshot after
+the update.
+
 ### Caddy reverse proxy
 
 Docker Compose runs Caddy as the public-facing service. It is the only
@@ -151,3 +158,14 @@ npm start
 ```
 
 The app listens on `http://127.0.0.1:3000/` by default.
+Without extra configuration, its cache remains in the system temporary
+directory. To keep local development data in the project across restarts, add
+this line to `.env`:
+
+```dotenv
+AIRCRAFT_CACHE_FILE=./data/aircraft-cache.json
+```
+
+The app creates the directory on its first successful cache write. `data/` is
+ignored by Git. Docker Compose sets its own cache path, so this local setting
+does not change where container data is stored.
