@@ -1,22 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const AircraftCard = require('../public/aircraft-card');
-const AircraftMap = require('../public/aircraft-map');
+const { create } = require('../public/app');
 
-test('history renders retained details, Geneva times and unknown fields, newest first, and expires without a fetch', () => {
-    const elements = { flightHistory: {}, historyCount: {} };
+test('history renders retained details, Geneva times and unknown fields, newest first, and expires without a fetch', async () => {
+    const elements = { flightHistory: {}, historyCount: {}, nextPlane: {}, arrivalCount: {}, aircraftList: {},
+        lastUpdated: {}, dataStatus: {} };
     let now = Date.parse('2026-01-01T12:00:00Z');
-    const context = vm.createContext({
-        AircraftCard, AircraftMap,
-        Date: class extends Date { static now() { return now; } },
-        document: { readyState: 'loading', addEventListener() {}, getElementById: id => elements[id] }
-    });
-    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
     const timestamp = now / 1000;
-    context.fixture = {
+    const fixture = {
         recentTracks: [
             { icao24: 'older', expiresAt: timestamp + 60 },
             {
@@ -28,7 +19,10 @@ test('history renders retained details, Geneva times and unknown fields, newest 
             { callsign: 'EXPIRED', expiresAt: timestamp }
         ]
     };
-    vm.runInContext('latestData = fixture; updateFlightHistory();', context);
+    const app = create({ document: { getElementById: id => elements[id] },
+        fetch: async () => ({ ok: true, json: async () => fixture }), now: () => now,
+        map: { update() {} } });
+    await app.poll();
     const markup = elements.flightHistory.innerHTML;
     assert.equal(elements.historyCount.textContent, '2 flights');
     assert.ok(markup.indexOf('&lt;NEW&gt;') < markup.indexOf('older'));
@@ -42,7 +36,7 @@ test('history renders retained details, Geneva times and unknown fields, newest 
     assert.match(markup, /<td>—<\/td>/);
     assert.doesNotMatch(markup, /EXPIRED|<NEW>/);
     now += 7140 * 1000;
-    vm.runInContext('updateFlightHistory();', context);
+    app.updateTimeSensitive();
     assert.equal(elements.historyCount.textContent, '0 flights');
     assert.match(elements.flightHistory.innerHTML, /No recent landings/);
 });

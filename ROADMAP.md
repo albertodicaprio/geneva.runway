@@ -293,13 +293,22 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      scroll-preserving focus. Local `npm start` served the page, both modules,
      and JSON; headless Chrome rendered desktop and mobile widths.
 
-4. [ ] Simplify browser state and update coordination.
+4. [x] Simplify browser state and update coordination.
    - Keep one snapshot instead of both `latestData` and `aircraftData`.
    - Make `public/app.js` coordinate fetching and module updates.
    - Consolidate overlapping redraw timers while preserving history expiry
      during failed polling, status updates, and refresh-rate limits.
    - Validate polling success/failure, expiry, layer preferences, selection,
      and focus preservation; run the full suite and a local smoke check.
+   - Completed: `public/app.js` keeps one response snapshot and coordinates
+     cards, history, status, and map updates through a testable app instance.
+     One two-second timer updates time-sensitive views and starts polling;
+     failed or rate-limited polls retain the snapshot while history and map
+     paths continue to expire.
+   - Validation: all 36 tests pass, including new polling, retry, expiry, and
+     single-timer tests alongside map layer, selection, and focus tests. Local
+     `npm start` served the page and JSON; headless Chrome rendered live
+     arrivals, estimated-position status, and aircraft markers.
 
 Remaining maintenance:
 
