@@ -341,6 +341,7 @@ function updateMapDetails() {
     document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
     document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
     document.getElementById('mapDetailsDestination').textContent = fullAirport(aircraft.route?.destination);
+    document.getElementById('mapDetailsOrigin').parentElement?.setAttribute('title', `${fullAirport(aircraft.route?.origin)} → ${fullAirport(aircraft.route?.destination)}`);
     document.getElementById('mapDetailsSpeed').textContent = formatSpeed(aircraft.velocity);
     document.getElementById('mapDetailsAltitude').textContent = formatAltitude(aircraft.altitude);
     document.getElementById('mapDetailsBearing').textContent = Number.isFinite(aircraft.heading)

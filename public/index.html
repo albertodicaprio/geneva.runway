@@ -62,25 +62,24 @@
                         <g id="mapMarkers"></g>
                     </svg>
                 </div>
-                <div id="mapAircraftDetails" class="map-details" role="region" aria-labelledby="mapDetailsHeading" hidden>
-                    <div class="arrival-title-row">
-                        <h3 id="mapDetailsHeading"></h3>
-                        <button id="closeMapDetails" type="button" aria-label="Close aircraft details">Close</button>
+                <div id="mapAircraftDetails" class="map-details arrival-card" role="region" aria-labelledby="mapDetailsHeading" hidden>
+                    <div id="mapDetailsPhoto" class="map-details-photo card-photo-wrap"></div>
+                    <div class="arrival-card-main">
+                        <div class="arrival-title-row">
+                            <div>
+                                <h3 id="mapDetailsHeading"></h3>
+                                <p id="mapDetailsAirline" class="airline"></p>
+                            </div>
+                            <button id="closeMapDetails" type="button" aria-label="Close aircraft details">Close</button>
+                        </div>
+                        <p class="route map-details-route"><span id="mapDetailsOrigin"></span> <span aria-label="to">→</span> <span id="mapDetailsDestination"></span></p>
+                        <p id="mapDetailsModel" class="aircraft-model"></p>
+                        <div class="metrics">
+                            <div><span>Ground speed</span><strong id="mapDetailsSpeed"></strong></div>
+                            <div><span>Altitude</span><strong id="mapDetailsAltitude"></strong></div>
+                            <div><span>Heading</span><strong id="mapDetailsBearing"></strong></div>
+                        </div>
                     </div>
-                    <div class="map-details-body">
-                        <div id="mapDetailsPhoto" class="map-details-photo"></div>
-                        <dl>
-                            <div><dt>Airline</dt><dd id="mapDetailsAirline"></dd></div>
-                            <div><dt>Model</dt><dd id="mapDetailsModel"></dd></div>
-                            <div><dt>Origin</dt><dd id="mapDetailsOrigin"></dd></div>
-                            <div><dt>Destination</dt><dd id="mapDetailsDestination"></dd></div>
-                        </dl>
-                    </div>
-                    <dl class="map-details-metrics">
-                        <div><dt>Ground speed</dt><dd id="mapDetailsSpeed"></dd></div>
-                        <div><dt>Altitude</dt><dd id="mapDetailsAltitude"></dd></div>
-                        <div><dt>Heading</dt><dd id="mapDetailsBearing"></dd></div>
-                    </dl>
                 </div>
             </section>
 

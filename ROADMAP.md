@@ -229,6 +229,11 @@ Completed:
    - Uses the existing route airline name for all map layers, with an explicit
      unavailable fallback when the company is unknown.
 
+37. Match selected aircraft details to landing cards.
+   - Shares the landing card layout, padding, thumbnail sizes, and responsive
+     sizing, with airline, route, model, and live measurements beside the photo.
+   - Keeps long routes compact with the full airport names in a tooltip.
+
 Remaining:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
