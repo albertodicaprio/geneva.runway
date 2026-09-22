@@ -1,16 +1,21 @@
 const assert = require('node:assert/strict');
 const { after, before, test } = require('node:test');
 const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 
 const projectRoot = path.join(__dirname, '..');
 let server;
 let baseUrl;
+let testCacheDir;
 
 before(async () => {
+    testCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'geneva-runway-test-'));
     server = spawn(process.execPath, ['server.js'], {
         cwd: projectRoot,
-        env: { ...process.env, PORT: '0' },
+        env: { ...process.env, PORT: '0', TMPDIR: testCacheDir,
+            OPENSKY_NETWORK_CLIENT_ID: '', OPENSKY_NETWORK_CLIENT_SECRET: '' },
         stdio: ['ignore', 'pipe', 'pipe']
     });
 
@@ -33,6 +38,7 @@ before(async () => {
 
 after(() => {
     server?.kill();
+    if (testCacheDir) fs.rmSync(testCacheDir, { recursive: true, force: true });
 });
 
 test('static responses include restrictive browser security headers', async () => {

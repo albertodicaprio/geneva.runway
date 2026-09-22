@@ -258,7 +258,7 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      headless Chrome verified all three photo fallbacks, matching card widths,
      and readable routes at desktop and narrow mobile viewport settings.
 
-2. [ ] Extract backend responsibilities and remove global runtime state.
+2. [x] Extract backend responsibilities and remove global runtime state.
    - Introduce `lib/opensky.js` for authentication and upstream fetching,
      `lib/adsbdb.js` for route/model enrichment and its cache, and
      `lib/traffic.js` for pure normalization, classification, projection, and
@@ -269,6 +269,12 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      tests do not replace globals or write to the running app's cache.
    - Preserve response shape and behavior; validate cache, refresh, projection,
      and retention tests before committing.
+   - Completed: OpenSky transport/auth, ADSBdb enrichment/cache, and traffic
+     calculations now live in their own modules. The aircraft service owns its
+     snapshot and refresh state through `createAircraftService`.
+   - Validation: backend tests use supplied fetch, clock, and cache storage;
+     startup refresh loads the saved snapshot before updating retained tracks.
+     All 32 tests and a local frontend/API browser smoke check pass.
 
 3. [ ] Consolidate aircraft cards and map behavior.
    - Add `public/aircraft-card.js` for shared identity, route, photo fallback,

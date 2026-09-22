@@ -12,10 +12,15 @@ direction is active before going plane spotting.
 ## Current Structure
 
 - `public/index.html` is the static page.
-- `public/app.js` contains all browser-side state, OpenSky response parsing,
-  landing filtering, runway estimation, sorting, and DOM updates.
+- `public/app.js` handles browser polling, map state, and DOM updates.
 - `public/style.css` contains the current visual styling.
 - `api/aircraft.js` is an HTTP adapter for the OpenSky aircraft service.
+- `lib/aircraft-service.js` owns the cached snapshot, disk persistence,
+  refresh scheduling, and stale fallback. `createAircraftService` accepts
+  fetch, clock, and cache storage for isolated tests.
+- `lib/opensky.js` handles upstream auth and requests; `lib/adsbdb.js` handles
+  route and aircraft enrichment; `lib/traffic.js` holds normalization,
+  classification, projection, and track calculations.
 
 The project uses a minimal Node server with no build step. It includes a
 `package.json`, Node's built-in test runner, Docker support, and a README.
@@ -47,14 +52,14 @@ Keep this file focused on durable project context and working rules.
 
 ## Product/Logic Notes
 
-The current browser logic is only a rough heuristic:
+The current backend classification is still only a rough heuristic:
 
-- It treats aircraft as landing when they are within 50 km, descending, below
-  3000 m, and heading broadly toward the airport.
-- It estimates runway direction from aircraft heading.
+- It confirms Geneva arrivals by ADSBdb destination and filters airborne
+  aircraft above 7000 m or without an identity.
+- It estimates runway direction from aircraft heading, without approach
+  corridor alignment.
 - It sorts by altitude, not estimated time to runway threshold.
-- It randomly assigns a runway if heading is missing. Avoid randomness in
-  operational display code; prefer an explicit unknown state.
+- It shows an explicit unknown runway direction when heading is missing.
 
 Geneva has one physical runway direction pair, commonly represented as `04/22`.
 Future work should model approach direction and threshold rather than showing
@@ -63,8 +68,6 @@ distinctions.
 
 Useful next improvements:
 
-- Move landing classification to the backend and return a smaller app-specific
-  JSON payload instead of the full OpenSky `states` array.
 - Add approach corridors for runway `04` and `22` and classify candidates by
   track alignment to those corridors.
 - Estimate time-to-arrival using distance-to-threshold and ground speed.

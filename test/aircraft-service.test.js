@@ -4,11 +4,11 @@ const {
     addArrivalTracks,
     classifyApproachDirection,
     distanceInKm,
-    enrichGvaArrivals,
-    isAircraftRefreshPaused,
     normalizeOpenSkyData,
     projectAircraftData
-} = require('../lib/aircraft-service');
+} = require('../lib/traffic');
+const { createAdsbdb } = require('../lib/adsbdb');
+const { isAircraftRefreshPaused } = require('../lib/aircraft-service');
 
 test('keeps an arrival trail and color for up to one hour, then retains it for two hours after it disappears', () => {
     const previous = {
@@ -165,9 +165,8 @@ test('normalization keeps valid OpenSky positions inside the configured search s
 });
 
 test('enrichment retains only airborne, identified flights at or below 7000 m whose route ends at Geneva and sorts them by altitude', async () => {
-    const originalFetch = global.fetch;
     const requestedUrls = [];
-    global.fetch = async url => {
+    const fetchMock = async url => {
         requestedUrls.push(String(url));
         const response = body => ({ ok: true, status: 200, json: async () => body });
         if (String(url).includes('/callsign/ARRHIGH')) {
@@ -182,32 +181,29 @@ test('enrichment retains only airborne, identified flights at or below 7000 m wh
         return response({ response: { aircraft: { registration: 'HB-TEST' } } });
     };
 
-    try {
-        const result = await enrichGvaArrivals({
-            updatedAt: 1_700_000_000,
-            aircraft: [
-                { icao24: 'high01', callsign: 'ARRHIGH', altitude: 2000, onGround: false },
-                { icao24: 'low001', callsign: 'ARRLOW', altitude: 900, onGround: false },
-                { icao24: 'other1', callsign: 'NOTGVA', altitude: 500, onGround: false },
-                { icao24: 'limit1', callsign: 'ATLIMIT', altitude: 7000, onGround: false },
-                { icao24: 'above1', callsign: 'TOOHIGH', altitude: 7000.1, onGround: false },
-                { icao24: 'noalt1', callsign: 'NOALT', altitude: null, onGround: false },
-                { icao24: 'ground', callsign: 'GROUND', altitude: 10, onGround: true },
-                { icao24: 'nocall', callsign: null, altitude: 10, onGround: false }
-            ]
-        });
+    const result = await createAdsbdb({ fetch: fetchMock }).enrichGvaArrivals({
+        updatedAt: 1_700_000_000,
+        aircraft: [
+            { icao24: 'high01', callsign: 'ARRHIGH', altitude: 2000, onGround: false },
+            { icao24: 'low001', callsign: 'ARRLOW', altitude: 900, onGround: false },
+            { icao24: 'other1', callsign: 'NOTGVA', altitude: 500, onGround: false },
+            { icao24: 'limit1', callsign: 'ATLIMIT', altitude: 7000, onGround: false },
+            { icao24: 'above1', callsign: 'TOOHIGH', altitude: 7000.1, onGround: false },
+            { icao24: 'noalt1', callsign: 'NOALT', altitude: null, onGround: false },
+            { icao24: 'ground', callsign: 'GROUND', altitude: 10, onGround: true },
+            { icao24: 'nocall', callsign: null, altitude: 10, onGround: false }
+        ]
+    });
 
-        assert.deepEqual(result.aircraft.map(aircraft => aircraft.callsign), ['ARRLOW', 'ARRHIGH']);
-        assert.deepEqual(result.aircraft.map(aircraft => aircraft.aircraftDetails.registration), ['HB-TEST', 'HB-TEST']);
-        assert.equal(requestedUrls.some(url => url.includes('/callsign/GROUND')), false);
-        assert.equal(requestedUrls.some(url => url.includes('/callsign/ATLIMIT')), true);
-        assert.equal(requestedUrls.some(url => url.includes('/callsign/TOOHIGH')), false);
-        assert.equal(requestedUrls.some(url => url.includes('/callsign/NOALT')), false);
-        assert.equal(requestedUrls.some(url => url.includes('/callsign/NOTGVA')), true);
-        assert.equal(requestedUrls.filter(url => url.includes('/aircraft/')).length, 2);
-    } finally {
-        global.fetch = originalFetch;
-    }
+    assert.deepEqual(result.aircraft.map(aircraft => aircraft.callsign), ['ARRLOW', 'ARRHIGH']);
+    assert.deepEqual(result.aircraft.map(aircraft => aircraft.aircraftDetails.registration), ['HB-TEST', 'HB-TEST']);
+    assert.equal(requestedUrls.some(url => url.includes('/callsign/GROUND')), false);
+    assert.equal(requestedUrls.some(url => url.includes('/callsign/ATLIMIT')), true);
+    assert.equal(requestedUrls.some(url => url.includes('/callsign/TOOHIGH')), false);
+    assert.equal(requestedUrls.some(url => url.includes('/callsign/NOALT')), false);
+    assert.equal(requestedUrls.some(url => url.includes('/callsign/NOTGVA')), true);
+    assert.equal(requestedUrls.filter(url => url.includes('/aircraft/')).length, 2);
+
 });
 
 test('landing colors avoid blue and red and migrate cached live and retained trails consistently', () => {

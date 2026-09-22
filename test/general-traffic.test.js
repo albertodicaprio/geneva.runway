@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { addGeneralTraffic, addArrivalTracks, projectAircraftData } = require('../lib/aircraft-service');
+const { addGeneralTraffic, addArrivalTracks, projectAircraftData } = require('../lib/traffic');
+const { createAdsbdb } = require('../lib/adsbdb');
 
 const aircraft = (icao24, extra = {}) => ({
     icao24, latitude: 46.3, longitude: 6.2, altitude: 10000,
@@ -69,10 +70,8 @@ test('map toggles hide paths and markers independently, persist choices and tole
 });
 
 test('general routes are cached for overflights and tolerate missing identities and unknown routes', async () => {
-    const { enrichGeneralTraffic } = require('../lib/aircraft-service');
-    const originalFetch = global.fetch;
     const requested = [];
-    global.fetch = async url => {
+    const fetchMock = async url => {
         requested.push(String(url));
         if (String(url).includes('/aircraft/')) return { ok: true, status: 200, json: async () => ({ response: { aircraft: { type: 'Airbus A320' } } }) };
         const found = String(url).endsWith('/callsign/OVERFLIGHT');
@@ -80,21 +79,21 @@ test('general routes are cached for overflights and tolerate missing identities 
             ? { response: { flightroute: { origin: { iata_code: 'LHR' }, destination: { iata_code: 'GVA' } } } }
             : {} };
     };
-    try {
-        const data = { updatedAt: 4000, aircraft: [], generalTraffic: [
-            aircraft('over01', { callsign: 'OVERFLIGHT' }), aircraft('noid'), aircraft('unknown', { callsign: 'NO_ROUTE' })
-        ] };
-        const result = await enrichGeneralTraffic(data);
-        assert.equal(result.generalTraffic[0].route.origin.iata_code, 'LHR');
-        assert.equal(result.generalTraffic[0].route.destination.iata_code, 'GVA');
-        assert.equal(result.generalTraffic[1].route, null);
-        assert.equal(result.generalTraffic[2].route, null);
-        assert.deepEqual(result.aircraft, []);
-        await enrichGeneralTraffic(data);
-        assert.equal(requested.filter(url => url.includes('/callsign/')).length, 2);
-        assert.equal(requested.filter(url => url.includes('/aircraft/')).length, 3);
-        assert.equal(result.generalTraffic[0].aircraftDetails.type, 'Airbus A320');
-    } finally { global.fetch = originalFetch; }
+    const data = { updatedAt: 4000, aircraft: [], generalTraffic: [
+        aircraft('over01', { callsign: 'OVERFLIGHT' }), aircraft('noid'), aircraft('unknown', { callsign: 'NO_ROUTE' })
+    ] };
+    const adsbdb = createAdsbdb({ fetch: fetchMock });
+    const result = await adsbdb.enrichGeneralTraffic(data);
+    assert.equal(result.generalTraffic[0].route.origin.iata_code, 'LHR');
+    assert.equal(result.generalTraffic[0].route.destination.iata_code, 'GVA');
+    assert.equal(result.generalTraffic[1].route, null);
+    assert.equal(result.generalTraffic[2].route, null);
+    assert.deepEqual(result.aircraft, []);
+    await adsbdb.enrichGeneralTraffic(data);
+    assert.equal(requested.filter(url => url.includes('/callsign/')).length, 2);
+    assert.equal(requested.filter(url => url.includes('/aircraft/')).length, 3);
+    assert.equal(result.generalTraffic[0].aircraftDetails.type, 'Airbus A320');
+
 });
 
 test('map markers keep accessible labels without hover tooltips', () => {
