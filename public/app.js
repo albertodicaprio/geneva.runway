@@ -13,6 +13,9 @@ const GenevaApp = (() => {
 
     function create({ document, fetch, storage, now = Date.now, schedule = setInterval,
         logger = console, card = cardModule, map = mapModule.create({ document, storage, now }) }) {
+        const hasOverview = Boolean(document.getElementById('nextPlane'));
+        const hasArrivals = Boolean(document.getElementById('aircraftList'));
+        const hasHistory = Boolean(document.getElementById('flightHistory'));
         let snapshot = null;
         let isFetching = false;
         let rateLimitResetTime = 0;
@@ -28,6 +31,7 @@ const GenevaApp = (() => {
         }
 
         function updateFlightHistory() {
+            if (!hasHistory) return;
             const history = unexpiredTracks().sort((first, second) => historyTime(second) - historyTime(first));
             document.getElementById('historyCount').textContent = `${history.length} flight${history.length === 1 ? '' : 's'}`;
             const container = document.getElementById('flightHistory');
@@ -59,7 +63,7 @@ const GenevaApp = (() => {
 
         function updateStatus() {
             const updatedAt = snapshot?.updatedAt ? new Date(snapshot.updatedAt * 1000) : null;
-            document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
+            if (hasOverview) document.getElementById('lastUpdated').textContent = updatedAt ? updatedAt.toLocaleTimeString() : '—';
             const secondsSinceUpdate = Number.isFinite(snapshot?.cacheUpdatedAt)
                 ? Math.max(0, Math.floor(now() / 1000) - snapshot.cacheUpdatedAt) : null;
             const updateAge = secondsSinceUpdate === null ? 'Update time unavailable' : `${secondsSinceUpdate}s since last update`;
@@ -69,23 +73,27 @@ const GenevaApp = (() => {
 
         function updateArrivals() {
             const aircraft = arrivals();
-            document.getElementById('nextPlane').innerHTML = aircraft.length ? card.featured(aircraft[0])
+            if (hasOverview) document.getElementById('nextPlane').innerHTML = aircraft.length ? card.featured(aircraft[0])
                 : '<p class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</p>';
-            document.getElementById('arrivalCount').textContent = `${aircraft.length} arrival${aircraft.length === 1 ? '' : 's'}`;
-            document.getElementById('aircraftList').innerHTML = aircraft.length ? aircraft.map(card.list).join('')
-                : '<div class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</div>';
+            if (hasArrivals) {
+                document.getElementById('arrivalCount').textContent = `${aircraft.length} arrival${aircraft.length === 1 ? '' : 's'}`;
+                document.getElementById('aircraftList').innerHTML = aircraft.length ? aircraft.map(card.list).join('')
+                    : '<div class="no-aircraft">No confirmed Geneva arrivals are currently tracked.</div>';
+            }
         }
 
         function updateTimeSensitive() {
             if (!snapshot) return;
             updateStatus();
             updateFlightHistory();
-            map.update(snapshot);
+            if (hasOverview) map.update(snapshot);
         }
 
         function displayError(message) {
-            document.getElementById('aircraftList').innerHTML = `<div class="error">${escapeHtml(message)}</div>`;
-            if (!snapshot) document.getElementById('flightHistory').innerHTML = '<p class="no-aircraft">Flight history is currently unavailable.</p>';
+            const error = `<div class="error">${escapeHtml(message)}</div>`;
+            if (hasArrivals) document.getElementById('aircraftList').innerHTML = error;
+            if (!snapshot && hasOverview) document.getElementById('nextPlane').innerHTML = error;
+            if (!snapshot && hasHistory) document.getElementById('flightHistory').innerHTML = error;
         }
 
         async function poll() {
@@ -121,7 +129,7 @@ const GenevaApp = (() => {
             if (started) return;
             started = true;
             document.addEventListener('error', card.handlePhotoError, true);
-            map.init();
+            if (hasOverview) map.init();
             poll();
             schedule(tick, FETCH_INTERVAL);
         }

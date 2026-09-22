@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recent landings · Geneva Air Traffic</title>
+    <link rel="icon" href="plane_ico.ico" sizes="any">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">LSGG · GENEVA</p>
+                <h1>Recent landings</h1>
+            </div>
+            <div class="data-status" id="dataStatus" aria-live="polite">Loading live data…</div>
+        </header>
+
+        <nav class="page-nav" aria-label="Main navigation">
+            <a href="/"><span class="nav-icon" aria-hidden="true">⌖</span><span>Overview</span></a>
+            <a href="/arrivals.html"><span class="nav-icon" aria-hidden="true">✈</span><span>Arrivals</span></a>
+            <a href="/history.html" aria-current="page"><span class="nav-icon" aria-hidden="true">◷</span><span>History</span></a>
+        </nav>
+
+        <main>
+            <section class="history-section" aria-labelledby="historyHeading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">FLIGHT HISTORY</p>
+                        <h2 id="historyHeading">Recent landings</h2>
+                    </div>
+                    <p class="arrival-count" id="historyCount">—</p>
+                </div>
+                <p class="history-note">Landing times are estimated from when flights leave the live list, not confirmed touchdown. Times are local to Geneva; history is kept for two hours.</p>
+                <div id="flightHistory">
+                    <p class="loading">Loading flight history…</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            Position data: <a href="https://opensky-network.org/" target="_blank" rel="noreferrer">OpenSky</a>
+            · Route and aircraft data: <a href="https://www.adsbdb.com/" target="_blank" rel="noreferrer">ADSBdb</a>
+        </footer>
+    </div>
+
+    <script src="aircraft-card.js"></script>
+    <script src="aircraft-map.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

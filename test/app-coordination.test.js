@@ -118,3 +118,31 @@ test('network errors preserve the last snapshot until a later successful poll', 
     assert.match(elements.aircraftList.innerHTML, /ARRIVAL/);
     assert.equal(requests, 3);
 });
+
+test('each page renders its own data without initializing the map elsewhere', async () => {
+    const data = fixture(Date.parse('2026-01-01T12:00:00Z'));
+    for (const pageIds of [
+        ['nextPlane', 'lastUpdated'],
+        ['arrivalCount', 'aircraftList'],
+        ['historyCount', 'flightHistory']
+    ]) {
+        const elements = Object.fromEntries(['dataStatus', ...pageIds].map(id => [id, {}]));
+        let mapInits = 0;
+        let mapUpdates = 0;
+        const app = create({
+            document: { getElementById: id => elements[id] || null, addEventListener() {} },
+            fetch: async () => ({ ok: true, json: async () => data }),
+            now: () => Date.parse('2026-01-01T12:00:00Z'),
+            schedule() {},
+            map: { init() { mapInits += 1; }, update() { mapUpdates += 1; } }
+        });
+        app.start();
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(mapInits, pageIds.includes('nextPlane') ? 1 : 0);
+        assert.equal(mapUpdates > 0, pageIds.includes('nextPlane'));
+        assert.match(elements.dataStatus.textContent, /since last update/);
+        if (elements.nextPlane) assert.match(elements.nextPlane.innerHTML, /ARRIVAL/);
+        if (elements.aircraftList) assert.match(elements.aircraftList.innerHTML, /ARRIVAL/);
+        if (elements.flightHistory) assert.match(elements.flightHistory.innerHTML, /RECENT/);
+    }
+});

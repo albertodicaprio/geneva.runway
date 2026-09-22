@@ -52,6 +52,27 @@ test('static responses include restrictive browser security headers', async () =
     assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
 
+test('all three pages provide direct navigation with the correct current page', async () => {
+    for (const [path, title, sectionId] of [
+        ['/', 'Geneva Air Traffic', 'mapSection'],
+        ['/arrivals.html', 'Arrivals', 'aircraftList'],
+        ['/history.html', 'Recent landings', 'flightHistory']
+    ]) {
+        const response = await fetch(`${baseUrl}${path}`);
+        assert.equal(response.status, 200);
+        const html = await response.text();
+        assert.match(html, new RegExp(`<h1>${title}</h1>`));
+        assert.match(html, /href="\/"/);
+        assert.match(html, /href="\/arrivals.html"/);
+        assert.match(html, /href="\/history.html"/);
+        assert.ok(html.includes(`href="${path}" aria-current="page"`));
+        assert.ok(html.includes(`id="${sectionId}"`));
+        for (const otherId of ['mapSection', 'aircraftList', 'flightHistory']) {
+            if (otherId !== sectionId) assert.ok(!html.includes(`id="${otherId}"`));
+        }
+    }
+});
+
 test('the aircraft API does not allow cross-origin browser access', async () => {
     const response = await fetch(`${baseUrl}/api/aircraft`, { method: 'OPTIONS' });
 

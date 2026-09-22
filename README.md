@@ -1,8 +1,9 @@
 # Geneva Runway
 
-A small, self-hosted Geneva Airport (LSGG/GVA) plane-spotting app. It shows
+A small, self-hosted Geneva Airport (LSGG/GVA) plane-spotting app. Its overview shows
 nearby airborne flights whose ADSBdb route is confirmed to end at Geneva,
 along with the likely runway approach direction (`04`, `22`, or `unknown`).
+The navigation links directly to separate Arrivals and Recent landings pages.
 
 The Node server uses `lib/aircraft-service.js` to own the saved snapshot,
 refresh schedule, and stale fallback. `lib/opensky.js` fetches OpenSky data,
@@ -22,7 +23,7 @@ remain together in the cache and the API's `recentTracks` for two hours. These
 are last observed values; leaving the list does not confirm touchdown. The map
 continues to show the retained trail without an aircraft marker. Older cached
 trails that already lost their details remain usable but cannot recover them.
-The Recent landings box below the live arrivals lists unexpired flights, newest
+The Recent landings page lists unexpired flights, newest
 first, with aircraft type, registration, estimated landing time in Geneva time,
 and the last likely runway and heading. Unavailable details are shown as unknown.
 

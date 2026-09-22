@@ -310,6 +310,15 @@ Docker deployment, cache fallback, traffic classification, and track retention.
      `npm start` served the page and JSON; headless Chrome rendered live
      arrivals, estimated-position status, and aircraft markers.
 
+5. [x] Split the page into overview, arrivals, and history.
+   - The overview keeps the lowest reported arrival and map. Arrivals and
+     recent landings each have a direct URL and a visible, mobile-sized link
+     in the shared navigation.
+   - The browser coordinator renders only the sections present on each page;
+     all three pages keep the same server-side cache and polling behavior.
+   - Validation: all 38 tests pass, including page-specific rendering and
+     navigation checks through the local Node server.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
