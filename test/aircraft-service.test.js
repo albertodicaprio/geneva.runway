@@ -234,3 +234,13 @@ test('landing colors avoid blue and red and migrate cached live and retained tra
     const refreshed = addArrivalTracks({ updatedAt: 130, aircraft: [aircraft[0]] }, cached);
     assert.equal(refreshed.aircraft[0].track.color, fresh.aircraft[0].track.color);
 });
+
+test('projects from the position timestamp even when more recent contact has no new position', () => {
+    const normalized = normalizeOpenSkyData({ time: 100, states: [
+        ['abc123', 'TEST123', 'Switzerland', 90, 100, 6.1, 46.2, 1000, false, 200, 90, 0]
+    ] });
+    assert.equal(normalized.aircraft[0].lastPositionUpdate, 90);
+    const projected = projectAircraftData(normalized, 100000).aircraft[0];
+    assert.equal(projected.projectionSeconds, 10);
+    assert.ok(projected.longitude > normalized.aircraft[0].longitude + 0.02);
+});

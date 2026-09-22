@@ -234,7 +234,61 @@ Completed:
      sizing, with airline, route, model, and live measurements beside the photo.
    - Keeps long routes compact with the full airport names in a tooltip.
 
-Remaining:
+## Refactor tasks (implement in order)
+
+Keep the app framework-free with no build step. Complete, validate, and commit
+one task at a time; leave the app runnable between tasks. Preserve the local
+Docker deployment, cache fallback, traffic classification, and track retention.
+
+1. [x] Fix the confirmed code-review bugs and add regression coverage.
+   - Reject malformed URLs without crashing the server.
+   - Keep upstream timeouts active through JSON body consumption.
+   - Enforce a refresh-attempt cooldown after failures, including browser polls.
+   - Use OpenSky position time (index 3), not last-contact time (index 4), for
+     position projection.
+   - Replace inline photo error handlers with CSP-compatible listeners.
+   - Make full selected-aircraft airport names readable on narrow/touch screens.
+   - Validate malformed-request recovery, stalled bodies, sequential retry
+     throttling, position timestamps, and photo fallback; run the full suite.
+   - Completed: all six fixes are implemented. Refresh attempts share a
+     30-second cooldown; JSON bodies remain within the request deadline, and
+     unused HTTP error bodies are aborted. Full airport names wrap on mobile.
+   - Validation: all 30 tests pass (the four initial regression tests failed
+     before the fixes). An isolated local server served the frontend and JSON;
+     headless Chrome verified all three photo fallbacks, matching card widths,
+     and readable routes at desktop and narrow mobile viewport settings.
+
+2. [ ] Extract backend responsibilities and remove global runtime state.
+   - Introduce `lib/opensky.js` for authentication and upstream fetching,
+     `lib/adsbdb.js` for route/model enrichment and its cache, and
+     `lib/traffic.js` for pure normalization, classification, projection, and
+     track/history calculations.
+   - Keep snapshot ownership, disk persistence, refresh scheduling, cooldown,
+     shared in-flight requests, and stale fallback in `lib/aircraft-service.js`.
+   - Create a module instance with supplied fetch, clock, and cache storage so
+     tests do not replace globals or write to the running app's cache.
+   - Preserve response shape and behavior; validate cache, refresh, projection,
+     and retention tests before committing.
+
+3. [ ] Consolidate aircraft cards and map behavior.
+   - Add `public/aircraft-card.js` for shared identity, route, photo fallback,
+     and measurement presentation with featured/list/selected layouts.
+   - Add `public/aircraft-map.js` to own projection, paths, markers, layer
+     preferences, selection, and keyboard interaction behind one update method.
+   - Share visible-aircraft calculations and presentation rules, preserving
+     responsive dimensions, accessible routes, selection, focus, and scroll.
+   - Move browser tests toward module interfaces instead of editing lexical
+     globals through `vm`; verify desktop/mobile layouts and keyboard behavior.
+
+4. [ ] Simplify browser state and update coordination.
+   - Keep one snapshot instead of both `latestData` and `aircraftData`.
+   - Make `public/app.js` coordinate fetching and module updates.
+   - Consolidate overlapping redraw timers while preserving history expiry
+     during failed polling, status updates, and refresh-rate limits.
+   - Validate polling success/failure, expiry, layer preferences, selection,
+     and focus preservation; run the full suite and a local smoke check.
+
+Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
 

@@ -135,7 +135,8 @@ test('clicking and keyboard-selecting aircraft opens full details and hides them
     vm.runInContext('updateMap();', context);
     assert.equal(elements.mapAircraftDetails.hidden, false);
     assert.match(elements.mapMarkers.innerHTML, /aria-expanded="true"/);
-    elements.mapDetailsPhoto.handlers.error({ target: { tagName: 'IMG' } });
+    context.failedPhotoEvent = { target: { tagName: 'IMG', closest: () => elements.mapDetailsPhoto } };
+    vm.runInContext('handleAircraftPhotoError(failedPhotoEvent);', context);
     vm.runInContext('updateMap();', context);
     assert.match(elements.mapDetailsPhoto.innerHTML, /Photo unavailable/);
     elements.mapMarkers.handlers.click(event);
@@ -234,4 +235,23 @@ test('live map refresh restores keyboard focus without scrolling back to the pla
     vm.runInContext('latestData = { generalTraffic: [fixture] }; mapLayers.general = true; updateMap();', context);
     assert.equal(focusRestored, true);
     assert.equal(scrollY, 1600);
+});
+
+test('aircraft photos use a CSP-compatible error fallback across card layouts', () => {
+    const context = vm.createContext({ URL, document: { readyState: 'loading', addEventListener() {} } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
+    context.fixture = { aircraftDetails: { url_photo_thumbnail: 'https://example.test/missing.jpg' } };
+    for (const imageClass of ['next-photo', 'aircraft-photo']) {
+        context.imageClass = imageClass;
+        const markup = vm.runInContext('aircraftPhoto(fixture, imageClass)', context);
+        assert.match(markup, /<img /);
+        assert.doesNotMatch(markup, /onerror=/);
+        const frame = { innerHTML: markup };
+        context.event = { target: { tagName: 'IMG', closest: () => frame } };
+        vm.runInContext('handleAircraftPhotoError(event)', context);
+        assert.match(frame.innerHTML, /Photo unavailable/);
+        assert.doesNotMatch(frame.innerHTML, /<img /);
+    }
+    context.event = { target: { tagName: 'IMG', closest: () => null } };
+    assert.doesNotThrow(() => vm.runInContext('handleAircraftPhotoError(event)', context));
 });

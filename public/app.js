@@ -89,7 +89,13 @@ function aircraftIdentity(aircraft) {
 
 function aircraftPhoto(aircraft, className = 'aircraft-photo') {
     const url = safeImageUrl(aircraft.aircraftDetails?.url_photo_thumbnail);
-    return url ? `<img class="${className}" src="${url}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    return url ? `<img class="${className}" src="${url}" alt="" loading="lazy">` : '';
+}
+
+function handleAircraftPhotoError(event) {
+    if (event.target.tagName !== 'IMG') return;
+    const frame = event.target.closest('.next-photo-wrap, .card-photo-wrap');
+    if (frame) frame.innerHTML = '<p class="photo-unavailable">Photo unavailable</p>';
 }
 
 function aircraftPhotoFrame(aircraft, frameClass, imageClass) {
@@ -341,7 +347,6 @@ function updateMapDetails() {
     document.getElementById('mapDetailsModel').textContent = aircraft.aircraftDetails?.type || aircraft.aircraftDetails?.icao_type || 'Unknown model';
     document.getElementById('mapDetailsOrigin').textContent = fullAirport(aircraft.route?.origin);
     document.getElementById('mapDetailsDestination').textContent = fullAirport(aircraft.route?.destination);
-    document.getElementById('mapDetailsOrigin').parentElement?.setAttribute('title', `${fullAirport(aircraft.route?.origin)} → ${fullAirport(aircraft.route?.destination)}`);
     document.getElementById('mapDetailsSpeed').textContent = formatSpeed(aircraft.velocity);
     document.getElementById('mapDetailsAltitude').textContent = formatAltitude(aircraft.altitude);
     document.getElementById('mapDetailsBearing').textContent = Number.isFinite(aircraft.heading)
@@ -349,11 +354,6 @@ function updateMapDetails() {
 }
 
 function initMapDetails() {
-    document.getElementById('mapDetailsPhoto').addEventListener('error', event => {
-        if (event.target.tagName === 'IMG') {
-            document.getElementById('mapDetailsPhoto').innerHTML = '<p>Photo unavailable</p>';
-        }
-    }, true);
     const markers = document.getElementById('mapMarkers');
     const select = event => {
         const marker = event.target.closest('[data-aircraft-id]');
@@ -451,6 +451,7 @@ function displayError(message) {
 }
 
 function init() {
+    document.addEventListener('error', handleAircraftPhotoError, true);
     initMapLayers();
     initMapDetails();
     fetchAircraftData();

@@ -168,19 +168,28 @@ async function serveStatic(req, res, urlPathname) {
     }
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
     for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
         res.setHeader(name, value);
     }
 
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-
-    if (url.pathname === '/api/aircraft') {
-        handleApi(aircraftHandler, req, res);
-        return;
+    try {
+        const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        if (url.pathname === '/api/aircraft') {
+            await handleApi(aircraftHandler, req, res);
+        } else {
+            await serveStatic(req, res, url.pathname);
+        }
+    } catch (error) {
+        const invalidUrl = error instanceof URIError || error.code === 'ERR_INVALID_URL';
+        if (!invalidUrl) console.error('Request failed:', error);
+        if (res.headersSent) {
+            res.end();
+            return;
+        }
+        res.statusCode = invalidUrl ? 400 : 500;
+        res.end(invalidUrl ? 'Bad request' : 'Internal server error');
     }
-
-    serveStatic(req, res, url.pathname);
 });
 
 server.headersTimeout = 10_000;
