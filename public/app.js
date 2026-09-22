@@ -103,7 +103,8 @@ const GenevaApp = (() => {
                 const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
                 if (response.status === 503 || response.status === 429) {
                     const errorData = await response.json().catch(() => ({}));
-                    const retryAfter = errorData.retryAfter || 120;
+                    const retryAfterHeader = Number(response.headers?.get('Retry-After'));
+                    const retryAfter = errorData.retryAfter || (retryAfterHeader > 0 ? retryAfterHeader : 120);
                     rateLimitResetTime = now() + retryAfter * 1000;
                     displayError(`Data source rate limited. Retrying in ${retryAfter} seconds.`);
                     return;

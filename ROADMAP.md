@@ -146,6 +146,9 @@ Completed:
      window to every path, including arbitrary bot probes. This leaves headroom
      for normal two-second browser polling, page assets, and retries while
      limiting short request bursts.
+   - Follow-up: rapid navigation could exhaust that shared limit. The site
+     limit is now 120 requests per 15 seconds, while `/api/aircraft` keeps a
+     separate 24-request limit. The browser honors Caddy's `Retry-After` header.
 
 22. Keep aircraft tracks updating without an open browser.
    - The Node server refreshes aircraft data at the existing 30-second cache

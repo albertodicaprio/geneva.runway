@@ -76,6 +76,25 @@ test('failed and rate-limited polls retain the snapshot, update age and expiry, 
     assert.match(elements.aircraftList.innerHTML, /No confirmed Geneva arrivals/);
 });
 
+test('Caddy 429 honors Retry-After and resumes polling when the window clears', async () => {
+    let now = Date.parse('2026-01-01T12:00:00Z');
+    let requests = 0;
+    const responses = [
+        { ok: false, status: 429, headers: { get: () => '7' }, json: async () => { throw Error('not JSON'); } },
+        { ok: true, json: async () => fixture(now) }
+    ];
+    const { app, elements } = setup({ now: () => now, fetch: async () => responses[requests++] });
+    await app.poll();
+    assert.match(elements.nextPlane.innerHTML, /Retrying in 7 seconds/);
+    now += 6_000;
+    await app.tick();
+    assert.equal(requests, 1);
+    now += 1_000;
+    await app.tick();
+    assert.equal(requests, 2);
+    assert.match(elements.nextPlane.innerHTML, /ARRIVAL/);
+});
+
 test('one timer drives polling and expiry without concurrent requests', async () => {
     let resolveRequest;
     let requests = 0;

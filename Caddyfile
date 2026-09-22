@@ -19,11 +19,9 @@
 		max_size 1MB
 	}
 
-	# Limit every client request, including unknown paths probed by bots. The
-	# 15-second sliding window allows 24 requests: ample room for a normal tab's
-	# 2-second aircraft polling, page assets, and retries, while limiting bursts.
-	# Group IPv6 privacy addresses by /64 so changing addresses cannot evade the
-	# limit.
+	# Give page navigation and assets room for rapid reloads, while keeping the
+	# aircraft API at its existing per-client rate. Unknown paths still count
+	# toward the site limit. Group IPv6 privacy addresses by /64.
 	# This service is intended for direct human use, not cloud-hosted clients.
 	defender block {
 		ranges aws azurepubliccloud deepseek gcloud githubcopilot openai
@@ -31,6 +29,15 @@
 
 	rate_limit {
 		zone site_requests {
+			key {remote_host}
+			events 120
+			window 15s
+			ipv6_prefix 64
+		}
+		zone aircraft_requests {
+			match {
+				path /api/aircraft
+			}
 			key {remote_host}
 			events 24
 			window 15s
