@@ -83,8 +83,7 @@ test('the stats API serves archive summaries without requiring OpenSky', async (
     assert.equal(summary.days, 7);
     assert.equal(summary.landing.total, 0);
     assert.equal(summary.general.total, 0);
-    assert.equal(summary.general.departures, 0);
-    assert.equal(summary.general.other, 0);
+    assert.equal(summary.takeoffs.total, 0);
     assert.equal((await fetch(`${baseUrl}/api/stats?days=365`)).status, 400);
 });
 

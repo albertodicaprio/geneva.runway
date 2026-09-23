@@ -43,30 +43,38 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
     assert.equal((await restarted.readDays(2, (first + 70 + 3601) * 1000)).length, 2);
 });
 
-test('landing and general stats have separate totals, rankings, and coverage', () => {
+test('landing, general, and takeoff stats have separate totals, rankings, and coverage', () => {
     const summary = summarizeFlights([
         { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, model: 'A320' },
         { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, model: 'A320' },
         { category: 'other', airline: null, origin: null, destination: null, model: null }
     ], 7);
     assert.equal(summary.landing.total, 1);
-    assert.equal(summary.general.total, 2);
-    assert.equal(summary.general.departures, 1);
-    assert.equal(summary.general.other, 1);
+    assert.equal(summary.general.total, 1);
+    assert.equal(summary.takeoffs.total, 1);
     assert.deepEqual(summary.landing.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
-    assert.deepEqual(summary.general.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
+    assert.deepEqual(summary.general.airlines, { known: 0, items: [] });
+    assert.deepEqual(summary.takeoffs.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
     assert.deepEqual(summary.landing.origins.items, [{ name: 'LHR', count: 1 }]);
-    assert.deepEqual(summary.general.origins.items, [{ name: 'GVA', count: 1 }]);
-    assert.equal(summary.general.models.known, 1);
+    assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'GVA', count: 1 }]);
+    assert.equal(summary.general.models.known, 0);
 });
 
-test('Stats page renders independent landing and general charts', async () => {
-    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts']
+test('Stats page switches among independent landing, general, and takeoff charts', async () => {
+    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
+        'takeoffsSummary', 'takeoffsCharts', 'landingStats', 'generalStats', 'takeoffsStats']
         .map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
-    const document = { getElementById: id => elements[id] };
+    const buttons = Object.fromEntries(['landing', 'general', 'takeoffs'].map(name => [name, {
+        dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
+        addEventListener(_event, callback) { this.click = callback; }
+    }]));
+    const document = { getElementById: id => elements[id],
+        querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
+        querySelectorAll: () => Object.values(buttons) };
     const summary = summarizeFlights([
         { category: 'arrival', airline: 'Landing Air' },
-        { category: 'other', airline: 'Overflight Air' }
+        { category: 'other', airline: 'Overflight Air' },
+        { category: 'departure', airline: 'Takeoff Air' }
     ], 7);
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
     await app.load();
@@ -74,6 +82,15 @@ test('Stats page renders independent landing and general charts', async () => {
     assert.doesNotMatch(elements.landingCharts.innerHTML, /Overflight Air/);
     assert.match(elements.generalCharts.innerHTML, /Overflight Air/);
     assert.doesNotMatch(elements.generalCharts.innerHTML, /Landing Air/);
+    assert.doesNotMatch(elements.generalCharts.innerHTML, /Takeoff Air/);
+    assert.match(elements.takeoffsCharts.innerHTML, /Takeoff Air/);
+    assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Overflight Air/);
     assert.match(elements.landingSummary.innerHTML, /Flights seen/);
-    assert.match(elements.generalSummary.innerHTML, /Other traffic/);
+    app.start();
+    buttons.takeoffs.click();
+    assert.equal(elements.landingStats.hidden, true);
+    assert.equal(elements.generalStats.hidden, true);
+    assert.equal(elements.takeoffsStats.hidden, false);
+    assert.equal(buttons.takeoffs.pressed, 'true');
+    assert.equal(buttons.landing.pressed, 'false');
 });

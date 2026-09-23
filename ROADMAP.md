@@ -347,6 +347,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
    - Validation: all 43 tests pass, including separate API summaries and
      independent page charts.
 
+9. [x] Add a three-option Stats navigation bar.
+   - Landings, General, and Takeoffs each have their own view and independent
+     totals and ranked charts. General now excludes confirmed Geneva
+     departures, which appear under Takeoffs.
+   - Validation: all 43 tests pass, including API partitioning and a Stats
+     navigation interaction test.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

@@ -17,11 +17,8 @@ const GenevaStats = (() => {
     }
 
     function renderGroup(group, prefix, document) {
-        const totals = prefix === 'landing'
-            ? [['Flights seen', group.total]]
-            : [['Flights seen', group.total], ['Geneva departures', group.departures], ['Other traffic', group.other]];
         document.getElementById(`${prefix}Summary`).innerHTML = `<div class="stats-totals">
-            ${totals.map(([label, count]) => `<div><strong>${count}</strong><span>${label}</span></div>`).join('')}
+            <div><strong>${group.total}</strong><span>Flights seen</span></div>
         </div>`;
         document.getElementById(`${prefix}Charts`).innerHTML = [
             chart('Airlines', group.airlines, group.total),
@@ -32,12 +29,17 @@ const GenevaStats = (() => {
     }
 
     function render(data, document) {
-        renderGroup(data.landing, 'landing', document);
-        renderGroup(data.general, 'general', document);
+        for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document);
     }
 
     function create({ document, fetch, logger = console }) {
         let requestId = 0;
+        function showView(view) {
+            for (const name of ['landing', 'general', 'takeoffs']) {
+                document.getElementById(`${name}Stats`).hidden = name !== view;
+                document.querySelector(`[data-stats-view="${name}"]`).setAttribute('aria-pressed', String(name === view));
+            }
+        }
         async function load() {
             const current = ++requestId;
             const days = document.getElementById('statsDays').value;
@@ -49,7 +51,7 @@ const GenevaStats = (() => {
             } catch (error) {
                 logger.error('Error fetching flight stats:', error);
                 if (current === requestId) {
-                    for (const prefix of ['landing', 'general']) {
+                    for (const prefix of ['landing', 'general', 'takeoffs']) {
                         document.getElementById(`${prefix}Summary`).innerHTML = '<p class="error">Unable to load flight stats.</p>';
                     }
                 }
@@ -57,9 +59,12 @@ const GenevaStats = (() => {
         }
         function start() {
             document.getElementById('statsDays').addEventListener('change', load);
+            for (const button of document.querySelectorAll('[data-stats-view]')) {
+                button.addEventListener('click', () => showView(button.dataset.statsView));
+            }
             load();
         }
-        return { start, load };
+        return { start, load, showView };
     }
 
     return { create };
