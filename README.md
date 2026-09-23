@@ -92,6 +92,13 @@ if you want to keep this data. An existing snapshot in a previous container's
 `/tmp` is not moved automatically; the app will fetch a new snapshot after
 the update.
 
+The same volume stores daily flight records in `/app/data/flight-history/`.
+Each file is named for the Geneva local date when a flight was first seen.
+Records include first/last seen times, aircraft identity, model, airline, and
+known airports, but no positions or trails. The archive starts with new
+successful OpenSky refreshes; earlier cache data is not backfilled. Files are
+retained until manually removed.
+
 ### Caddy reverse proxy
 
 Docker Compose runs Caddy as the public-facing service. It is the only
@@ -168,6 +175,8 @@ this line to `.env`:
 AIRCRAFT_CACHE_FILE=./data/aircraft-cache.json
 ```
 
-The app creates the directory on its first successful cache write. `data/` is
+The app creates the directory on its first successful cache write. Daily flight
+files are placed in `data/flight-history/` by default; set
+`AIRCRAFT_HISTORY_DIR` to use another directory. `data/` is
 ignored by Git. Docker Compose sets its own cache path, so this local setting
 does not change where container data is stored.

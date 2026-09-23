@@ -9,6 +9,7 @@ const noCache = {
 };
 const credentials = () => ({ clientId: 'test-client', clientSecret: 'test-secret' });
 const tokenResponse = { ok: true, status: 200, json: async () => ({ access_token: 'test-token', expires_in: 1800 }) };
+const noHistory = { async recordSnapshot() {} };
 
 test('upstream deadline aborts a stalled request before headers', async () => {
     let aborted = false;
@@ -48,6 +49,7 @@ test('upstream HTTP errors discard unused bodies while preserving status for ret
 
 test('concurrent refresh callers share one upstream request and persist the result', async () => {
     let stateRequests = 0;
+    let historyWrites = 0;
     let saved;
     const fetchMock = async url => {
         const address = String(url);
@@ -60,11 +62,13 @@ test('concurrent refresh callers share one upstream request and persist the resu
         throw new Error(`Unexpected request: ${address}`);
     };
     const service = createAircraftService({ fetch: fetchMock, clock: () => Date.parse('2026-09-22T12:00:00Z'), credentials,
+        historyStore: { async recordSnapshot() { historyWrites += 1; } },
         cacheStore: { ...noCache, async write(value) { saved = value; } } });
     const [first, second] = await Promise.all([service.refreshAircraftDataOnce(), service.refreshAircraftDataOnce()]);
     assert.equal(first, true);
     assert.equal(second, true);
     assert.equal(stateRequests, 1);
+    assert.equal(historyWrites, 1);
     assert.equal(saved.version, 6);
     assert.deepEqual(saved.arrivals.aircraft, []);
     assert.deepEqual(saved.arrivals.recentTracks, []);
@@ -80,6 +84,7 @@ test('failed refreshes have one cooldown across stale reads, expired reads, and 
         return { ok: false, status: 503 };
     };
     const service = createAircraftService({ fetch: fetchMock, clock: () => now, credentials,
+        historyStore: noHistory,
         cacheStore: { read: async () => ({ version: 6, lastFetchTime: now - 60000, arrivals: { updatedAt: now / 1000 - 60, aircraft: [] } }) },
         schedule: callback => { scheduledRefresh = callback; return { unref() {} }; } });
     for (let index = 0; index < 3; index++) {
@@ -111,6 +116,7 @@ test('a fresh on-disk snapshot retains its enrichment and serves without upstrea
         arrivals: { updatedAt: now / 1000, aircraft: [aircraft], generalTraffic: [], recentTracks: [retained] },
         enrichment: { aircraft: { abc123: { fetchedAt: now, data: aircraft.aircraftDetails } }, flights: {} } }) };
     const service = createAircraftService({ clock: () => now, cacheStore: store,
+        historyStore: noHistory,
         fetch: () => { throw new Error('Upstream should not be called'); } });
     const result = await service.getAircraftData();
     assert.equal(result.status, 200);
@@ -127,6 +133,7 @@ test('a scheduler refresh loads cached arrivals before retaining their tracks', 
     let readCount = 0;
     let saved;
     const service = createAircraftService({ clock: () => now, credentials,
+        historyStore: noHistory,
         cacheStore: {
             async read() {
                 readCount += 1;

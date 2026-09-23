@@ -322,6 +322,19 @@ Docker deployment, cache fallback, traffic classification, and track retention.
    - Validation: all 38 tests pass, including page-specific rendering and
      navigation checks through the local Node server.
 
+6. [x] Archive flights seen in the Geneva search area.
+   - Save one compact, enriched record per continuously observed airborne
+     flight, including arrivals, departures, overflights, and unknown routes.
+   - Start a new record after a one-hour gap and keep flights crossing midnight
+     in the Geneva-local day they were first seen. Write daily JSON files in
+     the existing Docker data volume without position trails.
+   - Validation: archive persistence, enrichment updates, deduplication,
+     midnight continuity, and restart behavior are covered by tests.
+
+7. [ ] Add a Stats page backed by the daily flight archive.
+   - Show totals, traffic categories, and top airlines, origins, destinations,
+     and aircraft types for selectable recent periods with simple charts.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
