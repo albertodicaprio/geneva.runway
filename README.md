@@ -109,6 +109,8 @@ identification relies on ADSBdb route data; the charts show their known-data
 coverage. Each chart initially shows up to eight ranked values; a checkbox
 reveals the full list when more are available. Landings rank registrations in
 place of destinations, and Takeoffs rank registrations in place of origins.
+Airport charts show full names when ADSBdb provides them, falling back to
+airport codes for entries without names.
 
 ### Caddy reverse proxy
 

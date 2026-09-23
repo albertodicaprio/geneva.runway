@@ -45,8 +45,8 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
 
 test('landing, general, and takeoff stats have separate totals, rankings, and coverage', () => {
     const summary = summarizeFlights([
-        { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, registration: 'HB-ARR', model: 'A320' },
-        { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, registration: 'HB-DEP', model: 'A320' },
+        { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR', name: 'Heathrow Airport' }, destination: { iata: 'GVA', name: 'Geneva Airport' }, registration: 'HB-ARR', model: 'A320' },
+        { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA', name: 'Geneva Airport' }, destination: { iata: 'LHR', name: 'Heathrow Airport' }, registration: 'HB-DEP', model: 'A320' },
         { category: 'other', airline: null, origin: null, destination: null, model: null }
     ], 7);
     assert.equal(summary.landing.total, 1);
@@ -55,11 +55,22 @@ test('landing, general, and takeoff stats have separate totals, rankings, and co
     assert.deepEqual(summary.landing.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
     assert.deepEqual(summary.general.airlines, { known: 0, items: [] });
     assert.deepEqual(summary.takeoffs.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
-    assert.deepEqual(summary.landing.origins.items, [{ name: 'LHR', count: 1 }]);
-    assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'GVA', count: 1 }]);
+    assert.deepEqual(summary.landing.origins.items, [{ name: 'Heathrow Airport', count: 1 }]);
+    assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'Geneva Airport', count: 1 }]);
     assert.deepEqual(summary.landing.registrations.items, [{ name: 'HB-ARR', count: 1 }]);
     assert.deepEqual(summary.takeoffs.registrations.items, [{ name: 'HB-DEP', count: 1 }]);
     assert.equal(summary.general.models.known, 0);
+});
+
+test('airport charts group by code and show full names when any flight provides one', () => {
+    const summary = summarizeFlights([
+        { category: 'arrival', origin: { iata: 'LHR' } },
+        { category: 'arrival', origin: { iata: 'LHR', name: 'Heathrow Airport' } },
+        { category: 'arrival', origin: { iata: 'CDG' } }
+    ], 7);
+    assert.deepEqual(summary.landing.origins, { known: 3, items: [
+        { name: 'Heathrow Airport', count: 2 }, { name: 'CDG', count: 1 }
+    ] });
 });
 
 test('stats return every ranked value so each card can expand past the top eight', () => {
@@ -81,9 +92,9 @@ test('Stats page switches among independent landing, general, and takeoff charts
         querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
         querySelectorAll: () => Object.values(buttons) };
     const summary = summarizeFlights([
-        { category: 'arrival', airline: 'Landing Air', registration: 'HB-LND', destination: { iata: 'GVA' } },
+        { category: 'arrival', airline: 'Landing Air', registration: 'HB-LND', origin: { iata: 'LHR', name: 'Heathrow Airport' }, destination: { iata: 'GVA' } },
         { category: 'other', airline: 'Overflight Air' },
-        { category: 'departure', airline: 'Takeoff Air', registration: 'HB-DEP', origin: { iata: 'GVA' } }
+        { category: 'departure', airline: 'Takeoff Air', registration: 'HB-DEP', origin: { iata: 'GVA' }, destination: { iata: 'CDG', name: 'Paris Charles de Gaulle Airport' } }
     ], 7);
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
     await app.load();
@@ -96,9 +107,11 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Overflight Air/);
     assert.match(elements.landingCharts.innerHTML, /Registrations/);
     assert.match(elements.landingCharts.innerHTML, /HB-LND/);
+    assert.match(elements.landingCharts.innerHTML, /Heathrow Airport/);
     assert.doesNotMatch(elements.landingCharts.innerHTML, /Destination airports/);
     assert.match(elements.takeoffsCharts.innerHTML, /Registrations/);
     assert.match(elements.takeoffsCharts.innerHTML, /HB-DEP/);
+    assert.match(elements.takeoffsCharts.innerHTML, /Paris Charles de Gaulle Airport/);
     assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Origin airports/);
     assert.match(elements.generalCharts.innerHTML, /Origin airports/);
     assert.match(elements.generalCharts.innerHTML, /Destination airports/);

@@ -361,6 +361,12 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 45 tests pass, including full rankings, chart-specific
       expansion, and registration placement.
 
+11. [x] Show full airport names in Stats rankings.
+    - Group airports by code so records with and without a name count together;
+      display a full name when available and fall back to the code otherwise.
+    - Validation: all 46 tests pass, including mixed named and code-only
+      airport records and rendered full names.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
