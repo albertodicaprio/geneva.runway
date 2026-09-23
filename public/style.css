@@ -143,3 +143,27 @@ footer a:hover { text-decoration: underline; }
 .map-details-photo p { margin: 0; padding: 4px; color: #63758a; font-size: .7rem; text-align: center; }
 .photo-unavailable { display: grid; place-items: center; height: 100%; margin: 0; padding: 4px; color: #63758a; font-size: .7rem; text-align: center; overflow-wrap: anywhere; }
 .next-arrival .photo-unavailable { color: #c7dae8; }
+
+.stats-period { display: grid; gap: 5px; color: #47637f; font-size: .8rem; font-weight: 750; }
+.stats-period select { min-height: 38px; padding: 6px 10px; border: 1px solid #b9c9d8; border-radius: 8px; color: #152237; background: #fff; font: inherit; }
+.stats-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.stats-totals div { display: grid; gap: 5px; padding: 16px; border-radius: 12px; background: #eaf3f8; }
+.stats-totals strong { color: #123c64; font-size: clamp(1.5rem, 4vw, 2.2rem); }
+.stats-totals span { color: #47637f; font-size: .8rem; font-weight: 750; }
+.stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.stats-chart { min-width: 0; }
+.stats-chart h2 { margin-bottom: 5px; }
+.stats-chart .history-note { margin-bottom: 18px; }
+.stats-bars { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
+.stats-bar-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 3px; font-size: .88rem; }
+.stats-bar-label span { min-width: 0; overflow-wrap: anywhere; }
+.stats-bar-label strong { flex: none; }
+.stats-bars progress { display: block; width: 100%; height: 9px; overflow: hidden; border: 0; border-radius: 9px; accent-color: #167a99; }
+.stats-bars progress::-webkit-progress-bar { background: #e5edf3; }
+.stats-bars progress::-webkit-progress-value { background: #167a99; border-radius: 9px; }
+.stats-bars progress::-moz-progress-bar { background: #167a99; border-radius: 9px; }
+
+@media (max-width: 700px) {
+    .stats-grid { grid-template-columns: 1fr; }
+    .stats-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

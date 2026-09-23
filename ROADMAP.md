@@ -331,9 +331,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
    - Validation: archive persistence, enrichment updates, deduplication,
      midnight continuity, and restart behavior are covered by tests.
 
-7. [ ] Add a Stats page backed by the daily flight archive.
+7. [x] Add a Stats page backed by the daily flight archive.
    - Show totals, traffic categories, and top airlines, origins, destinations,
      and aircraft types for selectable recent periods with simple charts.
+   - Periods are today, 7 days, and 30 days. Ranked charts show how many
+     archived flights have each detail; unknown values remain in the total.
+   - Validation: all 42 tests pass, including archive aggregation, the JSON
+     endpoint, and direct navigation to the page.
 
 Remaining maintenance:
 

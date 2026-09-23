@@ -99,6 +99,13 @@ known airports, but no positions or trails. The archive starts with new
 successful OpenSky refreshes; earlier cache data is not backfilled. Files are
 retained until manually removed.
 
+The Stats page at `/stats.html` summarizes today's, the last seven days', or
+the last 30 days' archived flights. `/api/stats?days=7` serves the same summary
+without making an OpenSky request. It counts airborne flights seen inside the
+existing search bounds, including overflights and flights with unknown routes.
+Arrival and departure counts rely on ADSBdb route data; unknown routes appear
+under other traffic. The charts show their known-data coverage.
+
 ### Caddy reverse proxy
 
 Docker Compose runs Caddy as the public-facing service. It is the only

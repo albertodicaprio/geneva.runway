@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats · Geneva Air Traffic</title>
+    <link rel="icon" href="plane_ico.ico" sizes="any">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">LSGG · GENEVA</p>
+                <h1>Stats</h1>
+            </div>
+        </header>
+
+        <nav class="page-nav" aria-label="Main navigation">
+            <a href="/"><span class="nav-icon" aria-hidden="true">⌖</span><span>Overview</span></a>
+            <a href="/arrivals.html"><span class="nav-icon" aria-hidden="true">✈</span><span>Arrivals</span></a>
+            <a href="/history.html"><span class="nav-icon" aria-hidden="true">◷</span><span>History</span></a>
+            <a href="/stats.html" aria-current="page"><span class="nav-icon" aria-hidden="true">▥</span><span>Stats</span></a>
+        </nav>
+
+        <main>
+            <section aria-labelledby="statsHeading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">GENEVA AREA</p>
+                        <h2 id="statsHeading">Flights seen</h2>
+                    </div>
+                    <label class="stats-period">Period
+                        <select id="statsDays">
+                            <option value="1">Today</option>
+                            <option value="7" selected>Last 7 days</option>
+                            <option value="30">Last 30 days</option>
+                        </select>
+                    </label>
+                </div>
+                <p class="history-note">Airborne flights inside the map's Geneva-area search bounds, including arrivals, departures, and overflights. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
+                <div id="statsSummary" aria-live="polite"><p class="loading">Loading stats…</p></div>
+            </section>
+
+            <div class="stats-grid" id="statsCharts" aria-live="polite"></div>
+        </main>
+
+        <footer>
+            Position data: <a href="https://opensky-network.org/" target="_blank" rel="noreferrer">OpenSky</a>
+            · Route and aircraft data: <a href="https://www.adsbdb.com/" target="_blank" rel="noreferrer">ADSBdb</a>
+        </footer>
+    </div>
+
+    <script src="stats.js"></script>
+</body>
+
+</html>

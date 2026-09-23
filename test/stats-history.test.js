@@ -4,6 +4,7 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const { createFlightHistory, genevaDate } = require('../lib/flight-history');
+const { summarizeFlights } = require('../lib/stats');
 
 test('daily history deduplicates refreshes, upgrades details, and keeps flights across Geneva midnight', async t => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-history-test-'));
@@ -39,4 +40,19 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
     assert.equal((await restarted.readDays(2, (first + 70) * 1000)).length, 1);
     await restarted.recordSnapshot({ updatedAt: first + 70 + 3601, aircraft: [aircraft], generalTraffic: [] });
     assert.equal((await restarted.readDays(2, (first + 70 + 3601) * 1000)).length, 2);
+});
+
+test('stats include unknown-route flights in totals and report enrichment coverage', () => {
+    const summary = summarizeFlights([
+        { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, model: 'A320' },
+        { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, model: 'A320' },
+        { category: 'other', airline: null, origin: null, destination: null, model: null }
+    ], 7);
+    assert.equal(summary.total, 3);
+    assert.deepEqual(summary.categories, { arrivals: 1, departures: 1, other: 1 });
+    assert.deepEqual(summary.airlines, { known: 2, items: [{ name: 'Swiss', count: 2 }] });
+    assert.deepEqual(summary.origins, { known: 2, items: [
+        { name: 'GVA', count: 1 }, { name: 'LHR', count: 1 }
+    ] });
+    assert.equal(summary.models.known, 2);
 });
