@@ -166,6 +166,8 @@ footer a:hover { text-decoration: underline; }
 .stats-bars progress::-webkit-progress-bar { background: #e5edf3; }
 .stats-bars progress::-webkit-progress-value { background: #167a99; border-radius: 9px; }
 .stats-bars progress::-moz-progress-bar { background: #167a99; border-radius: 9px; }
+.stats-show-all { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: #31516e; font-size: .84rem; font-weight: 750; cursor: pointer; }
+.stats-show-all input { width: 18px; height: 18px; margin: 0; accent-color: #165f7a; }
 
 @media (max-width: 700px) {
     .stats-grid { grid-template-columns: 1fr; }

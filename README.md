@@ -106,7 +106,9 @@ routes; takeoffs are Geneva departures. Each category has its own total and
 airline, airport, and model charts. `/api/stats?days=7` serves all three
 summaries without making an OpenSky request. Arrival and departure
 identification relies on ADSBdb route data; the charts show their known-data
-coverage.
+coverage. Each chart initially shows up to eight ranked values; a checkbox
+reveals the full list when more are available. Landings rank registrations in
+place of destinations, and Takeoffs rank registrations in place of origins.
 
 ### Caddy reverse proxy
 

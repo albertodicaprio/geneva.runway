@@ -354,6 +354,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
    - Validation: all 43 tests pass, including API partitioning and a Stats
      navigation interaction test.
 
+10. [x] Expand ranked Stats charts and show useful route-specific fields.
+    - Each chart can reveal all ranked values after the first eight through
+      its own checkbox. Landing destinations and takeoff origins are replaced
+      by registration rankings.
+    - Validation: all 45 tests pass, including full rankings, chart-specific
+      expansion, and registration placement.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

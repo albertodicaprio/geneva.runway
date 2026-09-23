@@ -45,8 +45,8 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
 
 test('landing, general, and takeoff stats have separate totals, rankings, and coverage', () => {
     const summary = summarizeFlights([
-        { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, model: 'A320' },
-        { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, model: 'A320' },
+        { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, registration: 'HB-ARR', model: 'A320' },
+        { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, registration: 'HB-DEP', model: 'A320' },
         { category: 'other', airline: null, origin: null, destination: null, model: null }
     ], 7);
     assert.equal(summary.landing.total, 1);
@@ -57,7 +57,16 @@ test('landing, general, and takeoff stats have separate totals, rankings, and co
     assert.deepEqual(summary.takeoffs.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
     assert.deepEqual(summary.landing.origins.items, [{ name: 'LHR', count: 1 }]);
     assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'GVA', count: 1 }]);
+    assert.deepEqual(summary.landing.registrations.items, [{ name: 'HB-ARR', count: 1 }]);
+    assert.deepEqual(summary.takeoffs.registrations.items, [{ name: 'HB-DEP', count: 1 }]);
     assert.equal(summary.general.models.known, 0);
+});
+
+test('stats return every ranked value so each card can expand past the top eight', () => {
+    const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
+    const summary = summarizeFlights(flights, 7);
+    assert.equal(summary.landing.airlines.items.length, 10);
+    assert.deepEqual(summary.landing.airlines.items.at(-1), { name: 'Airline 9', count: 1 });
 });
 
 test('Stats page switches among independent landing, general, and takeoff charts', async () => {
@@ -68,13 +77,13 @@ test('Stats page switches among independent landing, general, and takeoff charts
         dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
         addEventListener(_event, callback) { this.click = callback; }
     }]));
-    const document = { getElementById: id => elements[id],
+    const document = { getElementById: id => elements[id], addEventListener(_event, callback) { this.onChange = callback; },
         querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
         querySelectorAll: () => Object.values(buttons) };
     const summary = summarizeFlights([
-        { category: 'arrival', airline: 'Landing Air' },
+        { category: 'arrival', airline: 'Landing Air', registration: 'HB-LND', destination: { iata: 'GVA' } },
         { category: 'other', airline: 'Overflight Air' },
-        { category: 'departure', airline: 'Takeoff Air' }
+        { category: 'departure', airline: 'Takeoff Air', registration: 'HB-DEP', origin: { iata: 'GVA' } }
     ], 7);
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
     await app.load();
@@ -85,6 +94,14 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.doesNotMatch(elements.generalCharts.innerHTML, /Takeoff Air/);
     assert.match(elements.takeoffsCharts.innerHTML, /Takeoff Air/);
     assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Overflight Air/);
+    assert.match(elements.landingCharts.innerHTML, /Registrations/);
+    assert.match(elements.landingCharts.innerHTML, /HB-LND/);
+    assert.doesNotMatch(elements.landingCharts.innerHTML, /Destination airports/);
+    assert.match(elements.takeoffsCharts.innerHTML, /Registrations/);
+    assert.match(elements.takeoffsCharts.innerHTML, /HB-DEP/);
+    assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Origin airports/);
+    assert.match(elements.generalCharts.innerHTML, /Origin airports/);
+    assert.match(elements.generalCharts.innerHTML, /Destination airports/);
     assert.match(elements.landingSummary.innerHTML, /Flights seen/);
     app.start();
     buttons.takeoffs.click();
@@ -93,4 +110,26 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.equal(elements.takeoffsStats.hidden, false);
     assert.equal(buttons.takeoffs.pressed, 'true');
     assert.equal(buttons.landing.pressed, 'false');
+});
+
+test('each chart checkbox reveals and hides only its extra rows', async () => {
+    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
+        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '' }]));
+    const document = { getElementById: id => elements[id], addEventListener(_event, callback) { this.onChange = callback; },
+        querySelectorAll: () => [] };
+    const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
+    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summarizeFlights(flights, 7) }) });
+    await app.load();
+    assert.match(elements.landingCharts.innerHTML, /Show all 10 airlines/);
+    assert.equal((elements.landingCharts.innerHTML.match(/data-extra hidden/g) || []).length, 2);
+    const rows = [{ hidden: true }, { hidden: true }];
+    const checkbox = { checked: true, matches: () => true, closest: () => ({ querySelectorAll: () => rows }) };
+    // Exercise the delegated listener registered when the page starts.
+    elements.statsDays.addEventListener = () => {};
+    app.start();
+    document.onChange({ target: checkbox });
+    assert.deepEqual(rows.map(row => row.hidden), [false, false]);
+    checkbox.checked = false;
+    document.onChange({ target: checkbox });
+    assert.deepEqual(rows.map(row => row.hidden), [true, true]);
 });
