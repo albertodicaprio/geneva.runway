@@ -57,7 +57,7 @@ test('all four pages provide direct navigation with the correct current page', a
         ['/', 'Geneva Air Traffic', 'mapSection'],
         ['/arrivals.html', 'Arrivals', 'aircraftList'],
         ['/history.html', 'Recent landings', 'flightHistory'],
-        ['/stats.html', 'Stats', 'statsSummary']
+        ['/stats.html', 'Stats', 'landingSummary']
     ]) {
         const response = await fetch(`${baseUrl}${path}`);
         assert.equal(response.status, 200);
@@ -69,7 +69,7 @@ test('all four pages provide direct navigation with the correct current page', a
         assert.match(html, /href="\/stats.html"/);
         assert.ok(html.includes(`href="${path}" aria-current="page"`));
         assert.ok(html.includes(`id="${sectionId}"`));
-        for (const otherId of ['mapSection', 'aircraftList', 'flightHistory', 'statsSummary']) {
+        for (const otherId of ['mapSection', 'aircraftList', 'flightHistory', 'landingSummary']) {
             if (otherId !== sectionId) assert.ok(!html.includes(`id="${otherId}"`));
         }
     }
@@ -81,8 +81,10 @@ test('the stats API serves archive summaries without requiring OpenSky', async (
     assert.equal(response.headers.get('cache-control'), 'no-store');
     const summary = await response.json();
     assert.equal(summary.days, 7);
-    assert.equal(summary.total, 0);
-    assert.deepEqual(summary.categories, { arrivals: 0, departures: 0, other: 0 });
+    assert.equal(summary.landing.total, 0);
+    assert.equal(summary.general.total, 0);
+    assert.equal(summary.general.departures, 0);
+    assert.equal(summary.general.other, 0);
     assert.equal((await fetch(`${baseUrl}/api/stats?days=365`)).status, 400);
 });
 

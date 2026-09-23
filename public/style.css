@@ -146,12 +146,13 @@ footer a:hover { text-decoration: underline; }
 
 .stats-period { display: grid; gap: 5px; color: #47637f; font-size: .8rem; font-weight: 750; }
 .stats-period select { min-height: 38px; padding: 6px 10px; border: 1px solid #b9c9d8; border-radius: 8px; color: #152237; background: #fff; font: inherit; }
-.stats-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.stats-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
 .stats-totals div { display: grid; gap: 5px; padding: 16px; border-radius: 12px; background: #eaf3f8; }
+.stats-totals div:only-child { grid-column: 1 / -1; }
 .stats-totals strong { color: #123c64; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .stats-totals span { color: #47637f; font-size: .8rem; font-weight: 750; }
 .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
-.stats-chart { min-width: 0; }
+.stats-chart { min-width: 0; padding: 18px; background: #fff; box-shadow: none; }
 .stats-chart h2 { margin-bottom: 5px; }
 .stats-chart .history-note { margin-bottom: 18px; }
 .stats-bars { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }

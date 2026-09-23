@@ -100,11 +100,12 @@ successful OpenSky refreshes; earlier cache data is not backfilled. Files are
 retained until manually removed.
 
 The Stats page at `/stats.html` summarizes today's, the last seven days', or
-the last 30 days' archived flights. `/api/stats?days=7` serves the same summary
-without making an OpenSky request. It counts airborne flights seen inside the
-existing search bounds, including overflights and flights with unknown routes.
-Arrival and departure counts rely on ADSBdb route data; unknown routes appear
-under other traffic. The charts show their known-data coverage.
+the last 30 days' archived flights. It separates confirmed Geneva arrivals
+from general traffic, which includes departures, overflights, and flights with
+unknown routes. Each group has its own total and airline, airport, and model
+charts. `/api/stats?days=7` serves both summaries without making an OpenSky
+request. Arrival and departure identification relies on ADSBdb route data;
+the charts show their known-data coverage.
 
 ### Caddy reverse proxy
 

@@ -30,7 +30,7 @@
                 <div class="section-heading">
                     <div>
                         <p class="eyebrow">GENEVA AREA</p>
-                        <h2 id="statsHeading">Flights seen</h2>
+                        <h2 id="statsHeading">Flights seen in the Geneva area</h2>
                     </div>
                     <label class="stats-period">Period
                         <select id="statsDays">
@@ -40,11 +40,24 @@
                         </select>
                     </label>
                 </div>
-                <p class="history-note">Airborne flights inside the map's Geneva-area search bounds, including arrivals, departures, and overflights. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
-                <div id="statsSummary" aria-live="polite"><p class="loading">Loading stats…</p></div>
+                <p class="history-note">Airborne flights inside the map's Geneva-area search bounds. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
             </section>
 
-            <div class="stats-grid" id="statsCharts" aria-live="polite"></div>
+            <section aria-labelledby="landingStatsHeading">
+                <p class="eyebrow">CONFIRMED GENEVA ARRIVALS</p>
+                <h2 id="landingStatsHeading">Landing traffic</h2>
+                <p class="history-note">Flights whose reported destination is Geneva. A sighting does not confirm touchdown.</p>
+                <div id="landingSummary" aria-live="polite"><p class="loading">Loading landing stats…</p></div>
+                <div class="stats-grid" id="landingCharts"></div>
+            </section>
+
+            <section aria-labelledby="generalStatsHeading">
+                <p class="eyebrow">OTHER AIRBORNE TRAFFIC</p>
+                <h2 id="generalStatsHeading">General traffic</h2>
+                <p class="history-note">Geneva departures, overflights, and flights with unknown routes. Confirmed Geneva arrivals are excluded.</p>
+                <div id="generalSummary" aria-live="polite"><p class="loading">Loading general stats…</p></div>
+                <div class="stats-grid" id="generalCharts"></div>
+            </section>
         </main>
 
         <footer>

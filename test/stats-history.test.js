@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const { createFlightHistory, genevaDate } = require('../lib/flight-history');
 const { summarizeFlights } = require('../lib/stats');
+const GenevaStats = require('../public/stats');
 
 test('daily history deduplicates refreshes, upgrades details, and keeps flights across Geneva midnight', async t => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-history-test-'));
@@ -42,17 +43,37 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
     assert.equal((await restarted.readDays(2, (first + 70 + 3601) * 1000)).length, 2);
 });
 
-test('stats include unknown-route flights in totals and report enrichment coverage', () => {
+test('landing and general stats have separate totals, rankings, and coverage', () => {
     const summary = summarizeFlights([
         { category: 'arrival', airline: 'Swiss', origin: { iata: 'LHR' }, destination: { iata: 'GVA' }, model: 'A320' },
         { category: 'departure', airline: 'Swiss', origin: { iata: 'GVA' }, destination: { iata: 'LHR' }, model: 'A320' },
         { category: 'other', airline: null, origin: null, destination: null, model: null }
     ], 7);
-    assert.equal(summary.total, 3);
-    assert.deepEqual(summary.categories, { arrivals: 1, departures: 1, other: 1 });
-    assert.deepEqual(summary.airlines, { known: 2, items: [{ name: 'Swiss', count: 2 }] });
-    assert.deepEqual(summary.origins, { known: 2, items: [
-        { name: 'GVA', count: 1 }, { name: 'LHR', count: 1 }
-    ] });
-    assert.equal(summary.models.known, 2);
+    assert.equal(summary.landing.total, 1);
+    assert.equal(summary.general.total, 2);
+    assert.equal(summary.general.departures, 1);
+    assert.equal(summary.general.other, 1);
+    assert.deepEqual(summary.landing.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
+    assert.deepEqual(summary.general.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
+    assert.deepEqual(summary.landing.origins.items, [{ name: 'LHR', count: 1 }]);
+    assert.deepEqual(summary.general.origins.items, [{ name: 'GVA', count: 1 }]);
+    assert.equal(summary.general.models.known, 1);
+});
+
+test('Stats page renders independent landing and general charts', async () => {
+    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts']
+        .map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
+    const document = { getElementById: id => elements[id] };
+    const summary = summarizeFlights([
+        { category: 'arrival', airline: 'Landing Air' },
+        { category: 'other', airline: 'Overflight Air' }
+    ], 7);
+    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
+    await app.load();
+    assert.match(elements.landingCharts.innerHTML, /Landing Air/);
+    assert.doesNotMatch(elements.landingCharts.innerHTML, /Overflight Air/);
+    assert.match(elements.generalCharts.innerHTML, /Overflight Air/);
+    assert.doesNotMatch(elements.generalCharts.innerHTML, /Landing Air/);
+    assert.match(elements.landingSummary.innerHTML, /Flights seen/);
+    assert.match(elements.generalSummary.innerHTML, /Other traffic/);
 });

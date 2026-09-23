@@ -16,20 +16,24 @@ const GenevaStats = (() => {
         </section>`;
     }
 
-    function render(data, document) {
-        const summary = document.getElementById('statsSummary');
-        summary.innerHTML = `<div class="stats-totals">
-            <div><strong>${data.total}</strong><span>Total flights</span></div>
-            <div><strong>${data.categories.arrivals}</strong><span>Geneva arrivals</span></div>
-            <div><strong>${data.categories.departures}</strong><span>Geneva departures</span></div>
-            <div><strong>${data.categories.other}</strong><span>Other traffic</span></div>
+    function renderGroup(group, prefix, document) {
+        const totals = prefix === 'landing'
+            ? [['Flights seen', group.total]]
+            : [['Flights seen', group.total], ['Geneva departures', group.departures], ['Other traffic', group.other]];
+        document.getElementById(`${prefix}Summary`).innerHTML = `<div class="stats-totals">
+            ${totals.map(([label, count]) => `<div><strong>${count}</strong><span>${label}</span></div>`).join('')}
         </div>`;
-        document.getElementById('statsCharts').innerHTML = [
-            chart('Airlines', data.airlines, data.total),
-            chart('Origin airports', data.origins, data.total),
-            chart('Destination airports', data.destinations, data.total),
-            chart('Aircraft models', data.models, data.total)
+        document.getElementById(`${prefix}Charts`).innerHTML = [
+            chart('Airlines', group.airlines, group.total),
+            chart('Origin airports', group.origins, group.total),
+            chart('Destination airports', group.destinations, group.total),
+            chart('Aircraft models', group.models, group.total)
         ].join('');
+    }
+
+    function render(data, document) {
+        renderGroup(data.landing, 'landing', document);
+        renderGroup(data.general, 'general', document);
     }
 
     function create({ document, fetch, logger = console }) {
@@ -44,8 +48,11 @@ const GenevaStats = (() => {
                 if (current === requestId) render(data, document);
             } catch (error) {
                 logger.error('Error fetching flight stats:', error);
-                if (current === requestId) document.getElementById('statsSummary').innerHTML =
-                    '<p class="error">Unable to load flight stats.</p>';
+                if (current === requestId) {
+                    for (const prefix of ['landing', 'general']) {
+                        document.getElementById(`${prefix}Summary`).innerHTML = '<p class="error">Unable to load flight stats.</p>';
+                    }
+                }
             }
         }
         function start() {

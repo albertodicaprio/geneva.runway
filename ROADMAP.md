@@ -339,6 +339,14 @@ Docker deployment, cache fallback, traffic classification, and track retention.
    - Validation: all 42 tests pass, including archive aggregation, the JSON
      endpoint, and direct navigation to the page.
 
+8. [x] Separate landing and general traffic stats.
+   - Confirmed Geneva arrivals and all other airborne traffic have independent
+     totals, airline, airport, and aircraft-model rankings and charts.
+   - General traffic includes Geneva departures, overflights, and unknown
+     routes, with its departure and other counts shown separately.
+   - Validation: all 43 tests pass, including separate API summaries and
+     independent page charts.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
