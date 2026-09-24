@@ -73,7 +73,7 @@ test('airport charts group by code and show full names when any flight provides 
     ] });
 });
 
-test('airline charts group easyJet variants under easyjet', () => {
+test('airline charts group easyJet variants under easyJet', () => {
     const summary = summarizeFlights([
         { category: 'arrival', airline: 'easyJet' },
         { category: 'arrival', airline: 'easyJet Europe' },
@@ -81,7 +81,7 @@ test('airline charts group easyJet variants under easyjet', () => {
         { category: 'arrival', airline: 'Other Airline' }
     ], 7);
     assert.deepEqual(summary.landing.airlines, { known: 4, items: [
-        { name: 'easyjet', count: 3 }, { name: 'Other Airline', count: 1 }
+        { name: 'easyJet', count: 3 }, { name: 'Other Airline', count: 1 }
     ] });
 });
 
