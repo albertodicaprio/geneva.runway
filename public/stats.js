@@ -7,10 +7,15 @@ const GenevaStats = (() => {
     }
 
     function chartContent(title, data, total) {
-        const rows = data.items.map((item, index) => `<li${index >= INITIAL_CHART_ITEMS ? ' data-extra hidden' : ''}>
-            <div class="stats-bar-label"><span>${escapeHtml(item.name)}</span><strong>${item.count}</strong></div>
-            <progress value="${item.count}" max="${Math.max(total, 1)}" aria-label="${escapeHtml(item.name)}: ${item.count} of ${total} flights"></progress>
-        </li>`).join('');
+        const rows = data.items.map((item, index) => {
+            const examples = item.examples?.length
+                ? ` (${item.examples.join(', ')}${item.moreExamples ? ', …' : ''})` : '';
+            const label = item.name + examples;
+            return `<li${index >= INITIAL_CHART_ITEMS ? ' data-extra hidden' : ''}>
+                <div class="stats-bar-label"><span>${escapeHtml(label)}</span><strong>${item.count}</strong></div>
+                <progress value="${item.count}" max="${Math.max(total, 1)}" aria-label="${escapeHtml(label)}: ${item.count} of ${total} flights"></progress>
+            </li>`;
+        }).join('');
         return `<p class="history-note">Known for ${data.known} of ${total} flights</p>
             ${rows ? `<ol class="stats-bars">${rows}</ol>` : '<p class="no-aircraft">No known values yet.</p>'}
             ${data.items.length > INITIAL_CHART_ITEMS ? `<label class="stats-show-all"><input type="checkbox" data-stats-expand> Show all ${data.items.length} ${title.toLowerCase()}</label>` : ''}`;

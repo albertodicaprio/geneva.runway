@@ -372,6 +372,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       independent coverage counts and a toggle inside each card.
     - Validation: all 49 tests pass, including both rankings and the toggle.
 
+13. [x] Add recorded type examples beside ICAO codes in Stats.
+    - Show up to three common descriptive types per code, with an ellipsis when
+      more are available. Codes without descriptions remain visible alone.
+    - Validation: all 50 tests pass, including example selection and rendering.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

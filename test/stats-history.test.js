@@ -96,7 +96,22 @@ test('aircraft models rank descriptive and ICAO types separately', () => {
         { name: 'Airbus A320', count: 2 }, { name: 'Boeing 737-800', count: 1 }
     ] });
     assert.deepEqual(summary.landing.icaoTypes, { known: 3, items: [
-        { name: 'A320', count: 2 }, { name: 'B738', count: 1 }
+        { name: 'A320', count: 2, examples: ['Airbus A320'], moreExamples: false },
+        { name: 'B738', count: 1, examples: [], moreExamples: false }
+    ] });
+});
+
+test('ICAO types show at most three common recorded models', () => {
+    const summary = summarizeFlights([
+        { category: 'arrival', aircraftType: 'A320', model: 'A320 214SL' },
+        { category: 'arrival', aircraftType: 'A320', model: 'A320 214' },
+        { category: 'arrival', aircraftType: 'A320', model: 'A320 214SL' },
+        { category: 'arrival', aircraftType: 'A320', model: 'A320 232' },
+        { category: 'arrival', aircraftType: 'A320', model: 'A320 216' },
+        { category: 'arrival', aircraftType: 'A320', model: null }
+    ], 7);
+    assert.deepEqual(summary.landing.icaoTypes, { known: 6, items: [
+        { name: 'A320', count: 6, examples: ['A320 214SL', 'A320 214', 'A320 216'], moreExamples: true }
     ] });
 });
 
@@ -185,7 +200,7 @@ test('each aircraft models card toggles between type and ICAO rankings', async (
     assert.match(elements.landingCharts.innerHTML, /data-model-choice="type" aria-pressed="true"/);
     assert.match(elements.landingCharts.innerHTML, /data-model-choice="icao" aria-pressed="false"/);
     assert.match(elements.landingCharts.innerHTML, /data-model-mode="type">[\s\S]*Airbus A320/);
-    assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao" hidden>[\s\S]*A320/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao" hidden>[\s\S]*A320 \(Airbus A320\)/);
 
     const panels = [{ dataset: { modelMode: 'type' }, hidden: false }, { dataset: { modelMode: 'icao' }, hidden: true }];
     const card = { querySelectorAll: selector => selector === '[data-model-mode]' ? panels : buttons };
