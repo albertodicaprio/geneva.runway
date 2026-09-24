@@ -85,6 +85,21 @@ test('airline charts group easyJet variants under easyJet', () => {
     ] });
 });
 
+test('aircraft models rank descriptive and ICAO types separately', () => {
+    const summary = summarizeFlights([
+        { category: 'arrival', model: 'Airbus A320', aircraftType: 'A320' },
+        { category: 'arrival', model: 'Airbus A320', aircraftType: 'A320' },
+        { category: 'arrival', model: null, aircraftType: 'B738' },
+        { category: 'arrival', model: 'Boeing 737-800', aircraftType: null }
+    ], 7);
+    assert.deepEqual(summary.landing.models, { known: 3, items: [
+        { name: 'Airbus A320', count: 2 }, { name: 'Boeing 737-800', count: 1 }
+    ] });
+    assert.deepEqual(summary.landing.icaoTypes, { known: 3, items: [
+        { name: 'A320', count: 2 }, { name: 'B738', count: 1 }
+    ] });
+});
+
 test('stats return every ranked value so each card can expand past the top eight', () => {
     const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
     const summary = summarizeFlights(flights, 7);
@@ -100,7 +115,7 @@ test('Stats page switches among independent landing, general, and takeoff charts
         dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
         addEventListener(_event, callback) { this.click = callback; }
     }]));
-    const document = { getElementById: id => elements[id], addEventListener(_event, callback) { this.onChange = callback; },
+    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
         querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
         querySelectorAll: () => Object.values(buttons) };
     const summary = summarizeFlights([
@@ -140,7 +155,7 @@ test('Stats page switches among independent landing, general, and takeoff charts
 test('each chart checkbox reveals and hides only its extra rows', async () => {
     const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
         'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '' }]));
-    const document = { getElementById: id => elements[id], addEventListener(_event, callback) { this.onChange = callback; },
+    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
         querySelectorAll: () => [] };
     const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summarizeFlights(flights, 7) }) });
@@ -152,9 +167,36 @@ test('each chart checkbox reveals and hides only its extra rows', async () => {
     // Exercise the delegated listener registered when the page starts.
     elements.statsDays.addEventListener = () => {};
     app.start();
-    document.onChange({ target: checkbox });
+    document.onchange({ target: checkbox });
     assert.deepEqual(rows.map(row => row.hidden), [false, false]);
     checkbox.checked = false;
-    document.onChange({ target: checkbox });
+    document.onchange({ target: checkbox });
     assert.deepEqual(rows.map(row => row.hidden), [true, true]);
+});
+
+test('each aircraft models card toggles between type and ICAO rankings', async () => {
+    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
+        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
+    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
+        querySelectorAll: () => [] };
+    const summary = summarizeFlights([{ category: 'arrival', model: 'Airbus A320', aircraftType: 'A320' }], 7);
+    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
+    await app.load();
+    assert.match(elements.landingCharts.innerHTML, /data-model-choice="type" aria-pressed="true"/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-choice="icao" aria-pressed="false"/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-mode="type">[\s\S]*Airbus A320/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao" hidden>[\s\S]*A320/);
+
+    const panels = [{ dataset: { modelMode: 'type' }, hidden: false }, { dataset: { modelMode: 'icao' }, hidden: true }];
+    const card = { querySelectorAll: selector => selector === '[data-model-mode]' ? panels : buttons };
+    const buttons = ['type', 'icao'].map(modelChoice => ({
+        dataset: { modelChoice }, closest: () => card,
+        setAttribute(_name, value) { this.pressed = value; }
+    }));
+    app.start();
+    document.onclick({ target: { closest: () => buttons[1] } });
+    assert.deepEqual(panels.map(panel => panel.hidden), [true, false]);
+    assert.deepEqual(buttons.map(button => button.pressed), ['false', 'true']);
+    document.onclick({ target: { closest: () => buttons[0] } });
+    assert.deepEqual(panels.map(panel => panel.hidden), [false, true]);
 });

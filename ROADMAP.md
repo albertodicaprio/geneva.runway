@@ -367,6 +367,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 46 tests pass, including mixed named and code-only
       airport records and rendered full names.
 
+12. [x] Let each Aircraft models card switch between type names and ICAO codes.
+    - Rank descriptive aircraft types and ICAO type codes separately, with
+      independent coverage counts and a toggle inside each card.
+    - Validation: all 49 tests pass, including both rankings and the toggle.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

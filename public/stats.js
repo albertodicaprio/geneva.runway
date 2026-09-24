@@ -6,15 +6,28 @@ const GenevaStats = (() => {
         })[character]);
     }
 
-    function chart(title, data, total) {
+    function chartContent(title, data, total) {
         const rows = data.items.map((item, index) => `<li${index >= INITIAL_CHART_ITEMS ? ' data-extra hidden' : ''}>
             <div class="stats-bar-label"><span>${escapeHtml(item.name)}</span><strong>${item.count}</strong></div>
             <progress value="${item.count}" max="${Math.max(total, 1)}" aria-label="${escapeHtml(item.name)}: ${item.count} of ${total} flights"></progress>
         </li>`).join('');
-        return `<section class="stats-chart"><h2>${title}</h2>
-            <p class="history-note">Known for ${data.known} of ${total} flights</p>
+        return `<p class="history-note">Known for ${data.known} of ${total} flights</p>
             ${rows ? `<ol class="stats-bars">${rows}</ol>` : '<p class="no-aircraft">No known values yet.</p>'}
-            ${data.items.length > INITIAL_CHART_ITEMS ? `<label class="stats-show-all"><input type="checkbox" data-stats-expand> Show all ${data.items.length} ${title.toLowerCase()}</label>` : ''}
+            ${data.items.length > INITIAL_CHART_ITEMS ? `<label class="stats-show-all"><input type="checkbox" data-stats-expand> Show all ${data.items.length} ${title.toLowerCase()}</label>` : ''}`;
+    }
+
+    function chart(title, data, total) {
+        return `<section class="stats-chart"><h2>${title}</h2>${chartContent(title, data, total)}</section>`;
+    }
+
+    function modelChart(group) {
+        return `<section class="stats-chart" data-model-chart><h2>Aircraft models</h2>
+            <div class="model-toggle" role="group" aria-label="Group aircraft models by">
+                <button type="button" data-model-choice="type" aria-pressed="true">Type</button>
+                <button type="button" data-model-choice="icao" aria-pressed="false">ICAO type</button>
+            </div>
+            <div data-model-mode="type">${chartContent('Aircraft models', group.models, group.total)}</div>
+            <div data-model-mode="icao" hidden>${chartContent('Aircraft models', group.icaoTypes, group.total)}</div>
         </section>`;
     }
 
@@ -28,10 +41,9 @@ const GenevaStats = (() => {
                 ? [['Origin airports', group.origins], ['Registrations', group.registrations]]
                 : prefix === 'takeoffs'
                     ? [['Registrations', group.registrations], ['Destination airports', group.destinations]]
-                    : [['Origin airports', group.origins], ['Destination airports', group.destinations]]),
-            ['Aircraft models', group.models]
+                    : [['Origin airports', group.origins], ['Destination airports', group.destinations]])
         ];
-        document.getElementById(`${prefix}Charts`).innerHTML = charts.map(([title, data]) => chart(title, data, group.total)).join('');
+        document.getElementById(`${prefix}Charts`).innerHTML = charts.map(([title, data]) => chart(title, data, group.total)).join('') + modelChart(group);
     }
 
     function render(data, document) {
@@ -67,8 +79,20 @@ const GenevaStats = (() => {
             document.getElementById('statsDays').addEventListener('change', load);
             document.addEventListener('change', event => {
                 if (!event.target.matches?.('[data-stats-expand]')) return;
-                for (const row of event.target.closest('.stats-chart').querySelectorAll('.stats-bars li[data-extra]')) {
+                const chart = event.target.closest('[data-model-mode]') || event.target.closest('.stats-chart');
+                for (const row of chart.querySelectorAll('.stats-bars li[data-extra]')) {
                     row.hidden = !event.target.checked;
+                }
+            });
+            document.addEventListener('click', event => {
+                const button = event.target.closest?.('[data-model-choice]');
+                if (!button) return;
+                const card = button.closest('[data-model-chart]');
+                for (const choice of card.querySelectorAll('[data-model-choice]')) {
+                    choice.setAttribute('aria-pressed', String(choice === button));
+                }
+                for (const panel of card.querySelectorAll('[data-model-mode]')) {
+                    panel.hidden = panel.dataset.modelMode !== button.dataset.modelChoice;
                 }
             });
             for (const button of document.querySelectorAll('[data-stats-view]')) {
