@@ -73,6 +73,18 @@ test('airport charts group by code and show full names when any flight provides 
     ] });
 });
 
+test('airline charts group easyJet variants under easyjet', () => {
+    const summary = summarizeFlights([
+        { category: 'arrival', airline: 'easyJet' },
+        { category: 'arrival', airline: 'easyJet Europe' },
+        { category: 'arrival', airline: 'easyJet Switzerland' },
+        { category: 'arrival', airline: 'Other Airline' }
+    ], 7);
+    assert.deepEqual(summary.landing.airlines, { known: 4, items: [
+        { name: 'easyjet', count: 3 }, { name: 'Other Airline', count: 1 }
+    ] });
+});
+
 test('stats return every ranked value so each card can expand past the top eight', () => {
     const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
     const summary = summarizeFlights(flights, 7);
