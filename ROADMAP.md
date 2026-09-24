@@ -377,6 +377,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       more are available. Codes without descriptions remain visible alone.
     - Validation: all 50 tests pass, including example selection and rendering.
 
+14. [x] Refine the Aircraft models toggle.
+    - Put Group first and select it by default, label the other view Detail,
+      and place the control beside the card title.
+    - Validation: all 50 tests pass, including default selection and switching.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

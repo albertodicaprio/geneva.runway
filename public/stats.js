@@ -26,13 +26,15 @@ const GenevaStats = (() => {
     }
 
     function modelChart(group) {
-        return `<section class="stats-chart" data-model-chart><h2>Aircraft models</h2>
-            <div class="model-toggle" role="group" aria-label="Group aircraft models by">
-                <button type="button" data-model-choice="type" aria-pressed="true">Type</button>
-                <button type="button" data-model-choice="icao" aria-pressed="false">ICAO type</button>
+        return `<section class="stats-chart" data-model-chart>
+            <div class="model-chart-header"><h2>Aircraft models</h2>
+                <div class="model-toggle" role="group" aria-label="Aircraft model view">
+                    <button type="button" data-model-choice="icao" aria-pressed="true">Group</button>
+                    <button type="button" data-model-choice="type" aria-pressed="false">Detail</button>
+                </div>
             </div>
-            <div data-model-mode="type">${chartContent('Aircraft models', group.models, group.total)}</div>
-            <div data-model-mode="icao" hidden>${chartContent('Aircraft models', group.icaoTypes, group.total)}</div>
+            <div data-model-mode="icao">${chartContent('Aircraft models', group.icaoTypes, group.total)}</div>
+            <div data-model-mode="type" hidden>${chartContent('Aircraft models', group.models, group.total)}</div>
         </section>`;
     }
 

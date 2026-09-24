@@ -189,7 +189,7 @@ test('each chart checkbox reveals and hides only its extra rows', async () => {
     assert.deepEqual(rows.map(row => row.hidden), [true, true]);
 });
 
-test('each aircraft models card toggles between type and ICAO rankings', async () => {
+test('each aircraft models card defaults to Group and toggles to Detail', async () => {
     const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
         'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
     const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
@@ -197,14 +197,13 @@ test('each aircraft models card toggles between type and ICAO rankings', async (
     const summary = summarizeFlights([{ category: 'arrival', model: 'Airbus A320', aircraftType: 'A320' }], 7);
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
     await app.load();
-    assert.match(elements.landingCharts.innerHTML, /data-model-choice="type" aria-pressed="true"/);
-    assert.match(elements.landingCharts.innerHTML, /data-model-choice="icao" aria-pressed="false"/);
-    assert.match(elements.landingCharts.innerHTML, /data-model-mode="type">[\s\S]*Airbus A320/);
-    assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao" hidden>[\s\S]*A320 \(Airbus A320\)/);
+    assert.match(elements.landingCharts.innerHTML, /<div class="model-chart-header"><h2>Aircraft models<\/h2>[\s\S]*data-model-choice="icao" aria-pressed="true">Group<\/button>[\s\S]*data-model-choice="type" aria-pressed="false">Detail<\/button>/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao">[\s\S]*A320 \(Airbus A320\)/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-mode="type" hidden>[\s\S]*Airbus A320/);
 
-    const panels = [{ dataset: { modelMode: 'type' }, hidden: false }, { dataset: { modelMode: 'icao' }, hidden: true }];
+    const panels = [{ dataset: { modelMode: 'icao' }, hidden: false }, { dataset: { modelMode: 'type' }, hidden: true }];
     const card = { querySelectorAll: selector => selector === '[data-model-mode]' ? panels : buttons };
-    const buttons = ['type', 'icao'].map(modelChoice => ({
+    const buttons = ['icao', 'type'].map(modelChoice => ({
         dataset: { modelChoice }, closest: () => card,
         setAttribute(_name, value) { this.pressed = value; }
     }));

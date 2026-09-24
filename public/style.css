@@ -158,7 +158,9 @@ footer a:hover { text-decoration: underline; }
 .stats-chart { min-width: 0; padding: 18px; background: #fff; box-shadow: none; }
 .stats-chart h2 { margin-bottom: 5px; }
 .stats-chart .history-note { margin-bottom: 18px; }
-.model-toggle { display: flex; gap: 4px; width: fit-content; max-width: 100%; margin: 12px 0 18px; padding: 4px; border-radius: 9px; background: #eaf3f8; }
+.model-chart-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.model-chart-header h2 { margin: 0; }
+.model-toggle { display: flex; flex: none; gap: 4px; padding: 4px; border-radius: 9px; background: #eaf3f8; }
 .model-toggle button { min-height: 36px; padding: 6px 10px; border: 0; border-radius: 6px; color: #31516e; background: transparent; font: inherit; font-size: .84rem; font-weight: 750; cursor: pointer; }
 .model-toggle button:hover, .model-toggle button:focus-visible { background: #d8e9f2; }
 .model-toggle button[aria-pressed="true"] { color: #fff; background: #165f7a; }
