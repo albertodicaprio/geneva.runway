@@ -382,6 +382,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       and place the control beside the card title.
     - Validation: all 50 tests pass, including default selection and switching.
 
+15. [x] Move map position updates into the browser between snapshots.
+    - Fetch aircraft data every 30 seconds and update the map each second using
+      the elapsed time, heading, speed, and vertical rate from the last
+      snapshot. Keep the existing 60-second position projection limit.
+    - Validation: client positions match server projection, polling stays at
+      30 seconds, and all 54 tests pass.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

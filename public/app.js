@@ -1,10 +1,70 @@
 /* Fetch and display coordination for the browser modules. */
 const GenevaApp = (() => {
     const API_ENDPOINT = '/api/aircraft';
-    const FETCH_INTERVAL = 2000;
+    const FETCH_INTERVAL = 30_000;
+    const DISPLAY_INTERVAL = 1_000;
     const cardModule = typeof AircraftCard !== 'undefined' ? AircraftCard : require('./aircraft-card');
     const mapModule = typeof AircraftMap !== 'undefined' ? AircraftMap : require('./aircraft-map');
     const { escapeHtml } = cardModule;
+
+    function projectPosition(latitude, longitude, heading, velocity, elapsedSeconds) {
+        if (![latitude, longitude, heading, velocity].every(Number.isFinite) || velocity < 0 || elapsedSeconds <= 0)
+            return { latitude, longitude };
+        const radius = 6_371_000;
+        const distance = velocity * elapsedSeconds / radius;
+        const bearing = heading * Math.PI / 180;
+        const startLatitude = latitude * Math.PI / 180;
+        const startLongitude = longitude * Math.PI / 180;
+        const projectedLatitude = Math.asin(
+            Math.sin(startLatitude) * Math.cos(distance) +
+            Math.cos(startLatitude) * Math.sin(distance) * Math.cos(bearing)
+        );
+        const projectedLongitude = startLongitude + Math.atan2(
+            Math.sin(bearing) * Math.sin(distance) * Math.cos(startLatitude),
+            Math.cos(distance) - Math.sin(startLatitude) * Math.sin(projectedLatitude)
+        );
+        return {
+            latitude: projectedLatitude * 180 / Math.PI,
+            longitude: ((projectedLongitude * 180 / Math.PI + 540) % 360) - 180
+        };
+    }
+
+    function projectSnapshot(snapshot, now) {
+        const estimatedAt = snapshot?.positionEstimate?.estimatedAt;
+        if (!Number.isFinite(estimatedAt)) return snapshot;
+        const elapsed = Math.max(0, Math.floor(now / 1000) - estimatedAt);
+        if (!elapsed) return snapshot;
+        const projectList = list => (list || []).map(aircraft => {
+            const priorSeconds = Number.isFinite(aircraft.projectionSeconds) ? aircraft.projectionSeconds : 0;
+            const seconds = Math.min(elapsed, Math.max(0, 60 - priorSeconds));
+            if (!seconds) return aircraft;
+            const position = projectPosition(aircraft.latitude, aircraft.longitude, aircraft.heading, aircraft.velocity, seconds);
+            const altitude = Number.isFinite(aircraft.altitude) && Number.isFinite(aircraft.verticalRate)
+                ? Math.max(0, aircraft.altitude + aircraft.verticalRate * seconds) : aircraft.altitude;
+            const latitudeDelta = (position.latitude - 46.2381) * Math.PI / 180;
+            const longitudeDelta = (position.longitude - 6.1093) * Math.PI / 180;
+            const a = Math.sin(latitudeDelta / 2) ** 2 +
+                Math.cos(46.2381 * Math.PI / 180) * Math.cos(position.latitude * Math.PI / 180) *
+                Math.sin(longitudeDelta / 2) ** 2;
+            return {
+                ...aircraft, ...position, altitude,
+                distanceKm: Number.isFinite(position.latitude) && Number.isFinite(position.longitude)
+                    ? 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) : aircraft.distanceKm,
+                positionEstimated: true,
+                projectionSeconds: priorSeconds + seconds
+            };
+        });
+        const aircraft = projectList(snapshot.aircraft);
+        const generalTraffic = projectList(snapshot.generalTraffic);
+        return {
+            ...snapshot, aircraft, generalTraffic,
+            positionEstimate: {
+                ...snapshot.positionEstimate,
+                isEstimated: [...aircraft, ...generalTraffic].some(item => item.positionEstimated),
+                estimatedAt: Math.floor(now / 1000)
+            }
+        };
+    }
 
     function historyTime(aircraft) {
         // Older cached records predate disappearedAt and use the same two-hour retention.
@@ -17,12 +77,14 @@ const GenevaApp = (() => {
         const hasArrivals = Boolean(document.getElementById('aircraftList'));
         const hasHistory = Boolean(document.getElementById('flightHistory'));
         let snapshot = null;
+        let displayedSnapshot = null;
         let isFetching = false;
         let rateLimitResetTime = 0;
+        let lastRequestAt = -Infinity;
         let started = false;
 
         function arrivals() {
-            return Array.isArray(snapshot?.aircraft) ? snapshot.aircraft : [];
+            return Array.isArray(displayedSnapshot?.aircraft) ? displayedSnapshot.aircraft : [];
         }
 
         function unexpiredTracks() {
@@ -67,7 +129,7 @@ const GenevaApp = (() => {
             const secondsSinceUpdate = Number.isFinite(snapshot?.cacheUpdatedAt)
                 ? Math.max(0, Math.floor(now() / 1000) - snapshot.cacheUpdatedAt) : null;
             const updateAge = secondsSinceUpdate === null ? 'Update time unavailable' : `${secondsSinceUpdate}s since last update`;
-            document.getElementById('dataStatus').textContent = snapshot?.positionEstimate?.isEstimated
+            document.getElementById('dataStatus').textContent = displayedSnapshot?.positionEstimate?.isEstimated
                 ? `Estimated positions · ${updateAge}` : updateAge;
         }
 
@@ -84,9 +146,10 @@ const GenevaApp = (() => {
 
         function updateTimeSensitive() {
             if (!snapshot) return;
+            displayedSnapshot = projectSnapshot(snapshot, now());
             updateStatus();
             updateFlightHistory();
-            if (hasOverview) map.update(snapshot);
+            if (hasOverview) map.update(displayedSnapshot);
         }
 
         function displayError(message) {
@@ -99,6 +162,7 @@ const GenevaApp = (() => {
         async function poll() {
             if (isFetching || rateLimitResetTime > now()) return;
             isFetching = true;
+            lastRequestAt = now();
             try {
                 const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
                 if (response.status === 503 || response.status === 429) {
@@ -111,8 +175,8 @@ const GenevaApp = (() => {
                 }
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 snapshot = await response.json();
-                updateArrivals();
                 updateTimeSensitive();
+                updateArrivals();
             } catch (error) {
                 logger.error('Error fetching aircraft data:', error);
                 displayError('Unable to load arrival data.');
@@ -123,7 +187,7 @@ const GenevaApp = (() => {
 
         function tick() {
             updateTimeSensitive();
-            return poll();
+            if (now() - lastRequestAt >= FETCH_INTERVAL) return poll();
         }
 
         function start() {
@@ -132,13 +196,13 @@ const GenevaApp = (() => {
             document.addEventListener('error', card.handlePhotoError, true);
             if (hasOverview) map.init();
             poll();
-            schedule(tick, FETCH_INTERVAL);
+            schedule(tick, DISPLAY_INTERVAL);
         }
 
         return { start, poll, tick, updateTimeSensitive, get snapshot() { return snapshot; } };
     }
 
-    return { create, FETCH_INTERVAL };
+    return { create, projectSnapshot, FETCH_INTERVAL, DISPLAY_INTERVAL };
 })();
 
 if (typeof module !== 'undefined') module.exports = GenevaApp;

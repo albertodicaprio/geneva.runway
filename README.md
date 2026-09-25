@@ -8,10 +8,11 @@ The navigation links directly to separate Arrivals and Recent landings pages.
 The Node server uses `lib/aircraft-service.js` to own the saved snapshot,
 refresh schedule, and stale fallback. `lib/opensky.js` fetches OpenSky data,
 `lib/adsbdb.js` enriches routes and aircraft, and `lib/traffic.js` normalizes
-and projects positions and retains tracks. The browser renders the resulting
-app-specific JSON. Tests create isolated service instances with supplied fetch,
-clock, and cache storage, so they do not need live credentials or the app's
-cache file.
+and projects positions and retains tracks. The browser fetches a snapshot every
+30 seconds and advances displayed map positions once per second, stopping at
+60 seconds from each aircraft's last position report. Tests create isolated
+service instances with supplied fetch, clock, and cache storage, so they do
+not need live credentials or the app's cache file.
 
 The app is intended to run on a home-network machine, rather than a public
 cloud host. It obtains live position data from OpenSky and route and aircraft

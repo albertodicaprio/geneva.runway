@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { create, FETCH_INTERVAL } = require('../public/app');
+const { create, projectSnapshot, FETCH_INTERVAL, DISPLAY_INTERVAL } = require('../public/app');
+const { projectAircraftData } = require('../lib/traffic');
 
 function fixture(now) {
     return {
@@ -27,6 +28,38 @@ function setup({ fetch, now, schedule } = {}) {
     return { app, elements, map, mapUpdates, listeners };
 }
 
+test('client projection advances from the received position once per second and stops at 60 seconds', () => {
+    const snapshot = {
+        updatedAt: 1_000,
+        positionEstimate: { estimatedAt: 1_010, isEstimated: true, maximumSecondsAhead: 60 },
+        aircraft: [{ latitude: 46.2381, longitude: 6.1093, heading: 90, velocity: 100,
+            altitude: 1_000, verticalRate: -2, distanceKm: 0, projectionSeconds: 10, positionEstimated: true }],
+        generalTraffic: [], recentTracks: [{ expiresAt: 2_000 }]
+    };
+    const oneSecond = projectSnapshot(snapshot, 1_011_000);
+    const later = projectSnapshot(snapshot, 1_100_000);
+    const muchLater = projectSnapshot(snapshot, 1_200_000);
+    assert.ok(oneSecond.aircraft[0].longitude > snapshot.aircraft[0].longitude);
+    assert.equal(oneSecond.aircraft[0].altitude, 998);
+    assert.equal(oneSecond.aircraft[0].projectionSeconds, 11);
+    assert.equal(later.aircraft[0].projectionSeconds, 60);
+    assert.deepEqual(muchLater.aircraft, later.aircraft);
+    assert.equal(snapshot.aircraft[0].altitude, 1_000);
+    assert.equal(snapshot.aircraft[0].projectionSeconds, 10);
+    assert.equal(oneSecond.recentTracks, snapshot.recentTracks);
+});
+
+test('client projection matches the server calculation from the same source position', () => {
+    const source = { updatedAt: 1_000, aircraft: [{ latitude: 46.2381, longitude: 6.1093,
+        heading: 220, velocity: 120, altitude: 1_500, verticalRate: -3 }] };
+    const received = projectAircraftData(source, 1_010_000);
+    const expected = projectAircraftData(source, 1_025_000).aircraft[0];
+    const actual = projectSnapshot(received, 1_025_000).aircraft[0];
+    for (const key of ['latitude', 'longitude', 'altitude', 'distanceKm'])
+        assert.ok(Math.abs(actual[key] - expected[key]) < 0.00001, `${key} differs`);
+    assert.equal(actual.projectionSeconds, 25);
+});
+
 test('a successful poll renders cards, status, history, and the same map snapshot', async () => {
     let now = Date.parse('2026-01-01T12:00:00Z');
     const data = fixture(now);
@@ -48,6 +81,23 @@ test('a successful poll renders cards, status, history, and the same map snapsho
     assert.equal(mapUpdates.at(-1), data);
 });
 
+test('one-second display updates move aircraft without another request', async () => {
+    let now = 1_000_000;
+    const data = fixture(now);
+    data.positionEstimate.estimatedAt = now / 1000;
+    Object.assign(data.aircraft[0], { latitude: 46.2381, longitude: 6.1093, heading: 90,
+        projectionSeconds: 0, positionEstimated: false });
+    let requests = 0;
+    const { app, mapUpdates } = setup({ now: () => now,
+        fetch: async () => { requests += 1; return { ok: true, json: async () => data }; } });
+    await app.poll();
+    now += DISPLAY_INTERVAL;
+    await app.tick();
+    assert.equal(requests, 1);
+    assert.ok(mapUpdates.at(-1).aircraft[0].longitude > data.aircraft[0].longitude);
+    assert.equal(mapUpdates.at(-1).aircraft[0].projectionSeconds, 1);
+});
+
 test('failed and rate-limited polls retain the snapshot, update age and expiry, and honor retry limits', async () => {
     let now = Date.parse('2026-01-01T12:00:00Z');
     const data = fixture(now);
@@ -59,17 +109,20 @@ test('failed and rate-limited polls retain the snapshot, update age and expiry, 
     ];
     const { app, elements, mapUpdates } = setup({ now: () => now, fetch: async () => responses[requests++] });
     await app.poll();
-    now += 4_000;
+    now += FETCH_INTERVAL;
     await app.tick();
     assert.equal(requests, 2);
     assert.equal(app.snapshot, data);
     assert.match(elements.aircraftList.innerHTML, /rate limited/);
     assert.equal(elements.historyCount.textContent, '0 flights');
-    assert.equal(elements.dataStatus.textContent, 'Estimated positions · 4s since last update');
+    assert.equal(elements.dataStatus.textContent, 'Estimated positions · 30s since last update');
     await app.tick();
     assert.equal(requests, 2);
     assert.equal(mapUpdates.at(-1), data);
     now += 10_000;
+    await app.tick();
+    assert.equal(requests, 2);
+    now += 20_000;
     await app.tick();
     assert.equal(requests, 3);
     assert.equal(elements.arrivalCount.textContent, '0 arrivals');
@@ -89,7 +142,7 @@ test('Caddy 429 honors Retry-After and resumes polling when the window clears', 
     now += 6_000;
     await app.tick();
     assert.equal(requests, 1);
-    now += 1_000;
+    now += FETCH_INTERVAL - 6_000;
     await app.tick();
     assert.equal(requests, 2);
     assert.match(elements.nextPlane.innerHTML, /ARRIVAL/);
@@ -99,7 +152,8 @@ test('one timer drives polling and expiry without concurrent requests', async ()
     let resolveRequest;
     let requests = 0;
     const timers = [];
-    const { app, map, listeners } = setup({ now: () => 100_000,
+    let now = 100_000;
+    const { app, map, listeners } = setup({ now: () => now,
         fetch: () => { requests += 1; return new Promise(resolve => { resolveRequest = resolve; }); },
         schedule: (callback, interval) => timers.push({ callback, interval }) });
     app.start();
@@ -107,7 +161,10 @@ test('one timer drives polling and expiry without concurrent requests', async ()
     assert.equal(map.initCalls, 1);
     assert.equal(listeners.length, 1);
     assert.equal(timers.length, 1);
-    assert.equal(timers[0].interval, FETCH_INTERVAL);
+    assert.equal(timers[0].interval, DISPLAY_INTERVAL);
+    await timers[0].callback();
+    assert.equal(requests, 1);
+    now += FETCH_INTERVAL;
     await timers[0].callback();
     assert.equal(requests, 1);
     resolveRequest({ ok: true, json: async () => ({ aircraft: [] }) });
@@ -120,19 +177,23 @@ test('one timer drives polling and expiry without concurrent requests', async ()
 
 test('network errors preserve the last snapshot until a later successful poll', async () => {
     const data = fixture(100_000);
+    data.recentTracks[0].expiresAt = 190;
     let requests = 0;
-    const { app, elements, mapUpdates } = setup({ now: () => 100_000,
+    let now = 100_000;
+    const { app, elements, mapUpdates } = setup({ now: () => now,
         fetch: async () => {
             requests += 1;
             if (requests === 2) throw Error('offline');
             return { ok: true, json: async () => data };
         } });
     await app.poll();
+    now += FETCH_INTERVAL;
     await app.tick();
     assert.equal(app.snapshot, data);
     assert.match(elements.aircraftList.innerHTML, /Unable to load arrival data/);
     assert.equal(elements.historyCount.textContent, '1 flight');
     assert.equal(mapUpdates.at(-1), data);
+    now += FETCH_INTERVAL;
     await app.tick();
     assert.match(elements.aircraftList.innerHTML, /ARRIVAL/);
     assert.equal(requests, 3);
