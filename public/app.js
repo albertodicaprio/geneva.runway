@@ -80,7 +80,7 @@ const GenevaApp = (() => {
         let displayedSnapshot = null;
         let isFetching = false;
         let rateLimitResetTime = 0;
-        let lastRequestAt = -Infinity;
+        let nextRequestAt = 0;
         let started = false;
 
         function arrivals() {
@@ -162,14 +162,16 @@ const GenevaApp = (() => {
         async function poll() {
             if (isFetching || rateLimitResetTime > now()) return;
             isFetching = true;
-            lastRequestAt = now();
             try {
-                const response = await fetch(API_ENDPOINT, { cache: 'no-store' });
+                const after = snapshot?.cacheUpdatedAtMs;
+                const endpoint = Number.isFinite(after) ? `${API_ENDPOINT}?after=${after}` : API_ENDPOINT;
+                const response = await fetch(endpoint, { cache: 'no-store' });
                 if (response.status === 503 || response.status === 429) {
                     const errorData = await response.json().catch(() => ({}));
                     const retryAfterHeader = Number(response.headers?.get('Retry-After'));
                     const retryAfter = errorData.retryAfter || (retryAfterHeader > 0 ? retryAfterHeader : 120);
                     rateLimitResetTime = now() + retryAfter * 1000;
+                    nextRequestAt = rateLimitResetTime;
                     displayError(`Data source rate limited. Retrying in ${retryAfter} seconds.`);
                     return;
                 }
@@ -177,9 +179,11 @@ const GenevaApp = (() => {
                 snapshot = await response.json();
                 updateTimeSensitive();
                 updateArrivals();
+                nextRequestAt = now() + (Number.isFinite(snapshot.cacheUpdatedAtMs) ? DISPLAY_INTERVAL : FETCH_INTERVAL);
             } catch (error) {
                 logger.error('Error fetching aircraft data:', error);
                 displayError('Unable to load arrival data.');
+                nextRequestAt = now() + FETCH_INTERVAL;
             } finally {
                 isFetching = false;
             }
@@ -187,7 +191,7 @@ const GenevaApp = (() => {
 
         function tick() {
             updateTimeSensitive();
-            if (now() - lastRequestAt >= FETCH_INTERVAL) return poll();
+            if (now() >= nextRequestAt) return poll();
         }
 
         function start() {

@@ -97,6 +97,7 @@ test('the aircraft API does not allow cross-origin browser access', async () => 
     assert.equal(response.status, 405);
     assert.equal(response.headers.get('access-control-allow-origin'), null);
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal((await fetch(`${baseUrl}/api/aircraft?after=invalid`)).status, 400);
 });
 
 test('malformed percent-encoded paths return 400 and leave the server healthy', async () => {

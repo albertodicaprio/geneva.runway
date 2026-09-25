@@ -389,6 +389,14 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: client positions match server projection, polling stays at
       30 seconds, and all 54 tests pass.
 
+16. [x] Deliver completed cache refreshes to waiting browsers.
+    - Keep one browser request waiting for a cache version newer than its last
+      snapshot. Return when the OpenSky refresh completes, with a 25-second
+      timeout below the proxy's 30-second response limit.
+    - Continue the one-second local map updates and preserve stale-cache
+      fallback when an upstream refresh fails.
+    - Validation: all 57 tests pass, including waiting and timeout cases.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

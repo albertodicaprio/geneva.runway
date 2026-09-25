@@ -98,6 +98,21 @@ test('one-second display updates move aircraft without another request', async (
     assert.equal(mapUpdates.at(-1).aircraft[0].projectionSeconds, 1);
 });
 
+test('browser waits for a newer snapshot instead of waiting 30 seconds to ask again', async () => {
+    let now = 1_000_000;
+    const urls = [];
+    const data = { ...fixture(now), cacheUpdatedAtMs: now };
+    const { app } = setup({ now: () => now,
+        fetch: async url => {
+            urls.push(url);
+            return { ok: true, json: async () => data };
+        } });
+    await app.poll();
+    now += DISPLAY_INTERVAL;
+    await app.tick();
+    assert.deepEqual(urls, ['/api/aircraft', `/api/aircraft?after=${data.cacheUpdatedAtMs}`]);
+});
+
 test('failed and rate-limited polls retain the snapshot, update age and expiry, and honor retry limits', async () => {
     let now = Date.parse('2026-01-01T12:00:00Z');
     const data = fixture(now);
@@ -120,9 +135,6 @@ test('failed and rate-limited polls retain the snapshot, update age and expiry, 
     assert.equal(requests, 2);
     assert.equal(mapUpdates.at(-1), data);
     now += 10_000;
-    await app.tick();
-    assert.equal(requests, 2);
-    now += 20_000;
     await app.tick();
     assert.equal(requests, 3);
     assert.equal(elements.arrivalCount.textContent, '0 arrivals');
@@ -169,6 +181,7 @@ test('one timer drives polling and expiry without concurrent requests', async ()
     assert.equal(requests, 1);
     resolveRequest({ ok: true, json: async () => ({ aircraft: [] }) });
     await new Promise(resolve => setImmediate(resolve));
+    now += FETCH_INTERVAL;
     const secondPoll = timers[0].callback();
     assert.equal(requests, 2);
     resolveRequest({ ok: true, json: async () => ({ aircraft: [] }) });

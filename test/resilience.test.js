@@ -125,6 +125,40 @@ test('a fresh on-disk snapshot retains its enrichment and serves without upstrea
     assert.deepEqual(result.body.recentTracks[0], retained);
 });
 
+test('a waiting aircraft request returns the next completed refresh', async () => {
+    let now = Date.parse('2026-09-22T12:00:00Z');
+    const initialTime = now - 10_000;
+    const service = createAircraftService({ clock: () => now, credentials, historyStore: noHistory,
+        cacheStore: { read: async () => ({ version: 6, lastFetchTime: initialTime,
+            arrivals: { updatedAt: initialTime / 1000, aircraft: [] } }), async write() {} },
+        fetch: async url => String(url).includes('/token') ? tokenResponse :
+            { ok: true, status: 200, json: async () => ({ time: now / 1000, states: [] }) }
+    });
+    let settled = false;
+    const pending = service.getAircraftData({ after: initialTime }).then(result => {
+        settled = true;
+        return result;
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(settled, false);
+    now += 20_000;
+    await service.refreshAircraftDataOnce();
+    const result = await pending;
+    assert.equal(result.body.cacheUpdatedAtMs, now);
+});
+
+test('a waiting aircraft request returns stale data after its bounded wait', async () => {
+    const now = Date.parse('2026-09-22T12:00:00Z');
+    const lastFetchTime = now - 10_000;
+    const service = createAircraftService({ clock: () => now, waitTimeoutMs: 5,
+        cacheStore: { read: async () => ({ version: 6, lastFetchTime,
+            arrivals: { updatedAt: lastFetchTime / 1000, aircraft: [] } }) },
+        historyStore: noHistory, fetch: () => { throw Error('Refresh not due'); } });
+    const result = await service.getAircraftData({ after: lastFetchTime });
+    assert.equal(result.status, 200);
+    assert.equal(result.body.cacheUpdatedAtMs, lastFetchTime);
+});
+
 test('a scheduler refresh loads cached arrivals before retaining their tracks', async () => {
     const now = Date.parse('2026-09-22T12:00:00Z');
     const previous = { icao24: 'abc123', callsign: 'SWR123', latitude: 46.2, longitude: 6.1,
