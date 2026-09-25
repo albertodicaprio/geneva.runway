@@ -141,6 +141,7 @@ footer a:hover { text-decoration: underline; }
 .map-details .aircraft-model { overflow-wrap: anywhere; }
 
 .map-aircraft[aria-expanded="true"] .map-aircraft-icon { fill: #ffff00; }
+.map-flight-path.map-selected-path { stroke: #ffff00; opacity: 1; }
 .map-details-photo { display: grid; place-items: center; }
 .map-details-photo img { width: 100%; height: 100%; object-fit: cover; }
 .map-details-photo p { margin: 0; padding: 4px; color: #63758a; font-size: .7rem; text-align: center; }

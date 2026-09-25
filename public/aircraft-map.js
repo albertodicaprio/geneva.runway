@@ -52,7 +52,7 @@ const AircraftMap = (() => {
         return path;
     }
 
-    function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals') {
+    function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals', selectedAircraftId = null) {
         const points = (aircraft.track?.points || [])
             .map(point => mapCoordinates(point.latitude, point.longitude))
             .filter(Boolean);
@@ -62,7 +62,8 @@ const AircraftMap = (() => {
         }
         if (points.length < 2 || !aircraft.track?.color) return '';
         const path = smoothMapPath(points);
-        return `<path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
+        const selectedClass = selectedAircraftId != null && selectedAircraftId === aircraft.icao24 ? ' map-selected-path' : '';
+        return `<path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}${selectedClass}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
     }
 
     function mapMarker(aircraft, selectedAircraftId, layer = 'arrivals') {
@@ -125,10 +126,10 @@ const AircraftMap = (() => {
             const paths = document.getElementById('mapPaths');
             const markers = document.getElementById('mapMarkers');
             paths.innerHTML = [
-                ...general.map(item => mapPath(item, true, 'general')),
-                ...departures.map(item => mapPath(item, true, 'departure')),
+                ...general.map(item => mapPath(item, true, 'general', selectedAircraftId)),
+                ...departures.map(item => mapPath(item, true, 'departure', selectedAircraftId)),
                 ...recentTracks.map(item => mapPath(item, false)),
-                ...arrivals.map(item => mapPath(item, true))
+                ...arrivals.map(item => mapPath(item, true, 'arrivals', selectedAircraftId))
             ].filter(Boolean).join('');
             const markup = [
                 ...general.map(item => mapMarker(item, selectedAircraftId, 'general')),
@@ -166,9 +167,7 @@ const AircraftMap = (() => {
                 const marker = event.target.closest('[data-aircraft-id]');
                 if (!marker) return;
                 selectedAircraftId = selectedAircraftId === marker.dataset.aircraftId ? null : marker.dataset.aircraftId;
-                details();
-                for (const item of markers.querySelectorAll('[data-aircraft-id]'))
-                    item.setAttribute('aria-expanded', String(item.dataset.aircraftId === selectedAircraftId));
+                update();
             };
             markers.addEventListener('click', select);
             markers.addEventListener('keydown', event => {
