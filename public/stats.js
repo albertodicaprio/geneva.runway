@@ -69,7 +69,8 @@ const GenevaStats = (() => {
             const current = ++requestId;
             const days = document.getElementById('statsDays').value;
             try {
-                const response = await fetch(`/api/stats?days=${days}`, { cache: 'no-store' });
+                const query = days === 'yesterday' ? 'days=1&offset=1' : `days=${days}`;
+                const response = await fetch(`/api/stats?${query}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 const data = await response.json();
                 if (current === requestId) render(data, document);

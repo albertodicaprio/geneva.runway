@@ -33,6 +33,8 @@ test('daily history deduplicates refreshes, upgrades details, and keeps flights 
         country: 'Switzerland', category: 'arrival', firstSeenAt: first, lastSeenAt: first + 60
     });
     assert.equal((await history.readDays(2, (first + 60) * 1000)).length, 1);
+    assert.equal((await history.readDays(1, (first + 60) * 1000)).length, 0);
+    assert.equal((await history.readDays(1, (first + 60) * 1000, 1)).length, 1);
     assert.equal(saved.flights[0].track, undefined);
     assert.equal(saved.flights[0].latitude, undefined);
 
@@ -165,6 +167,21 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.equal(elements.takeoffsStats.hidden, false);
     assert.equal(buttons.takeoffs.pressed, 'true');
     assert.equal(buttons.landing.pressed, 'false');
+});
+
+test('Stats page requests the previous Geneva day for Yesterday', async () => {
+    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
+        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '1', innerHTML: '' }]));
+    const requested = [];
+    const app = GenevaStats.create({ document: { getElementById: id => elements[id] },
+        fetch: async url => {
+            requested.push(url);
+            return { ok: true, json: async () => summarizeFlights([], 1) };
+        } });
+    await app.load();
+    elements.statsDays.value = 'yesterday';
+    await app.load();
+    assert.deepEqual(requested, ['/api/stats?days=1', '/api/stats?days=1&offset=1']);
 });
 
 test('each chart checkbox reveals and hides only its extra rows', async () => {
