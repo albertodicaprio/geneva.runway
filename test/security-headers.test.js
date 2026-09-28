@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { genevaDate } = require('../lib/flight-history');
 
 const projectRoot = path.join(__dirname, '..');
 let server;
@@ -89,6 +90,32 @@ test('the stats API serves archive summaries without requiring OpenSky', async (
     assert.equal((await yesterday.json()).days, 1);
     assert.equal((await fetch(`${baseUrl}/api/stats?days=7&offset=1`)).status, 400);
     assert.equal((await fetch(`${baseUrl}/api/stats?days=365`)).status, 400);
+});
+
+test('stats availability and date ranges use only recorded Geneva days', async () => {
+    const today = genevaDate(Date.now());
+    const previous = new Date(Date.parse(`${today}T00:00:00Z`) - 10 * 86400000).toISOString().slice(0, 10);
+    const recent = new Date(Date.parse(`${today}T00:00:00Z`) - 8 * 86400000).toISOString().slice(0, 10);
+    const missing = new Date(Date.parse(`${today}T00:00:00Z`) - 9 * 86400000).toISOString().slice(0, 10);
+    const directory = path.join(testCacheDir, 'flight-history');
+    fs.mkdirSync(directory, { recursive: true });
+    for (const [date, category] of [[previous, 'arrival'], [recent, 'departure']]) {
+        fs.writeFileSync(path.join(directory, `${date}.json`), JSON.stringify({ version: 1, date,
+            flights: [{ category, airline: 'Swiss' }] }));
+    }
+    const availability = await fetch(`${baseUrl}/api/stats?available=1`);
+    assert.equal(availability.status, 200);
+    assert.deepEqual(await availability.json(), { today, dates: [previous, recent] });
+    const range = await fetch(`${baseUrl}/api/stats?from=${previous}&to=${recent}`);
+    assert.equal(range.status, 200);
+    const summary = await range.json();
+    assert.equal(summary.days, 3);
+    assert.equal(summary.landing.total, 1);
+    assert.equal(summary.takeoffs.total, 1);
+    assert.equal((await fetch(`${baseUrl}/api/stats?from=${missing}&to=${recent}`)).status, 400);
+    assert.equal((await fetch(`${baseUrl}/api/stats?from=2026-02-30&to=${recent}`)).status, 400);
+    const future = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+    assert.equal((await fetch(`${baseUrl}/api/stats?from=${today}&to=${future}`)).status, 400);
 });
 
 test('the aircraft API does not allow cross-origin browser access', async () => {

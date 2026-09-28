@@ -148,8 +148,19 @@ footer a:hover { text-decoration: underline; }
 .photo-unavailable { display: grid; place-items: center; height: 100%; margin: 0; padding: 4px; color: #63758a; font-size: .7rem; text-align: center; overflow-wrap: anywhere; }
 .next-arrival .photo-unavailable { color: #c7dae8; }
 
-.stats-period { display: grid; gap: 5px; color: #47637f; font-size: .8rem; font-weight: 750; }
-.stats-period select { min-height: 38px; padding: 6px 10px; border: 1px solid #b9c9d8; border-radius: 8px; color: #152237; background: #fff; font: inherit; }
+.stats-date-picker { width: min(100%, 350px); margin: 18px 0 22px; padding: 14px; border: 1px solid #d7e3ec; border-radius: 12px; background: #f7fbfd; }
+.stats-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #123c64; }
+.stats-calendar-header button { width: 36px; height: 36px; border: 0; border-radius: 8px; background: #eaf3f8; color: #123c64; font: inherit; font-size: 1.5rem; cursor: pointer; }
+.stats-calendar-header button:disabled { opacity: .35; cursor: default; }
+.stats-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; text-align: center; }
+.stats-calendar > * { display: grid; place-items: center; min-width: 0; min-height: 36px; }
+.stats-weekday { color: #47637f; font-size: .72rem; font-weight: 750; }
+.stats-calendar button { border: 0; border-radius: 7px; background: transparent; color: #123c64; font: inherit; cursor: pointer; }
+.stats-calendar button:hover:not(:disabled), .stats-calendar button:focus-visible { outline: 2px solid #165f7a; outline-offset: -2px; }
+.stats-calendar button[aria-pressed="true"] { background: #165f7a; color: #fff; }
+.stats-calendar button:disabled { color: #aab8c4; cursor: default; }
+.stats-range-label { margin: 12px 0 0; color: #123c64; font-size: .88rem; font-weight: 750; }
+.stats-calendar-help { margin: 5px 0 0; font-size: .76rem; }
 .stats-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
 .stats-totals div { display: grid; gap: 5px; padding: 16px; border-radius: 12px; background: #eaf3f8; }
 .stats-totals div:only-child { grid-column: 1 / -1; }

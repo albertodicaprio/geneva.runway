@@ -57,8 +57,68 @@ const GenevaStats = (() => {
         for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document);
     }
 
+    function monthKey(date) { return date.slice(0, 7); }
+    function shiftMonth(month, amount) {
+        const [year, number] = month.split('-').map(Number);
+        return new Date(Date.UTC(year, number - 1 + amount, 1)).toISOString().slice(0, 7);
+    }
+    function dateLabel(date) {
+        return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+            .format(new Date(`${date}T00:00:00Z`));
+    }
+
     function create({ document, fetch, logger = console }) {
         let requestId = 0;
+        let today;
+        let available = new Set();
+        let month;
+        let from;
+        let to;
+        let awaitingEnd = false;
+        function showEmpty(message) {
+            for (const prefix of ['landing', 'general', 'takeoffs']) {
+                document.getElementById(`${prefix}Summary`).innerHTML = `<p class="no-aircraft">${message}</p>`;
+                document.getElementById(`${prefix}Charts`).innerHTML = '';
+            }
+        }
+        function renderCalendar() {
+            if (!month) return;
+            const [year, number] = month.split('-').map(Number);
+            const firstWeekday = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
+            const dayCount = new Date(Date.UTC(year, number, 0)).getUTCDate();
+            const cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                .map(day => `<span class="stats-weekday">${day}</span>`);
+            for (let i = 0; i < firstWeekday; i++) cells.push('<span></span>');
+            for (let day = 1; day <= dayCount; day++) {
+                const date = `${month}-${String(day).padStart(2, '0')}`;
+                const enabled = available.has(date) && date <= today;
+                const selected = enabled && from && to && date >= from && date <= to;
+                cells.push(`<button type="button" data-stats-date="${date}" aria-label="${dateLabel(date)}"` +
+                    `${enabled ? '' : ' disabled'}${selected ? ' aria-pressed="true"' : ' aria-pressed="false"'}` +
+                    `${date === today ? ' aria-current="date"' : ''}>${day}</button>`);
+            }
+            document.getElementById('statsCalendarMonth').textContent = new Intl.DateTimeFormat('en-GB', {
+                month: 'long', year: 'numeric', timeZone: 'UTC'
+            }).format(new Date(`${month}-01T00:00:00Z`));
+            document.getElementById('statsCalendar').innerHTML = cells.join('');
+            document.getElementById('statsPreviousMonth').disabled = !available.size || shiftMonth(month, -1) < monthKey([...available][0]);
+            document.getElementById('statsNextMonth').disabled = !available.size || shiftMonth(month, 1) > monthKey(today);
+            document.getElementById('statsRangeLabel').textContent = !available.size
+                ? 'No recorded flight days yet.'
+                : `${dateLabel(from)}${from === to ? '' : ` – ${dateLabel(to)}`}${awaitingEnd ? ' · Choose an end day' : ''}`;
+        }
+        function chooseDate(date) {
+            if (!available.has(date) || date > today) return;
+            if (awaitingEnd) {
+                [from, to] = date < from ? [date, from] : [from, date];
+                awaitingEnd = false;
+            } else {
+                from = to = date;
+                awaitingEnd = true;
+            }
+            renderCalendar();
+            load();
+        }
         function showView(view) {
             for (const name of ['landing', 'general', 'takeoffs']) {
                 document.getElementById(`${name}Stats`).hidden = name !== view;
@@ -66,11 +126,10 @@ const GenevaStats = (() => {
             }
         }
         async function load() {
+            if (!from || !to) return;
             const current = ++requestId;
-            const days = document.getElementById('statsDays').value;
             try {
-                const query = days === 'yesterday' ? 'days=1&offset=1' : `days=${days}`;
-                const response = await fetch(`/api/stats?${query}`, { cache: 'no-store' });
+                const response = await fetch(`/api/stats?from=${from}&to=${to}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 const data = await response.json();
                 if (current === requestId) render(data, document);
@@ -83,8 +142,36 @@ const GenevaStats = (() => {
                 }
             }
         }
-        function start() {
-            document.getElementById('statsDays').addEventListener('change', load);
+        async function start() {
+            try {
+                const response = await fetch('/api/stats?available=1', { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                const data = await response.json();
+                today = data.today;
+                available = new Set(data.dates);
+                const latest = data.dates.at(-1);
+                month = monthKey(latest || today);
+                from = to = latest;
+                renderCalendar();
+                if (latest) load();
+                else showEmpty('No recorded flights yet.');
+            } catch (error) {
+                logger.error('Error fetching available stats dates:', error);
+                document.getElementById('statsRangeLabel').textContent = 'Unable to load available dates.';
+                showEmpty('Unable to load flight stats.');
+            }
+            document.getElementById('statsPreviousMonth').addEventListener('click', () => {
+                month = shiftMonth(month, -1);
+                renderCalendar();
+            });
+            document.getElementById('statsNextMonth').addEventListener('click', () => {
+                month = shiftMonth(month, 1);
+                renderCalendar();
+            });
+            document.getElementById('statsCalendar').addEventListener('click', event => {
+                const button = event.target.closest?.('[data-stats-date]');
+                if (button && !button.disabled) chooseDate(button.dataset.statsDate);
+            });
             document.addEventListener('change', event => {
                 if (!event.target.matches?.('[data-stats-expand]')) return;
                 const chart = event.target.closest('[data-model-mode]') || event.target.closest('.stats-chart');
@@ -106,7 +193,6 @@ const GenevaStats = (() => {
             for (const button of document.querySelectorAll('[data-stats-view]')) {
                 button.addEventListener('click', () => showView(button.dataset.statsView));
             }
-            load();
         }
         return { start, load, showView };
     }

@@ -102,11 +102,13 @@ known airports, but no positions or trails. The archive starts with new
 successful OpenSky refreshes; earlier cache data is not backfilled. Files are
 retained until manually removed.
 
-The Stats page at `/stats.html` summarizes today's, the last seven days', or
-the last 30 days' archived flights. Its Landings, General, and Takeoffs bar
+The Stats page at `/stats.html` has a calendar for choosing a recorded Geneva
+day or an inclusive range. Future days and days without archived flights are
+disabled; gaps inside a selected range contribute no flights. Its Landings, General, and Takeoffs bar
 shows each category separately. General includes overflights and unknown
 routes; takeoffs are Geneva departures. Each category has its own total and
-airline, airport, and model charts. `/api/stats?days=7` serves all three
+airline, airport, and model charts. `/api/stats?available=1` lists selectable
+dates, and `/api/stats?from=YYYY-MM-DD&to=YYYY-MM-DD` serves all three
 summaries without making an OpenSky request. Arrival and departure
 identification relies on ADSBdb route data; the charts show their known-data
 coverage. Each chart initially shows up to eight ranked values; a checkbox

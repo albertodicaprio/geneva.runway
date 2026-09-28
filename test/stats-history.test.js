@@ -7,6 +7,32 @@ const { createFlightHistory, genevaDate } = require('../lib/flight-history');
 const { summarizeFlights } = require('../lib/stats');
 const GenevaStats = require('../public/stats');
 
+function statsDocument() {
+    const ids = ['statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
+        'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts', 'takeoffsSummary', 'takeoffsCharts',
+        'landingStats', 'generalStats', 'takeoffsStats'];
+    const elements = Object.fromEntries(ids.map(id => [id, {
+        innerHTML: '', textContent: '', disabled: false,
+        addEventListener(event, callback) { this[`on${event}`] = callback; }
+    }]));
+    const buttons = Object.fromEntries(['landing', 'general', 'takeoffs'].map(name => [name, {
+        dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
+        addEventListener(_event, callback) { this.click = callback; }
+    }]));
+    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
+        querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
+        querySelectorAll: () => Object.values(buttons) };
+    return { elements, buttons, document };
+}
+
+function statsFetch(summary, requested = []) {
+    return async url => {
+        requested.push(url);
+        return { ok: true, json: async () => url.includes('available=1')
+            ? { today: '2026-09-28', dates: ['2026-09-25', '2026-09-27'] } : summary };
+    };
+}
+
 test('daily history deduplicates refreshes, upgrades details, and keeps flights across Geneva midnight', async t => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-history-test-'));
     t.after(() => fs.rm(directory, { recursive: true, force: true }));
@@ -125,22 +151,14 @@ test('stats return every ranked value so each card can expand past the top eight
 });
 
 test('Stats page switches among independent landing, general, and takeoff charts', async () => {
-    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
-        'takeoffsSummary', 'takeoffsCharts', 'landingStats', 'generalStats', 'takeoffsStats']
-        .map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
-    const buttons = Object.fromEntries(['landing', 'general', 'takeoffs'].map(name => [name, {
-        dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
-        addEventListener(_event, callback) { this.click = callback; }
-    }]));
-    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
-        querySelector: selector => buttons[selector.match(/data-stats-view="(.*?)"/)[1]],
-        querySelectorAll: () => Object.values(buttons) };
+    const { elements, buttons, document } = statsDocument();
     const summary = summarizeFlights([
         { category: 'arrival', airline: 'Landing Air', registration: 'HB-LND', origin: { iata: 'LHR', name: 'Heathrow Airport' }, destination: { iata: 'GVA' } },
         { category: 'other', airline: 'Overflight Air' },
         { category: 'departure', airline: 'Takeoff Air', registration: 'HB-DEP', origin: { iata: 'GVA' }, destination: { iata: 'CDG', name: 'Paris Charles de Gaulle Airport' } }
     ], 7);
-    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
+    const app = GenevaStats.create({ document, fetch: statsFetch(summary) });
+    await app.start();
     await app.load();
     assert.match(elements.landingCharts.innerHTML, /Landing Air/);
     assert.doesNotMatch(elements.landingCharts.innerHTML, /Overflight Air/);
@@ -160,7 +178,6 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.match(elements.generalCharts.innerHTML, /Origin airports/);
     assert.match(elements.generalCharts.innerHTML, /Destination airports/);
     assert.match(elements.landingSummary.innerHTML, /Flights seen/);
-    app.start();
     buttons.takeoffs.click();
     assert.equal(elements.landingStats.hidden, true);
     assert.equal(elements.generalStats.hidden, true);
@@ -169,36 +186,52 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.equal(buttons.landing.pressed, 'false');
 });
 
-test('Stats page requests the previous Geneva day for Yesterday', async () => {
-    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
-        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '1', innerHTML: '' }]));
+test('Stats calendar selects recorded days and inclusive ranges while disabling gaps and future days', async () => {
+    const { elements, document } = statsDocument();
     const requested = [];
-    const app = GenevaStats.create({ document: { getElementById: id => elements[id] },
-        fetch: async url => {
-            requested.push(url);
-            return { ok: true, json: async () => summarizeFlights([], 1) };
-        } });
+    const app = GenevaStats.create({ document, fetch: statsFetch(summarizeFlights([], 1), requested) });
+    await app.start();
     await app.load();
-    elements.statsDays.value = 'yesterday';
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-09-26"[^>]*disabled/);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-09-29"[^>]*disabled/);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-09-27"[^>]*aria-pressed="true"/);
+    elements.statsCalendar.onclick({ target: { closest: () => ({ dataset: { statsDate: '2026-09-25' }, disabled: false }) } });
     await app.load();
-    assert.deepEqual(requested, ['/api/stats?days=1', '/api/stats?days=1&offset=1']);
+    elements.statsCalendar.onclick({ target: { closest: () => ({ dataset: { statsDate: '2026-09-27' }, disabled: false }) } });
+    await app.load();
+    assert.deepEqual(requested.filter(url => url.includes('from=')), [
+        '/api/stats?from=2026-09-27&to=2026-09-27',
+        '/api/stats?from=2026-09-27&to=2026-09-27',
+        '/api/stats?from=2026-09-25&to=2026-09-25',
+        '/api/stats?from=2026-09-25&to=2026-09-25',
+        '/api/stats?from=2026-09-25&to=2026-09-27',
+        '/api/stats?from=2026-09-25&to=2026-09-27'
+    ]);
+    assert.match(elements.statsRangeLabel.textContent, /25 Sept 2026 – 27 Sept 2026/);
+});
+
+test('Stats calendar explains an empty archive without leaving loading indicators', async () => {
+    const { elements, document } = statsDocument();
+    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true,
+        json: async () => ({ today: '2026-09-28', dates: [] }) }) });
+    await app.start();
+    assert.equal(elements.statsRangeLabel.textContent, 'No recorded flight days yet.');
+    assert.match(elements.landingSummary.innerHTML, /No recorded flights yet/);
+    assert.equal(elements.statsPreviousMonth.disabled, true);
+    assert.equal(elements.statsNextMonth.disabled, true);
 });
 
 test('each chart checkbox reveals and hides only its extra rows', async () => {
-    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
-        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '' }]));
-    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
-        querySelectorAll: () => [] };
+    const { elements, document } = statsDocument();
     const flights = Array.from({ length: 10 }, (_, index) => ({ category: 'arrival', airline: `Airline ${index}` }));
-    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summarizeFlights(flights, 7) }) });
+    const app = GenevaStats.create({ document, fetch: statsFetch(summarizeFlights(flights, 7)) });
+    await app.start();
     await app.load();
     assert.match(elements.landingCharts.innerHTML, /Show all 10 airlines/);
     assert.equal((elements.landingCharts.innerHTML.match(/data-extra hidden/g) || []).length, 2);
     const rows = [{ hidden: true }, { hidden: true }];
     const checkbox = { checked: true, matches: () => true, closest: () => ({ querySelectorAll: () => rows }) };
     // Exercise the delegated listener registered when the page starts.
-    elements.statsDays.addEventListener = () => {};
-    app.start();
     document.onchange({ target: checkbox });
     assert.deepEqual(rows.map(row => row.hidden), [false, false]);
     checkbox.checked = false;
@@ -207,12 +240,10 @@ test('each chart checkbox reveals and hides only its extra rows', async () => {
 });
 
 test('each aircraft models card defaults to Group and toggles to Detail', async () => {
-    const elements = Object.fromEntries(['statsDays', 'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts',
-        'takeoffsSummary', 'takeoffsCharts'].map(id => [id, { value: '7', innerHTML: '', addEventListener() {} }]));
-    const document = { getElementById: id => elements[id], addEventListener(event, callback) { this[`on${event}`] = callback; },
-        querySelectorAll: () => [] };
+    const { elements, document } = statsDocument();
     const summary = summarizeFlights([{ category: 'arrival', model: 'Airbus A320', aircraftType: 'A320' }], 7);
-    const app = GenevaStats.create({ document, fetch: async () => ({ ok: true, json: async () => summary }) });
+    const app = GenevaStats.create({ document, fetch: statsFetch(summary) });
+    await app.start();
     await app.load();
     assert.match(elements.landingCharts.innerHTML, /<div class="model-chart-header"><h2>Aircraft models<\/h2>[\s\S]*data-model-choice="icao" aria-pressed="true">Group<\/button>[\s\S]*data-model-choice="type" aria-pressed="false">Detail<\/button>/);
     assert.match(elements.landingCharts.innerHTML, /data-model-mode="icao">[\s\S]*A320 \(Airbus A320\)/);
@@ -224,7 +255,6 @@ test('each aircraft models card defaults to Group and toggles to Detail', async 
         dataset: { modelChoice }, closest: () => card,
         setAttribute(_name, value) { this.pressed = value; }
     }));
-    app.start();
     document.onclick({ target: { closest: () => buttons[1] } });
     assert.deepEqual(panels.map(panel => panel.hidden), [true, false]);
     assert.deepEqual(buttons.map(button => button.pressed), ['false', 'true']);

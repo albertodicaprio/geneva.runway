@@ -32,16 +32,18 @@
                         <p class="eyebrow">GENEVA AREA</p>
                         <h2 id="statsHeading">Flights seen in the Geneva area</h2>
                     </div>
-                    <label class="stats-period">Period
-                        <select id="statsDays">
-                            <option value="1" selected>Today</option>
-                            <option value="yesterday">Yesterday</option>
-                            <option value="7">Last 7 days</option>
-                            <option value="30">Last 30 days</option>
-                        </select>
-                    </label>
                 </div>
                 <p class="history-note">Airborne flights inside the map's Geneva-area search bounds. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
+                <div class="stats-date-picker" aria-label="Statistics date range">
+                    <div class="stats-calendar-header">
+                        <button type="button" id="statsPreviousMonth" aria-label="Previous month" disabled>‹</button>
+                        <strong id="statsCalendarMonth"></strong>
+                        <button type="button" id="statsNextMonth" aria-label="Next month" disabled>›</button>
+                    </div>
+                    <div id="statsCalendar" class="stats-calendar"></div>
+                    <p id="statsRangeLabel" class="stats-range-label" aria-live="polite">Loading available dates…</p>
+                    <p class="history-note stats-calendar-help">Choose a day for its stats, then another day to extend the range.</p>
+                </div>
             </section>
 
             <nav class="stats-nav" aria-label="Traffic statistics">
