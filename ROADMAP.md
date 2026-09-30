@@ -397,6 +397,15 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       fallback when an upstream refresh fails.
     - Validation: all 57 tests pass, including waiting and timeout cases.
 
+17. [x] Improve homepage search visibility and visitor context.
+    - Add a descriptive title, search description, sharing metadata and a
+      canonical homepage URL at `https://gva-runway.ahpc.ch/`.
+    - Introduce the spotting tracker and explain runway estimates, data age
+      and altitude ordering in static HTML, with links to the other pages.
+    - Replace the next-to-land label with approaching Geneva to reflect the
+      altitude-based ordering. Validation: all 59 tests pass, including local
+      HTTP checks for the homepage and API.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

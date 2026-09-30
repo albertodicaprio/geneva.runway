@@ -55,7 +55,7 @@ test('static responses include restrictive browser security headers', async () =
 
 test('all four pages provide direct navigation with the correct current page', async () => {
     for (const [path, title, sectionId] of [
-        ['/', 'Geneva Air Traffic', 'mapSection'],
+        ['/', 'Geneva Airport plane spotting', 'mapSection'],
         ['/arrivals.html', 'Arrivals', 'aircraftList'],
         ['/history.html', 'Recent landings', 'flightHistory'],
         ['/stats.html', 'Stats', 'landingSummary']

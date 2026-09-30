@@ -17,6 +17,13 @@ body { margin: 0; min-width: 320px; background: inherit; }
 .eyebrow { margin: 0 0 7px; color: #54708d; font-size: .72rem; font-weight: 800; letter-spacing: .13em; }
 .page-header { color: #f6fbff; }
 .page-header .eyebrow { color: #b9d7e9; }
+.page-intro { max-width: 58ch; margin: 10px 0 0; color: #c7dae8; line-height: 1.6; }
+.spotting-guide p:not(.eyebrow) { max-width: 75ch; color: #31516e; line-height: 1.65; }
+.spotting-guide h2 { margin-bottom: 16px; }
+.spotting-guide h3 { margin-top: 24px; }
+.spotting-guide p:last-child { margin-bottom: 0; }
+.spotting-guide a { color: #123c64; font-weight: 700; text-underline-offset: 3px; }
+.page-header > div:first-child { min-width: 0; }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin-bottom: 6px; font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -.05em; }
 h2 { margin-bottom: 0; font-size: clamp(1.3rem, 3vw, 1.75rem); letter-spacing: -.03em; }

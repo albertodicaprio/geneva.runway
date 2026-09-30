@@ -4,7 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Geneva Air Traffic</title>
+    <title>Geneva Airport Plane Spotting — Arrivals &amp; Runway 04/22</title>
+    <meta name="description" content="Track arrivals near Geneva Airport (GVA/LSGG), see aircraft on the map and check estimated runway 04/22 landing directions before going plane spotting.">
+    <link rel="canonical" href="https://gva-runway.ahpc.ch/">
+    <meta property="og:url" content="https://gva-runway.ahpc.ch/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Geneva Airport Plane Spotting — Arrivals &amp; Runway 04/22">
+    <meta property="og:description" content="Explore aircraft near Geneva Airport, approaching arrivals and estimated runway 04/22 landing directions.">
     <link rel="icon" href="plane_ico.ico" sizes="any">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +20,8 @@
         <header class="page-header">
             <div>
                 <p class="eyebrow">LSGG · GENEVA</p>
-                <h1>Geneva Air Traffic</h1>
+                <h1>Geneva Airport plane spotting</h1>
+                <p class="page-intro">Track approaching arrivals and estimated runway 04/22 landing directions at Geneva Airport (GVA/LSGG).</p>
             </div>
             <div class="data-status" id="dataStatus" aria-live="polite">Loading live data…</div>
         </header>
@@ -30,7 +37,7 @@
             <section class="next-section" aria-labelledby="nextArrivalHeading">
                 <div class="section-heading">
                     <div>
-                        <p class="eyebrow">NEXT TO LAND</p>
+                        <p class="eyebrow">APPROACHING GENEVA</p>
                         <h2 id="nextArrivalHeading">Lowest reported arrival</h2>
                     </div>
                     <p class="last-updated">Last reported <span id="lastUpdated">—</span></p>
@@ -89,6 +96,16 @@
                 </div>
             </section>
 
+            <section class="spotting-guide" aria-labelledby="spottingHeading">
+                <p class="eyebrow">PLAN YOUR VISIT</p>
+                <h2 id="spottingHeading">Follow Geneva Airport arrivals</h2>
+                <p>See aircraft approaching Geneva Airport on the map, then open the <a href="/arrivals.html">arrivals list</a> for flight routes, aircraft details and estimated landing directions. Select an aircraft on the map to see more about its flight.</p>
+                <h3>Which runway direction are arrivals using?</h3>
+                <p>Geneva Airport’s runway has two directions, 04 and 22. This tracker estimates each arrival’s landing direction from its reported heading. Treat the direction as a spotting guide: it is an estimate, and an aircraft may change course.</p>
+                <h3>How current is the traffic?</h3>
+                <p>Aircraft reports come from OpenSky, with route and aircraft details from ADSBdb. Positions may be estimated for up to 60 seconds between reports. Check the data status and last reported time above; the lowest reported arrival is ranked by altitude, so it may not be the next aircraft to land.</p>
+                <p>Explore <a href="/history.html">recent flight history</a> or <a href="/stats.html">Geneva traffic statistics</a> for more context.</p>
+            </section>
         </main>
 
         <footer>
