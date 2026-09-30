@@ -406,6 +406,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       altitude-based ordering. Validation: all 59 tests pass, including local
       HTTP checks for the homepage and API.
 
+18. [x] Replace the homepage guide card with a compact Help disclosure.
+    - Show a small, collapsed Help bar below the map with concise guidance
+      on aircraft details, runway estimates and data freshness.
+    - Use native HTML details/summary for mouse and keyboard interaction.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

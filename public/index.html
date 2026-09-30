@@ -96,16 +96,15 @@
                 </div>
             </section>
 
-            <section class="spotting-guide" aria-labelledby="spottingHeading">
-                <p class="eyebrow">PLAN YOUR VISIT</p>
-                <h2 id="spottingHeading">Follow Geneva Airport arrivals</h2>
-                <p>See aircraft approaching Geneva Airport on the map, then open the <a href="/arrivals.html">arrivals list</a> for flight routes, aircraft details and estimated landing directions. Select an aircraft on the map to see more about its flight.</p>
-                <h3>Which runway direction are arrivals using?</h3>
-                <p>Geneva Airport’s runway has two directions, 04 and 22. This tracker estimates each arrival’s landing direction from its reported heading. Treat the direction as a spotting guide: it is an estimate, and an aircraft may change course.</p>
-                <h3>How current is the traffic?</h3>
-                <p>Aircraft reports come from OpenSky, with route and aircraft details from ADSBdb. Positions may be estimated for up to 60 seconds between reports. Check the data status and last reported time above; the lowest reported arrival is ranked by altitude, so it may not be the next aircraft to land.</p>
-                <p>Explore <a href="/history.html">recent flight history</a> or <a href="/stats.html">Geneva traffic statistics</a> for more context.</p>
-            </section>
+            <details class="help-bar">
+                <summary>Help</summary>
+                <div class="help-content">
+                    <p><strong>Aircraft details:</strong> Select an aircraft on the map or open the <a href="/arrivals.html">arrivals list</a> for routes and aircraft information.</p>
+                    <p><strong>Runway 04/22:</strong> Landing directions are estimated from aircraft headings and may change. Arrivals are ranked by altitude, so the lowest aircraft may not land next.</p>
+                    <p><strong>Data freshness:</strong> Check the status and last reported time above. Positions may be estimated for up to 60 seconds between OpenSky reports.</p>
+                    <p>Explore <a href="/history.html">recent flight history</a> and <a href="/stats.html">traffic statistics</a>.</p>
+                </div>
+            </details>
         </main>
 
         <footer>
