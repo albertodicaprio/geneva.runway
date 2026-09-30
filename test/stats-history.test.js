@@ -10,12 +10,12 @@ const GenevaStats = require('../public/stats');
 function statsDocument() {
     const ids = ['statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
         'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts', 'takeoffsSummary', 'takeoffsCharts',
-        'landingStats', 'generalStats', 'takeoffsStats'];
+        'landingStats', 'generalStats', 'takeoffsStats', 'hourlyStats', 'hourlyChart', 'showHourlyLandings', 'showHourlyTakeoffs'];
     const elements = Object.fromEntries(ids.map(id => [id, {
-        innerHTML: '', textContent: '', disabled: false,
+        innerHTML: '', textContent: '', disabled: false, checked: true,
         addEventListener(event, callback) { this[`on${event}`] = callback; }
     }]));
-    const buttons = Object.fromEntries(['landing', 'general', 'takeoffs'].map(name => [name, {
+    const buttons = Object.fromEntries(['landing', 'general', 'takeoffs', 'hourly'].map(name => [name, {
         dataset: { statsView: name }, setAttribute(_name, value) { this.pressed = value; },
         addEventListener(_event, callback) { this.click = callback; }
     }]));
@@ -260,4 +260,77 @@ test('each aircraft models card defaults to Group and toggles to Detail', async 
     assert.deepEqual(buttons.map(button => button.pressed), ['false', 'true']);
     document.onclick({ target: { closest: () => buttons[0] } });
     assert.deepEqual(panels.map(panel => panel.hidden), [false, true]);
+});
+
+test('hourly counts use Geneva first sightings, sum days and respect daylight saving time', () => {
+    const flight = (category, date) => ({ category, firstSeenAt: Date.parse(date) / 1000 });
+    const summary = summarizeFlights([
+        flight('arrival', '2026-09-27T21:59:00Z'),
+        flight('arrival', '2026-09-28T21:20:00Z'),
+        flight('departure', '2026-09-27T22:01:00Z'),
+        flight('other', '2026-09-27T21:30:00Z'),
+        { category: 'arrival' },
+        flight('arrival', '2026-01-12T22:00:00Z'),
+        flight('departure', '2026-10-25T00:30:00Z'),
+        flight('departure', '2026-10-25T01:30:00Z')
+    ], 30);
+    assert.equal(summary.hourly.length, 24);
+    assert.deepEqual(summary.hourly[23], { hour: 23, landings: 3, takeoffs: 0 });
+    assert.deepEqual(summary.hourly[0], { hour: 0, landings: 0, takeoffs: 1 });
+    assert.deepEqual(summary.hourly[2], { hour: 2, landings: 0, takeoffs: 2 });
+    assert.deepEqual(summary.hourly[1], { hour: 1, landings: 0, takeoffs: 0 });
+});
+
+test('Hourly tab filters both bar series without fetching and keeps choices on reload', async () => {
+    const { elements, buttons, document } = statsDocument();
+    const requested = [];
+    const summary = summarizeFlights([
+        { category: 'arrival', firstSeenAt: Date.parse('2026-09-27T08:00:00Z') / 1000 },
+        { category: 'departure', firstSeenAt: Date.parse('2026-09-27T08:30:00Z') / 1000 }
+    ], 1);
+    const app = GenevaStats.create({ document, fetch: statsFetch(summary, requested) });
+    await app.start();
+    await app.load();
+    buttons.hourly.click();
+    assert.equal(elements.hourlyStats.hidden, false);
+    for (const view of ['landing', 'general', 'takeoffs']) assert.equal(elements[`${view}Stats`].hidden, true);
+    assert.equal(buttons.hourly.pressed, 'true');
+    assert.match(elements.hourlyChart.innerHTML, /rect class="hourly-landing"/);
+    assert.match(elements.hourlyChart.innerHTML, /rect class="hourly-takeoff"/);
+    assert.match(elements.hourlyChart.innerHTML, /10:00–10:59<\/th><td>1<\/td><td>1/);
+    const requestsBefore = requested.length;
+    elements.showHourlyLandings.checked = false;
+    elements.showHourlyLandings.onchange();
+    assert.doesNotMatch(elements.hourlyChart.innerHTML, /rect class="hourly-landing"/);
+    assert.match(elements.hourlyChart.innerHTML, /rect class="hourly-takeoff"/);
+    elements.showHourlyTakeoffs.checked = false;
+    elements.showHourlyTakeoffs.onchange();
+    assert.match(elements.hourlyChart.innerHTML, /Select Landings or Takeoffs/);
+    elements.showHourlyLandings.checked = true;
+    elements.showHourlyLandings.onchange();
+    assert.match(elements.hourlyChart.innerHTML, /rect class="hourly-landing"/);
+    assert.doesNotMatch(elements.hourlyChart.innerHTML, /rect class="hourly-takeoff"/);
+    assert.equal(requested.length, requestsBefore);
+    await app.load();
+    assert.doesNotMatch(elements.hourlyChart.innerHTML, /rect class="hourly-takeoff"/);
+    buttons.landing.click();
+    assert.equal(elements.hourlyStats.hidden, true);
+});
+
+test('Hourly chart shows empty and failure states and clears stale data after a failed date request', async () => {
+    const { elements, document } = statsDocument();
+    let fail = false;
+    const fetch = statsFetch(summarizeFlights([], 1));
+    const app = GenevaStats.create({ document, logger: { error() {} }, fetch: url => {
+        if (fail) throw new Error('offline');
+        return fetch(url);
+    } });
+    await app.start();
+    await app.load();
+    assert.match(elements.hourlyChart.innerHTML, /No recorded flights for the selected traffic types/);
+    fail = true;
+    await app.load();
+    elements.showHourlyLandings.onchange();
+    assert.match(elements.hourlyChart.innerHTML, /Unable to load hourly stats/);
+    assert.doesNotMatch(elements.hourlyChart.innerHTML, /<svg/);
 });

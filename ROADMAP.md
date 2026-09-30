@@ -411,6 +411,15 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       on aircraft details, runway estimates and data freshness.
     - Use native HTML details/summary for mouse and keyboard interaction.
 
+19. [x] Add hourly landing and takeoff statistics.
+    - Add a fourth Stats view with 24 hourly groups in Europe/Zurich time,
+      totaling first sightings across the selected date range.
+    - Show separate landing and takeoff bars with independent checkboxes,
+      an expandable counts table and horizontal scrolling on small screens.
+    - Explain that sightings do not establish exact landing/takeoff times.
+      Validation: all 62 tests pass, including local time and daylight saving
+      aggregation, view switching, filters, date reloads and failure states.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

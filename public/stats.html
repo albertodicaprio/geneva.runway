@@ -50,6 +50,7 @@
                 <button type="button" data-stats-view="landing" aria-controls="landingStats" aria-pressed="true">Landings</button>
                 <button type="button" data-stats-view="general" aria-controls="generalStats" aria-pressed="false">General</button>
                 <button type="button" data-stats-view="takeoffs" aria-controls="takeoffsStats" aria-pressed="false">Takeoffs</button>
+                <button type="button" data-stats-view="hourly" aria-controls="hourlyStats" aria-pressed="false">Hourly</button>
             </nav>
 
             <section id="landingStats" aria-labelledby="landingStatsHeading">
@@ -74,6 +75,17 @@
                 <p class="history-note">Airborne flights whose reported origin is Geneva. A sighting does not confirm the exact takeoff time.</p>
                 <div id="takeoffsSummary" aria-live="polite"><p class="loading">Loading takeoff stats…</p></div>
                 <div class="stats-grid" id="takeoffsCharts"></div>
+            </section>
+            <section id="hourlyStats" aria-labelledby="hourlyStatsHeading" hidden>
+                <p class="eyebrow">GENEVA LOCAL TIME</p>
+                <h2 id="hourlyStatsHeading">Landings and takeoffs per hour</h2>
+                <p class="history-note">Totals across the selected dates, grouped by the hour each flight was first seen (Europe/Zurich). These are sightings of Geneva arrivals and departures, not exact touchdown or takeoff times. Tracking pauses from 01:00 to 05:00.</p>
+                <fieldset class="map-controls hourly-controls">
+                    <legend>Show on chart</legend>
+                    <label><input type="checkbox" id="showHourlyLandings" checked> <span class="hourly-swatch hourly-landing" aria-hidden="true"></span> Landings</label>
+                    <label><input type="checkbox" id="showHourlyTakeoffs" checked> <span class="hourly-swatch hourly-takeoff" aria-hidden="true"></span> Takeoffs</label>
+                </fieldset>
+                <div id="hourlyChart" aria-live="polite"><p class="loading">Loading hourly stats…</p></div>
             </section>
         </main>
 

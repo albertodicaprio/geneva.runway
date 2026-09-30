@@ -57,6 +57,46 @@ const GenevaStats = (() => {
         for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document);
     }
 
+    function renderHourly(hours, document) {
+        const container = document.getElementById('hourlyChart');
+        const series = [
+            { key: 'landings', label: 'Landings', className: 'hourly-landing', enabled: document.getElementById('showHourlyLandings').checked },
+            { key: 'takeoffs', label: 'Takeoffs', className: 'hourly-takeoff', enabled: document.getElementById('showHourlyTakeoffs').checked }
+        ].filter(item => item.enabled);
+        if (!series.length) {
+            container.innerHTML = '<p class="no-aircraft">Select Landings or Takeoffs to show the chart.</p>';
+            return;
+        }
+        const maximum = Math.max(1, ...hours.flatMap(hour => series.map(item => hour[item.key])));
+        const step = Math.max(1, Math.ceil(maximum / 4));
+        const ceiling = Math.ceil(maximum / step) * step;
+        const baseline = 260;
+        let marks = '';
+        for (let count = 0; count <= ceiling; count += step) {
+            const y = baseline - count / ceiling * 220;
+            marks += `<line class="hourly-gridline" x1="42" x2="902" y1="${y}" y2="${y}" />` +
+                `<text class="hourly-axis" x="34" y="${y + 4}" text-anchor="end">${count}</text>`;
+        }
+        const rows = hours.map(({ hour, ...counts }) => {
+            const label = String(hour).padStart(2, '0');
+            const x = 48 + hour * 35.5;
+            for (const [index, item] of series.entries()) {
+                const height = counts[item.key] / ceiling * 220;
+                const width = series.length === 1 ? 22 : 12;
+                marks += `<rect class="${item.className}" x="${x + index * 14}" y="${baseline - height}" width="${width}" height="${height}"><title>${label}:00–${label}:59 · ${item.label}: ${counts[item.key]}</title></rect>`;
+            }
+            marks += `<text class="hourly-axis" x="${x + 11}" y="282" text-anchor="middle">${label}</text>`;
+            return `<tr><th scope="row">${label}:00–${label}:59</th>${series.map(item => `<td>${counts[item.key]}</td>`).join('')}</tr>`;
+        }).join('');
+        const total = hours.reduce((sum, hour) => sum + series.reduce((count, item) => count + hour[item.key], 0), 0);
+        container.innerHTML = `${total ? '' : '<p class="no-aircraft">No recorded flights for the selected traffic types.</p>'}
+            <div class="hourly-chart-scroll"><svg class="hourly-chart" viewBox="0 0 920 310" role="img" aria-label="Hourly ${series.map(item => item.label.toLowerCase()).join(' and ')} counts in Geneva local time. Exact counts are in the table below.">
+                <text class="hourly-axis" x="42" y="20">Flights seen</text>${marks}
+                <text class="hourly-axis" x="472" y="306" text-anchor="middle">Hour (Europe/Zurich)</text>
+            </svg></div>
+            <details class="hourly-table"><summary>View hourly counts</summary><div class="history-table-wrap"><table class="history-table"><caption>Flights first seen per hour across the selected dates</caption><thead><tr><th scope="col">Hour</th>${series.map(item => `<th scope="col">${item.label}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+    }
+
     function monthKey(date) { return date.slice(0, 7); }
     function shiftMonth(month, amount) {
         const [year, number] = month.split('-').map(Number);
@@ -75,7 +115,10 @@ const GenevaStats = (() => {
         let from;
         let to;
         let awaitingEnd = false;
+        let hourly = null;
         function showEmpty(message) {
+            hourly = null;
+            document.getElementById('hourlyChart').innerHTML = `<p class="no-aircraft">${message}</p>`;
             for (const prefix of ['landing', 'general', 'takeoffs']) {
                 document.getElementById(`${prefix}Summary`).innerHTML = `<p class="no-aircraft">${message}</p>`;
                 document.getElementById(`${prefix}Charts`).innerHTML = '';
@@ -120,7 +163,7 @@ const GenevaStats = (() => {
             load();
         }
         function showView(view) {
-            for (const name of ['landing', 'general', 'takeoffs']) {
+            for (const name of ['landing', 'general', 'takeoffs', 'hourly']) {
                 document.getElementById(`${name}Stats`).hidden = name !== view;
                 document.querySelector(`[data-stats-view="${name}"]`).setAttribute('aria-pressed', String(name === view));
             }
@@ -132,10 +175,16 @@ const GenevaStats = (() => {
                 const response = await fetch(`/api/stats?from=${from}&to=${to}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 const data = await response.json();
-                if (current === requestId) render(data, document);
+                if (current === requestId) {
+                    render(data, document);
+                    hourly = data.hourly;
+                    renderHourly(hourly, document);
+                }
             } catch (error) {
                 logger.error('Error fetching flight stats:', error);
                 if (current === requestId) {
+                    hourly = null;
+                    document.getElementById('hourlyChart').innerHTML = '<p class="error">Unable to load hourly stats.</p>';
                     for (const prefix of ['landing', 'general', 'takeoffs']) {
                         document.getElementById(`${prefix}Summary`).innerHTML = '<p class="error">Unable to load flight stats.</p>';
                     }
@@ -179,6 +228,11 @@ const GenevaStats = (() => {
                     row.hidden = !event.target.checked;
                 }
             });
+            for (const id of ['showHourlyLandings', 'showHourlyTakeoffs']) {
+                document.getElementById(id).addEventListener('change', () => {
+                    if (hourly) renderHourly(hourly, document);
+                });
+            }
             document.addEventListener('click', event => {
                 const button = event.target.closest?.('[data-model-choice]');
                 if (!button) return;
