@@ -106,19 +106,19 @@ const GenevaApp = (() => {
                 const time = new Date(historyTime(aircraft) * 1000);
                 const runway = ['04', '22'].includes(aircraft.approachDirection) ? `Likely ${aircraft.approachDirection}` : 'Unknown';
                 const heading = Number.isFinite(aircraft.heading) ? ` · ${Math.round(aircraft.heading)}°` : '';
-                return `<tr>
-                    <th scope="row">${escapeHtml(aircraft.callsign || aircraft.icao24 || 'Unknown')}</th>
-                    <td>${escapeHtml(aircraft.route?.airline?.name || '—')}</td>
-                    <td>${escapeHtml(details.type || details.icao_type || '—')}</td>
-                    <td>${escapeHtml(details.registration || '—')}</td>
-                    <td><time datetime="${time.toISOString()}">${escapeHtml(time.toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }))}</time></td>
-                    <td>${escapeHtml(runway + heading)}</td>
+                return `<tr role="row">
+                    <th scope="row" role="rowheader">${escapeHtml(aircraft.callsign || aircraft.icao24 || 'Unknown')}</th>
+                    <td role="cell" data-label="Airline">${escapeHtml(aircraft.route?.airline?.name || '—')}</td>
+                    <td role="cell" data-label="Plane type">${escapeHtml(details.type || details.icao_type || '—')}</td>
+                    <td role="cell" data-label="Registration">${escapeHtml(details.registration || '—')}</td>
+                    <td role="cell" data-label="Landing (est.)"><time datetime="${time.toISOString()}">${escapeHtml(time.toLocaleTimeString('en-GB', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' }))}</time></td>
+                    <td role="cell" data-label="Runway / heading">${escapeHtml(runway + heading)}</td>
                 </tr>`;
             }).join('');
             container.innerHTML = `<div class="history-table-wrap" role="region" aria-label="Recent landings" tabindex="0">
-                <table class="history-table">
+                <table class="history-table" role="table">
                     <thead><tr><th scope="col">Flight</th><th scope="col">Airline</th><th scope="col">Plane type</th><th scope="col">Registration</th><th scope="col">Landing (est.)</th><th scope="col">Last runway / heading</th></tr></thead>
-                    <tbody>${rows}</tbody>
+                    <tbody role="rowgroup">${rows}</tbody>
                 </table>
             </div>`;
         }

@@ -427,6 +427,14 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validate shared navigation, section placement, combined rendering,
       and redirects through the local Node server.
 
+21. [x] Make recent landing history readable on mobile.
+    - Show each retained flight as a card with labeled details below 700px;
+      keep the desktop table and live arrivals layout.
+    - Allow long history values to wrap and contain the section within the
+      page width. Preserve table semantics for assistive technology.
+    - Validation: all 63 tests pass; headless Chrome confirms no horizontal
+      overflow at 320px and 390px and retains the table layout at 1040px.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

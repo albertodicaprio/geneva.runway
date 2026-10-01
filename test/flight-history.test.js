@@ -33,7 +33,7 @@ test('history renders retained details, Geneva times and unknown fields, newest 
     assert.match(markup, /12:59/);
     assert.match(markup, /Likely 22 · 220°/);
     assert.match(markup, /Unknown/);
-    assert.match(markup, /<td>—<\/td>/);
+    assert.match(markup, /<td[^>]*>—<\/td>/);
     assert.doesNotMatch(markup, /EXPIRED|<NEW>/);
     now += 7140 * 1000;
     app.updateTimeSensitive();
