@@ -135,6 +135,13 @@ async function serveStatic(req, res, urlPathname) {
         return;
     }
 
+    if (urlPathname === '/history.html') {
+        res.statusCode = 301;
+        res.setHeader('Location', '/arrivals.html#historyHeading');
+        res.end();
+        return;
+    }
+
     const filePath = getStaticFilePath(urlPathname);
     if (!filePath) {
         res.statusCode = 403;

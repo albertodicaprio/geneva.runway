@@ -420,6 +420,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Validation: all 62 tests pass, including local time and daylight saving
       aggregation, view switching, filters, date reloads and failure states.
 
+20. [x] Move recent landings to the bottom of Arrivals.
+    - Remove the separate History page and its shared navigation tab.
+    - Keep live arrivals and retained history on the same polling loop;
+      redirect old history links to the new section.
+    - Validate shared navigation, section placement, combined rendering,
+      and redirects through the local Node server.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

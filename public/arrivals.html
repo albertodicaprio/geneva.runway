@@ -22,7 +22,6 @@
         <nav class="page-nav" aria-label="Main navigation">
             <a href="/"><span class="nav-icon" aria-hidden="true">⌖</span><span>Overview</span></a>
             <a href="/arrivals.html" aria-current="page"><span class="nav-icon" aria-hidden="true">✈</span><span>Arrivals</span></a>
-            <a href="/history.html"><span class="nav-icon" aria-hidden="true">◷</span><span>History</span></a>
             <a href="/stats.html"><span class="nav-icon" aria-hidden="true">▥</span><span>Stats</span></a>
         </nav>
 
@@ -37,6 +36,20 @@
                 </div>
                 <div class="aircraft-list" id="aircraftList">
                     <div class="loading">Loading arrival data…</div>
+                </div>
+            </section>
+
+            <section class="history-section" aria-labelledby="historyHeading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">FLIGHT HISTORY</p>
+                        <h2 id="historyHeading">Recent landings</h2>
+                    </div>
+                    <p class="arrival-count" id="historyCount">—</p>
+                </div>
+                <p class="history-note">Landing times are estimated from when flights leave the live list, not confirmed touchdown. Times are local to Geneva; history is kept for two hours.</p>
+                <div id="flightHistory">
+                    <p class="loading">Loading flight history…</p>
                 </div>
             </section>
         </main>

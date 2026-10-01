@@ -216,8 +216,7 @@ test('each page renders its own data without initializing the map elsewhere', as
     const data = fixture(Date.parse('2026-01-01T12:00:00Z'));
     for (const pageIds of [
         ['nextPlane', 'lastUpdated'],
-        ['arrivalCount', 'aircraftList'],
-        ['historyCount', 'flightHistory']
+        ['arrivalCount', 'aircraftList', 'historyCount', 'flightHistory']
     ]) {
         const elements = Object.fromEntries(['dataStatus', ...pageIds].map(id => [id, {}]));
         let mapInits = 0;

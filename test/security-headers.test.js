@@ -53,12 +53,11 @@ test('static responses include restrictive browser security headers', async () =
     assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
 
-test('all four pages provide direct navigation with the correct current page', async () => {
-    for (const [path, title, sectionId] of [
-        ['/', 'Geneva Airport plane spotting', 'mapSection'],
-        ['/arrivals.html', 'Arrivals', 'aircraftList'],
-        ['/history.html', 'Recent landings', 'flightHistory'],
-        ['/stats.html', 'Stats', 'landingSummary']
+test('all three pages provide direct navigation and arrivals includes history at the bottom', async () => {
+    for (const [path, title, sectionIds] of [
+        ['/', 'Geneva Airport plane spotting', ['mapSection']],
+        ['/arrivals.html', 'Arrivals', ['aircraftList', 'flightHistory']],
+        ['/stats.html', 'Stats', ['landingSummary']]
     ]) {
         const response = await fetch(`${baseUrl}${path}`);
         assert.equal(response.status, 200);
@@ -66,13 +65,25 @@ test('all four pages provide direct navigation with the correct current page', a
         assert.match(html, new RegExp(`<h1>${title}</h1>`));
         assert.match(html, /href="\/"/);
         assert.match(html, /href="\/arrivals.html"/);
-        assert.match(html, /href="\/history.html"/);
+        assert.doesNotMatch(html, /href="\/history.html"/);
         assert.match(html, /href="\/stats.html"/);
         assert.ok(html.includes(`href="${path}" aria-current="page"`));
-        assert.ok(html.includes(`id="${sectionId}"`));
-        for (const otherId of ['mapSection', 'aircraftList', 'flightHistory', 'landingSummary']) {
-            if (otherId !== sectionId) assert.ok(!html.includes(`id="${otherId}"`));
+        for (const sectionId of sectionIds) assert.ok(html.includes(`id="${sectionId}"`));
+        if (path === '/arrivals.html') {
+            assert.ok(html.indexOf('id="aircraftList"') < html.indexOf('id="flightHistory"'));
+            assert.match(html, /id="historyCount"/);
         }
+        for (const otherId of ['mapSection', 'aircraftList', 'flightHistory', 'landingSummary']) {
+            if (!sectionIds.includes(otherId)) assert.ok(!html.includes(`id="${otherId}"`));
+        }
+    }
+});
+
+test('the old history URL redirects to recent landings on arrivals', async () => {
+    for (const method of ['GET', 'HEAD']) {
+        const response = await fetch(`${baseUrl}/history.html`, { method, redirect: 'manual' });
+        assert.equal(response.status, 301);
+        assert.equal(response.headers.get('location'), '/arrivals.html#historyHeading');
     }
 });
 
