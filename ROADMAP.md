@@ -435,6 +435,16 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 63 tests pass; headless Chrome confirms no horizontal
       overflow at 320px and 390px and retains the table layout at 1040px.
 
+22. [x] Add a two-month statistics range picker.
+    - Open on the previous and current months, navigate both panes together,
+      and select endpoints in either pane with distinct range highlighting.
+    - Stack panes and enlarge day buttons on mobile; preserve keyboard focus
+      after choosing a date and keep unrecorded/future dates disabled.
+    - Validation: all 64 tests pass, including cross-year ranges, reverse
+      selection, single-day selection, and navigation preserving ranges.
+      Headless Chrome confirms layouts fit 320px, 390px, 700px, 768px,
+      and 1040px with one pane per row on mobile and two on desktop.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

@@ -126,26 +126,37 @@ const GenevaStats = (() => {
         }
         function renderCalendar() {
             if (!month) return;
-            const [year, number] = month.split('-').map(Number);
-            const firstWeekday = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
-            const dayCount = new Date(Date.UTC(year, number, 0)).getUTCDate();
-            const cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                .map(day => `<span class="stats-weekday">${day}</span>`);
-            for (let i = 0; i < firstWeekday; i++) cells.push('<span></span>');
-            for (let day = 1; day <= dayCount; day++) {
-                const date = `${month}-${String(day).padStart(2, '0')}`;
-                const enabled = available.has(date) && date <= today;
-                const selected = enabled && from && to && date >= from && date <= to;
-                cells.push(`<button type="button" data-stats-date="${date}" aria-label="${dateLabel(date)}"` +
-                    `${enabled ? '' : ' disabled'}${selected ? ' aria-pressed="true"' : ' aria-pressed="false"'}` +
-                    `${date === today ? ' aria-current="date"' : ''}>${day}</button>`);
-            }
-            document.getElementById('statsCalendarMonth').textContent = new Intl.DateTimeFormat('en-GB', {
+            const monthLabel = value => new Intl.DateTimeFormat('en-GB', {
                 month: 'long', year: 'numeric', timeZone: 'UTC'
-            }).format(new Date(`${month}-01T00:00:00Z`));
-            document.getElementById('statsCalendar').innerHTML = cells.join('');
-            document.getElementById('statsPreviousMonth').disabled = !available.size || shiftMonth(month, -1) < monthKey([...available][0]);
-            document.getElementById('statsNextMonth').disabled = !available.size || shiftMonth(month, 1) > monthKey(today);
+            }).format(new Date(`${value}-01T00:00:00Z`));
+            const months = [month, shiftMonth(month, 1)];
+            document.getElementById('statsCalendarMonth').textContent = months.map(monthLabel).join(' – ');
+            document.getElementById('statsCalendar').innerHTML = months.map((value, index) => {
+                const [year, number] = value.split('-').map(Number);
+                const firstWeekday = (new Date(Date.UTC(year, number - 1, 1)).getUTCDay() + 6) % 7;
+                const dayCount = new Date(Date.UTC(year, number, 0)).getUTCDate();
+                const cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                    .map(day => `<span class="stats-weekday">${day}</span>`);
+                for (let i = 0; i < firstWeekday; i++) cells.push('<span aria-hidden="true"></span>');
+                for (let day = 1; day <= dayCount; day++) {
+                    const date = `${value}-${String(day).padStart(2, '0')}`;
+                    const enabled = available.has(date) && date <= today;
+                    const selected = from && to && date >= from && date <= to;
+                    const range = date === from && date === to ? 'both'
+                        : date === from ? 'start' : date === to ? 'end' : 'middle';
+                    cells.push(`<button type="button" data-stats-date="${date}" aria-label="${dateLabel(date)}"` +
+                        `${enabled ? '' : ' disabled'} aria-pressed="${Boolean(selected)}"` +
+                        `${selected ? ` data-range="${range}"` : ''}` +
+                        `${date === today ? ' aria-current="date"' : ''}>${day}</button>`);
+                }
+                return `<div class="stats-calendar-pane" role="group" aria-labelledby="statsMonth${index}">
+                    <h3 id="statsMonth${index}" class="stats-month-title">${monthLabel(value)}</h3>
+                    <div class="stats-calendar">${cells.join('')}</div>
+                </div>`;
+            }).join('');
+            const earliestMonth = available.size ? monthKey([...available].sort()[0]) : null;
+            document.getElementById('statsPreviousMonth').disabled = !available.size || month <= earliestMonth;
+            document.getElementById('statsNextMonth').disabled = !available.size || months[1] >= monthKey(today);
             document.getElementById('statsRangeLabel').textContent = !available.size
                 ? 'No recorded flight days yet.'
                 : `${dateLabel(from)}${from === to ? '' : ` – ${dateLabel(to)}`}${awaitingEnd ? ' · Choose an end day' : ''}`;
@@ -160,6 +171,7 @@ const GenevaStats = (() => {
                 awaitingEnd = true;
             }
             renderCalendar();
+            document.getElementById('statsCalendar').querySelector?.(`[data-stats-date="${date}"]`)?.focus();
             load();
         }
         function showView(view) {
@@ -199,7 +211,7 @@ const GenevaStats = (() => {
                 today = data.today;
                 available = new Set(data.dates);
                 const latest = data.dates.at(-1);
-                month = monthKey(latest || today);
+                month = shiftMonth(monthKey(today), -1);
                 from = to = latest;
                 renderCalendar();
                 if (latest) load();

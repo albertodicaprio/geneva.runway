@@ -210,6 +210,53 @@ test('Stats calendar selects recorded days and inclusive ranges while disabling 
     assert.match(elements.statsRangeLabel.textContent, /25 Sept 2026 – 27 Sept 2026/);
 });
 
+test('two calendar panes select ranges across a year boundary and navigate together without fetching', async () => {
+    const { elements, document } = statsDocument();
+    const requested = [];
+    const app = GenevaStats.create({ document, fetch: async url => {
+        requested.push(url);
+        return { ok: true, json: async () => url.includes('available=1')
+            ? { today: '2027-01-05', dates: ['2026-11-15', '2026-12-30', '2027-01-01', '2027-01-05'] }
+            : summarizeFlights([], 1) };
+    } });
+    await app.start();
+    const choose = date => elements.statsCalendar.onclick({ target: {
+        closest: () => ({ dataset: { statsDate: date }, disabled: false })
+    } });
+    assert.equal(elements.statsCalendarMonth.textContent, 'December 2026 – January 2027');
+    assert.equal((elements.statsCalendar.innerHTML.match(/class="stats-calendar-pane"/g) || []).length, 2);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2027-01-06"[^>]*disabled/);
+    assert.equal(elements.statsNextMonth.disabled, true);
+    choose('2026-12-30');
+    assert.match(elements.statsRangeLabel.textContent, /Choose an end day/);
+    choose('2027-01-01');
+    assert.equal(requested.at(-1), '/api/stats?from=2026-12-30&to=2027-01-01');
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-12-30"[^>]*data-range="start"/);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-12-31"[^>]*disabled[^>]*data-range="middle"/);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2027-01-01"[^>]*data-range="end"/);
+    choose('2027-01-01');
+    choose('2026-12-30');
+    assert.equal(requested.at(-1), '/api/stats?from=2026-12-30&to=2027-01-01');
+    const beforeNavigation = requested.length;
+    elements.statsPreviousMonth.onclick();
+    assert.equal(elements.statsCalendarMonth.textContent, 'November 2026 – December 2026');
+    assert.equal(elements.statsPreviousMonth.disabled, true);
+    assert.equal(elements.statsNextMonth.disabled, false);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-12-30"[^>]*data-range="start"/);
+    elements.statsNextMonth.onclick();
+    assert.equal(elements.statsCalendarMonth.textContent, 'December 2026 – January 2027');
+    assert.equal(requested.length, beforeNavigation);
+    choose('2027-01-01');
+    choose('2027-01-01');
+    assert.equal(requested.at(-1), '/api/stats?from=2027-01-01&to=2027-01-01');
+    choose('2027-01-05');
+    choose('2027-01-01');
+    assert.equal(requested.at(-1), '/api/stats?from=2027-01-01&to=2027-01-05');
+    choose('2026-12-30');
+    choose('2026-12-30');
+    assert.equal(requested.at(-1), '/api/stats?from=2026-12-30&to=2026-12-30');
+});
+
 test('Stats calendar explains an empty archive without leaving loading indicators', async () => {
     const { elements, document } = statsDocument();
     const app = GenevaStats.create({ document, fetch: async () => ({ ok: true,
