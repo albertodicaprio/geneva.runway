@@ -90,7 +90,7 @@ const GenevaStats = (() => {
         }).join('');
         const total = hours.reduce((sum, hour) => sum + series.reduce((count, item) => count + hour[item.key], 0), 0);
         container.innerHTML = `${total ? '' : '<p class="no-aircraft">No recorded flights for the selected traffic types.</p>'}
-            <div class="hourly-chart-scroll"><svg class="hourly-chart" viewBox="0 0 920 310" role="img" aria-label="Hourly ${series.map(item => item.label.toLowerCase()).join(' and ')} counts in Geneva local time. Exact counts are in the table below.">
+            <div class="hourly-chart-scroll"><svg class="hourly-chart" width="920" height="310" viewBox="0 0 920 310" role="img" aria-label="Hourly ${series.map(item => item.label.toLowerCase()).join(' and ')} counts in Geneva local time. Exact counts are in the table below.">
                 <text class="hourly-axis" x="42" y="20">Flights seen</text>${marks}
                 <text class="hourly-axis" x="472" y="306" text-anchor="middle">Hour (Europe/Zurich)</text>
             </svg></div>

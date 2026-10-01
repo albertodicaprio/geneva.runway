@@ -204,8 +204,9 @@ footer a:hover { text-decoration: underline; }
 .hourly-swatch { width: 14px; height: 14px; border-radius: 3px; }
 .hourly-landing { fill: #167a99; background: #167a99; }
 .hourly-takeoff { fill: #a94713; background: #a94713; }
+#hourlyStats { min-width: 0; }
 .hourly-chart-scroll { overflow-x: auto; }
-.hourly-chart { display: block; width: 100%; min-width: 660px; }
+.hourly-chart { display: block; width: 100%; min-width: 660px; height: auto; }
 .hourly-gridline { stroke: #d4e1ea; stroke-width: 1; }
 .hourly-axis { fill: #47637f; font-size: 12px; }
 .hourly-table { margin-top: 16px; color: #31516e; font-size: .86rem; }
