@@ -470,6 +470,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Chrome confirms four rendered cards without page overflow at 320px,
       390px, 700px, 768px, and 1040px.
 
+25. [x] Rename General statistics to Other traffic.
+    - Update the Stats tab, heading, loading text, accessible filter label,
+      and selected-period traffic split to describe overflights and flights
+      with unknown routes more clearly.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

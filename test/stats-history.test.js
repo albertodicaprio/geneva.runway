@@ -97,7 +97,7 @@ test('period overview renders selected dates, stays independent of filters and c
     await app.load();
     assert.match(elements.statsOverview.innerHTML, /<strong>3<\/strong><span>Flights seen/);
     assert.match(elements.statsOverview.innerHTML, /<strong>1<\/strong><span>Distinct aircraft/);
-    assert.match(elements.statsOverview.innerHTML, /3 landings · 0 general · 0 takeoffs/);
+    assert.match(elements.statsOverview.innerHTML, /3 landings · 0 other traffic · 0 takeoffs/);
     const overview = elements.statsOverview.innerHTML;
     document.oninput({ target: { dataset: { statsFilter: 'landing' }, value: 'missing' } });
     await app.load();

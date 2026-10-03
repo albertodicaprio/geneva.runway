@@ -45,7 +45,7 @@ const GenevaStats = (() => {
         } else {
             summary.innerHTML = `<div class="stats-totals">
                 <div><strong data-stats-total aria-live="polite">${group.total}</strong><span>Flights seen</span></div>
-                <label class="stats-filter"><input type="search" data-stats-filter="${prefix}" value="${escapeHtml(filter)}" placeholder="Search flights…" aria-controls="${prefix}Charts" aria-label="Filter ${prefix === 'landing' ? 'landings' : prefix} by airline, airport, ${prefix === 'general' ? '' : 'registration, '}or aircraft model"><span>Filter</span></label>
+                <label class="stats-filter"><input type="search" data-stats-filter="${prefix}" value="${escapeHtml(filter)}" placeholder="Search flights…" aria-controls="${prefix}Charts" aria-label="Filter ${prefix === 'landing' ? 'landings' : prefix === 'general' ? 'other traffic' : prefix} by airline, airport, ${prefix === 'general' ? '' : 'registration, '}or aircraft model"><span>Filter</span></label>
             </div>`;
         }
         const charts = [
@@ -71,7 +71,7 @@ const GenevaStats = (() => {
             [overview.airlines, 'Airlines'], [overview.airports, 'Airports']];
         document.getElementById('statsOverview').innerHTML = `<div class="stats-totals stats-overview-totals">
             ${cards.map(([count, label]) => `<div><strong>${count}</strong><span>${label}</span></div>`).join('')}
-            </div><p class="history-note stats-overview-split">${overview.landings} landings · ${overview.general} general · ${overview.takeoffs} takeoffs</p>
+            </div><p class="history-note stats-overview-split">${overview.landings} landings · ${overview.general} other traffic · ${overview.takeoffs} takeoffs</p>
             <p class="history-note stats-overview-help">Selected period · Distinct counts use known data. Airports exclude Geneva.</p>`;
     }
 
