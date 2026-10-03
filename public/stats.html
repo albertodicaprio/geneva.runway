@@ -26,13 +26,16 @@
 
         <main>
             <section class="stats-intro" aria-labelledby="statsHeading">
-                <div class="section-heading">
-                    <div>
-                        <p class="eyebrow">GENEVA AREA</p>
-                        <h2 id="statsHeading">Flights seen in the Geneva area</h2>
+                <div class="stats-intro-copy">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">GENEVA AREA</p>
+                            <h2 id="statsHeading">Flights seen in the Geneva area</h2>
+                        </div>
                     </div>
+                    <p class="history-note">Airborne flights inside the map's Geneva-area search bounds. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
+                    <div id="statsOverview" aria-live="polite" aria-label="All flights in the selected period"><p class="loading">Loading period totals…</p></div>
                 </div>
-                <p class="history-note">Airborne flights inside the map's Geneva-area search bounds. Each flight is counted on the Geneva-local day it was first seen. Tracking pauses from 01:00 to 05:00.</p>
                 <div class="stats-date-picker" aria-label="Statistics date range">
                     <div class="stats-calendar-header">
                         <button type="button" id="statsPreviousMonth" aria-label="Previous month" disabled>‹</button>

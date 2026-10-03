@@ -123,11 +123,13 @@ test('stats availability and date ranges use only recorded Geneva days', async (
     assert.equal(summary.days, 3);
     assert.equal(summary.landing.total, 1);
     assert.equal(summary.takeoffs.total, 1);
+    assert.deepEqual(summary.overview, { total: 2, aircraft: 0, airlines: 1, airports: 0, landings: 1, takeoffs: 1, general: 0 });
     const filtered = await fetch(`${baseUrl}/api/stats?from=${previous}&to=${recent}&landingFilter=missing&takeoffsFilter=SWISS`);
     assert.equal(filtered.status, 200);
     const filteredSummary = await filtered.json();
     assert.equal(filteredSummary.landing.total, 0);
     assert.equal(filteredSummary.takeoffs.total, 1);
+    assert.deepEqual(filteredSummary.overview, summary.overview);
     assert.equal((await fetch(`${baseUrl}/api/stats?from=${missing}&to=${recent}`)).status, 400);
     assert.equal((await fetch(`${baseUrl}/api/stats?from=2026-02-30&to=${recent}`)).status, 400);
     const future = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);

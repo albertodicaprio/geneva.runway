@@ -8,7 +8,7 @@ const { summarizeFlights } = require('../lib/stats');
 const GenevaStats = require('../public/stats');
 
 function statsDocument() {
-    const ids = ['statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
+    const ids = ['statsOverview', 'statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
         'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts', 'takeoffsSummary', 'takeoffsCharts',
         'landingStats', 'generalStats', 'takeoffsStats', 'hourlyStats', 'hourlyChart', 'showHourlyLandings', 'showHourlyTakeoffs'];
     const elements = Object.fromEntries(ids.map(id => [id, {
@@ -59,6 +59,54 @@ test('text filters select flights across chart fields and recalculate all rankin
     assert.equal(summarizeFlights(flights, 2, { landing: 'swiss' }).landing.total, 3);
     assert.equal(summarizeFlights(flights, 2, { landing: 'missing' }).landing.total, 0);
     assert.equal(summarizeFlights(flights, 2, { landing: '   ' }).landing.total, 5);
+});
+
+test('period overview counts distinct identities and airports across all traffic, independently of filters', () => {
+    const flights = [
+        { category: 'arrival', icao24: 'ABC123', airline: 'easyJet Europe', origin: { iata: 'LHR', icao: 'EGLL', name: 'London Heathrow' }, destination: { iata: 'GVA' } },
+        { category: 'departure', icao24: 'abc123', airline: 'easyJet Switzerland', origin: { icao: 'LSGG' }, destination: { iata: 'lhr' } },
+        { category: 'other', icao24: 'DEF456', airline: 'Swiss', origin: { name: 'London Heathrow' }, destination: { iata: 'CDG', icao: 'LFPG', name: 'Paris' } },
+        { icao24: 'def456', airline: 'SWISS', origin: { name: 'Geneva Airport' }, destination: { icao: 'LFPG' } },
+        { category: 'other' }
+    ];
+    const expected = { total: 5, aircraft: 2, airlines: 2, airports: 2, landings: 1, takeoffs: 1, general: 3 };
+    assert.deepEqual(summarizeFlights(flights, 7).overview, expected);
+    const filtered = summarizeFlights(flights, 7, { landing: 'missing', general: 'missing', takeoffs: 'missing' });
+    assert.deepEqual(filtered.overview, expected);
+    assert.equal(filtered.landing.total + filtered.general.total + filtered.takeoffs.total, 0);
+    assert.deepEqual(summarizeFlights([], 1).overview,
+        { total: 0, aircraft: 0, airlines: 0, airports: 0, landings: 0, takeoffs: 0, general: 0 });
+});
+
+test('period overview renders selected dates, stays independent of filters and clears failed totals', async () => {
+    const { elements, document } = statsDocument();
+    let fail = false;
+    const app = GenevaStats.create({ document, logger: { error() {} }, fetch: async url => {
+        if (fail) throw new Error('offline');
+        const params = new URL(url, 'http://localhost').searchParams;
+        return { ok: true, json: async () => params.has('available')
+            ? { today: '2026-09-28', dates: ['2026-09-25', '2026-09-27'] }
+            : summarizeFlights(Array.from({ length: params.get('from') === '2026-09-25' ? 3 : 1 },
+                () => ({ category: 'arrival', icao24: 'ABC123', airline: 'Swiss' })), 1,
+            { landing: params.get('landingFilter') }) };
+    } });
+    await app.start();
+    await app.load();
+    assert.match(elements.statsOverview.innerHTML, /<strong>1<\/strong><span>Flights seen/);
+    elements.statsCalendar.onclick({ target: { closest: () => ({ dataset: { statsDate: '2026-09-25' } }) } });
+    await app.load();
+    assert.match(elements.statsOverview.innerHTML, /<strong>3<\/strong><span>Flights seen/);
+    assert.match(elements.statsOverview.innerHTML, /<strong>1<\/strong><span>Distinct aircraft/);
+    assert.match(elements.statsOverview.innerHTML, /3 landings · 0 general · 0 takeoffs/);
+    const overview = elements.statsOverview.innerHTML;
+    document.oninput({ target: { dataset: { statsFilter: 'landing' }, value: 'missing' } });
+    await app.load();
+    assert.equal(elements.statsOverview.innerHTML, overview);
+    assert.match(elements.landingSummary.innerHTML, /<strong[^>]*>0<\/strong>/);
+    fail = true;
+    await app.load();
+    assert.match(elements.statsOverview.innerHTML, /Unable to load period totals/);
+    assert.doesNotMatch(elements.statsOverview.innerHTML, /<strong>3/);
 });
 
 test('typing filters automatically refreshes all charts, preserves inputs and clears independently', async () => {
@@ -357,6 +405,7 @@ test('Stats calendar explains an empty archive without leaving loading indicator
         json: async () => ({ today: '2026-09-28', dates: [] }) }) });
     await app.start();
     assert.equal(elements.statsRangeLabel.textContent, 'No recorded flight days yet.');
+    assert.match(elements.statsOverview.innerHTML, /No recorded flights yet/);
     assert.match(elements.landingSummary.innerHTML, /No recorded flights yet/);
     assert.equal(elements.statsPreviousMonth.disabled, true);
     assert.equal(elements.statsNextMonth.disabled, true);

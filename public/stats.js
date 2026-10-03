@@ -62,7 +62,17 @@ const GenevaStats = (() => {
     }
 
     function render(data, document, filters) {
+        renderOverview(data.overview, document);
         for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document, filters[view]);
+    }
+
+    function renderOverview(overview, document) {
+        const cards = [[overview.total, 'Flights seen'], [overview.aircraft, 'Distinct aircraft'],
+            [overview.airlines, 'Airlines'], [overview.airports, 'Airports']];
+        document.getElementById('statsOverview').innerHTML = `<div class="stats-totals stats-overview-totals">
+            ${cards.map(([count, label]) => `<div><strong>${count}</strong><span>${label}</span></div>`).join('')}
+            </div><p class="history-note stats-overview-split">${overview.landings} landings · ${overview.general} general · ${overview.takeoffs} takeoffs</p>
+            <p class="history-note stats-overview-help">Selected period · Distinct counts use known data. Airports exclude Geneva.</p>`;
     }
 
     function renderHourly(hours, document) {
@@ -128,6 +138,7 @@ const GenevaStats = (() => {
         let hourly = null;
         function showEmpty(message) {
             hourly = null;
+            document.getElementById('statsOverview').innerHTML = `<p class="no-aircraft">${message}</p>`;
             document.getElementById('hourlyChart').innerHTML = `<p class="no-aircraft">${message}</p>`;
             for (const prefix of ['landing', 'general', 'takeoffs']) {
                 document.getElementById(`${prefix}Summary`).innerHTML = `<p class="no-aircraft">${message}</p>`;
@@ -211,6 +222,7 @@ const GenevaStats = (() => {
                 logger.error('Error fetching flight stats:', error);
                 if (current === requestId) {
                     hourly = null;
+                    document.getElementById('statsOverview').innerHTML = '<p class="error">Unable to load period totals.</p>';
                     document.getElementById('hourlyChart').innerHTML = '<p class="error">Unable to load hourly stats.</p>';
                     for (const prefix of ['landing', 'general', 'takeoffs']) {
                         document.getElementById(`${prefix}Charts`).innerHTML = '<p class="error">Unable to load flight stats.</p>';

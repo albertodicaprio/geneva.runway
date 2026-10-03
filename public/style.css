@@ -168,9 +168,10 @@ footer a:hover { text-decoration: underline; }
 .next-arrival .photo-unavailable { color: #c7dae8; }
 
 .stats-intro { display: grid; grid-template-columns: minmax(0, 1fr) 460px; column-gap: 24px; align-items: start; }
-.stats-intro .section-heading { grid-column: 1; grid-row: 1; margin-bottom: 12px; }
-.stats-intro > .history-note { grid-column: 1; grid-row: 2; margin-bottom: 0; }
-.stats-date-picker { grid-column: 2; grid-row: 1 / span 2; justify-self: end; width: 100%; min-width: 0; margin: 0; padding: 12px; border: 1px solid #d7e3ec; border-radius: 9px; background: #f7fbfd; }
+.stats-intro-copy { min-width: 0; }
+.stats-intro .section-heading { margin-bottom: 12px; }
+.stats-intro-copy > .history-note { margin-bottom: 0; }
+.stats-date-picker { justify-self: end; width: 100%; min-width: 0; margin: 0; padding: 12px; border: 1px solid #d7e3ec; border-radius: 9px; background: #f7fbfd; }
 .stats-calendar-panes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .stats-month-title { margin: 8px 0 10px; color: #123c64; font-size: .85rem; text-align: center; letter-spacing: normal; }
 .stats-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-bottom: 6px; color: #123c64; font-size: .75rem; }
@@ -192,6 +193,9 @@ footer a:hover { text-decoration: underline; }
 .stats-filter input:focus-visible { outline: 2px solid #123c64; outline-offset: 2px; }
 .stats-totals strong { color: #123c64; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .stats-totals span { color: #47637f; font-size: .8rem; font-weight: 750; }
+.stats-overview-totals { margin-bottom: 10px; }
+.stats-overview-split { margin-bottom: 4px; }
+.stats-overview-help { margin-bottom: 0; font-size: .7rem; }
 .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
 .stats-chart { min-width: 0; padding: 18px; background: #fff; box-shadow: none; }
 .stats-chart h2 { margin-bottom: 5px; }
@@ -226,10 +230,12 @@ footer a:hover { text-decoration: underline; }
 .hourly-table summary { padding: 8px 0; cursor: pointer; }
 .hourly-table caption { padding: 12px; text-align: left; }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
     .stats-intro { grid-template-columns: 1fr; }
-    .stats-intro .section-heading, .stats-intro > .history-note, .stats-date-picker { grid-column: 1; grid-row: auto; }
     .stats-date-picker { justify-self: start; margin-top: 16px; }
+}
+
+@media (max-width: 700px) {
     .stats-calendar-panes { grid-template-columns: 1fr; }
     .stats-calendar > * { min-height: 40px; }
     .stats-grid { grid-template-columns: 1fr; }

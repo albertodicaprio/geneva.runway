@@ -456,6 +456,20 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       independent filters, input preservation, stale responses, and the local
       HTTP API. Filtering does not request upstream aircraft data.
 
+24. [x] Summarize all traffic beside the statistics calendars.
+    - Show Flights seen, Distinct aircraft, Airlines, and Airports for the
+      selected date range, with a landing/general/takeoff split. These totals
+      are independent of the individual tab filters.
+    - Count each recorded aircraft identity once, group easyJet variants, and
+      deduplicate origin/destination airports by known codes and names while
+      excluding Geneva. Unknown details do not inflate distinct counts.
+    - Keep four mini cards beside the calendars on desktop; place calendars
+      below the summary on tablets and phones to preserve readable cards.
+    - Validation: all 69 tests pass, including distinct counts, date changes,
+      filter independence, empty/failure states, and the HTTP API. Headless
+      Chrome confirms four rendered cards without page overflow at 320px,
+      390px, 700px, 768px, and 1040px.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
