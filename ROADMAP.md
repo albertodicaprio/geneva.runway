@@ -475,6 +475,19 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       and selected-period traffic split to describe overflights and flights
       with unknown routes more clearly.
 
+26. [x] Add live text filtering to hourly statistics.
+    - Place the Filter card to the right of Show on chart on desktop and below
+      it on mobile. Reuse the existing debounced, case-insensitive search.
+    - Filter recorded arrivals and departures by airline, registration, model,
+      ICAO type, and origin for arrivals or destination for departures before
+      recalculating hourly bars and the counts table.
+    - Preserve the independent hourly filter across date/tab changes and keep
+      checkbox choices. The overall period summary remains unfiltered.
+    - Validation: all 71 tests pass, including hourly field matching, clearing,
+      checkbox interaction, date/tab persistence, and the HTTP API. Headless
+      Chrome confirms placement and no page overflow at 320px, 390px, 700px,
+      768px, and 1040px.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

@@ -112,7 +112,7 @@ test('stats availability and date ranges use only recorded Geneva days', async (
     fs.mkdirSync(directory, { recursive: true });
     for (const [date, category] of [[previous, 'arrival'], [recent, 'departure']]) {
         fs.writeFileSync(path.join(directory, `${date}.json`), JSON.stringify({ version: 1, date,
-            flights: [{ category, airline: 'Swiss' }] }));
+            flights: [{ category, airline: 'Swiss', firstSeenAt: Date.now() / 1000 }] }));
     }
     const availability = await fetch(`${baseUrl}/api/stats?available=1`);
     assert.equal(availability.status, 200);
@@ -130,6 +130,10 @@ test('stats availability and date ranges use only recorded Geneva days', async (
     assert.equal(filteredSummary.landing.total, 0);
     assert.equal(filteredSummary.takeoffs.total, 1);
     assert.deepEqual(filteredSummary.overview, summary.overview);
+    const hourlyFiltered = await (await fetch(`${baseUrl}/api/stats?from=${previous}&to=${recent}&hourlyFilter=missing`)).json();
+    assert.equal(summary.hourly.reduce((sum, hour) => sum + hour.landings + hour.takeoffs, 0), 2);
+    assert.equal(hourlyFiltered.hourly.reduce((sum, hour) => sum + hour.landings + hour.takeoffs, 0), 0);
+    assert.deepEqual(hourlyFiltered.overview, summary.overview);
     assert.equal((await fetch(`${baseUrl}/api/stats?from=${missing}&to=${recent}`)).status, 400);
     assert.equal((await fetch(`${baseUrl}/api/stats?from=2026-02-30&to=${recent}`)).status, 400);
     const future = new Date(Date.parse(`${today}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);

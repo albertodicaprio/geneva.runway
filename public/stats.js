@@ -127,7 +127,7 @@ const GenevaStats = (() => {
 
     function create({ document, fetch, logger = console, setTimeout = globalThis.setTimeout, clearTimeout = globalThis.clearTimeout }) {
         let requestId = 0;
-        const filters = { landing: '', general: '', takeoffs: '' };
+        const filters = { landing: '', general: '', takeoffs: '', hourly: '' };
         let filterTimer;
         let today;
         let available = new Set();

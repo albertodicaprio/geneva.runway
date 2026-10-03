@@ -5,7 +5,7 @@ const { summarizeFlights } = require('../lib/stats');
 module.exports = async (req, res) => {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
     const params = new URL(req.url, 'http://localhost').searchParams;
-    const filters = Object.fromEntries(['landing', 'general', 'takeoffs']
+    const filters = Object.fromEntries(['landing', 'general', 'takeoffs', 'hourly']
         .map(view => [view, params.get(`${view}Filter`) || '']));
     res.setHeader('Cache-Control', 'no-store');
     if (params.get('available') === '1') {

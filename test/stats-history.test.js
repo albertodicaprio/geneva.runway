@@ -471,6 +471,77 @@ test('hourly counts use Geneva first sightings, sum days and respect daylight sa
     assert.deepEqual(summary.hourly[1], { hour: 1, landings: 0, takeoffs: 0 });
 });
 
+test('hourly text filtering matches the same flight fields as landing and takeoff stats', () => {
+    const firstSeenAt = Date.parse('2026-09-27T08:00:00Z') / 1000;
+    const flights = [
+        { category: 'arrival', firstSeenAt, airline: 'Swiss', registration: 'HB-ONE', model: 'Airbus', aircraftType: 'A320', origin: { iata: 'LHR', name: 'London Heathrow' }, destination: { iata: 'GVA' } },
+        { category: 'departure', firstSeenAt, airline: 'Swiss', registration: 'HB-TWO', model: 'Airbus', aircraftType: 'A320', origin: { iata: 'GVA' }, destination: { iata: 'LHR', name: 'London Heathrow' } },
+        { category: 'arrival', firstSeenAt, aircraftType: 'B738' },
+        { category: 'other', firstSeenAt, aircraftType: 'A320' }
+    ];
+    for (const query of [' a320 ', 'SWISS', 'Airbus', 'London', 'lhr', 'HB-']) {
+        const filtered = summarizeFlights(flights, 1, { hourly: query });
+        assert.deepEqual(filtered.hourly[10], { hour: 10, landings: 1, takeoffs: 1 }, query);
+        assert.deepEqual(filtered.overview, summarizeFlights(flights, 1).overview);
+        assert.equal(filtered.landing.total, 2);
+    }
+    assert.deepEqual(summarizeFlights(flights, 1, { hourly: 'hb-one' }).hourly[10], { hour: 10, landings: 1, takeoffs: 0 });
+    for (const query of ['missing', 'GVA']) {
+        assert.equal(summarizeFlights(flights, 1, { hourly: query }).hourly.reduce((sum, hour) => sum + hour.landings + hour.takeoffs, 0), 0);
+    }
+    assert.deepEqual(summarizeFlights(flights, 1, { hourly: '   ' }).hourly[10], { hour: 10, landings: 2, takeoffs: 1 });
+});
+
+test('typing an hourly filter updates counts, keeps checkbox choices and survives tab and date changes', async () => {
+    const { elements, buttons, document } = statsDocument();
+    const requested = [];
+    let timer;
+    const flights = [
+        { category: 'arrival', aircraftType: 'A320', firstSeenAt: Date.parse('2026-09-27T08:00:00Z') / 1000 },
+        { category: 'arrival', aircraftType: 'B738', firstSeenAt: Date.parse('2026-09-27T08:00:00Z') / 1000 },
+        { category: 'departure', aircraftType: 'A320', firstSeenAt: Date.parse('2026-09-27T08:00:00Z') / 1000 }
+    ];
+    const app = GenevaStats.create({ document,
+        setTimeout(callback) { timer = callback; return 1; }, clearTimeout() { timer = null; },
+        fetch: async url => {
+            requested.push(url);
+            const params = new URL(url, 'http://localhost').searchParams;
+            return { ok: true, json: async () => params.has('available')
+                ? { today: '2026-09-28', dates: ['2026-09-25', '2026-09-27'] }
+                : summarizeFlights(flights, 1, { hourly: params.get('hourlyFilter'), landing: params.get('landingFilter') }) };
+        }
+    });
+    await app.start();
+    await app.load();
+    buttons.hourly.click();
+    assert.match(elements.hourlyChart.innerHTML, /10:00–10:59<\/th><td>2<\/td><td>1/);
+    const input = { dataset: { statsFilter: 'hourly' }, value: 'A320' };
+    document.oninput({ target: input });
+    await timer();
+    assert.match(requested.at(-1), /hourlyFilter=A320/);
+    assert.match(elements.hourlyChart.innerHTML, /10:00–10:59<\/th><td>1<\/td><td>1/);
+    elements.showHourlyTakeoffs.checked = false;
+    elements.showHourlyTakeoffs.onchange();
+    buttons.landing.click();
+    document.oninput({ target: { dataset: { statsFilter: 'landing' }, value: 'B738' } });
+    await timer();
+    buttons.hourly.click();
+    elements.statsCalendar.onclick({ target: { closest: () => ({ dataset: { statsDate: '2026-09-25' } }) } });
+    await app.load();
+    assert.match(requested.at(-1), /from=2026-09-25.*landingFilter=B738.*hourlyFilter=A320/);
+    assert.doesNotMatch(elements.hourlyChart.innerHTML, /rect class="hourly-takeoff"/);
+    assert.match(elements.hourlyChart.innerHTML, /10:00–10:59<\/th><td>1<\/td>/);
+    input.value = 'missing';
+    document.oninput({ target: input });
+    await timer();
+    assert.match(elements.hourlyChart.innerHTML, /No recorded flights for the selected traffic types/);
+    input.value = '';
+    document.oninput({ target: input });
+    await timer();
+    assert.doesNotMatch(requested.at(-1), /hourlyFilter/);
+    assert.match(elements.hourlyChart.innerHTML, /10:00–10:59<\/th><td>2<\/td>/);
+});
+
 test('Hourly tab filters both bar series without fetching and keeps choices on reload', async () => {
     const { elements, buttons, document } = statsDocument();
     const requested = [];
