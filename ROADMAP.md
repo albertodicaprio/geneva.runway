@@ -488,6 +488,12 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Chrome confirms placement and no page overflow at 320px, 390px, 700px,
       768px, and 1040px.
 
+27. [x] Make statistics filter controls visually consistent.
+    - Put hourly series checkboxes in a matching padded card beside the filter.
+      Move Filter above the search box in every Stats tab.
+    - Validation: all 71 tests pass. Headless Chrome confirms desktop cards
+      and stacked mobile controls fit without page overflow.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

@@ -217,8 +217,10 @@ footer a:hover { text-decoration: underline; }
 .stats-show-all { display: flex; align-items: center; gap: 8px; margin-top: 18px; color: #31516e; font-size: .84rem; font-weight: 750; cursor: pointer; }
 .stats-show-all input { width: 18px; height: 18px; margin: 0; accent-color: #165f7a; }
 
-.hourly-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 10px; margin: 20px 0 24px; }
+.hourly-toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
+.hourly-options { display: grid; align-content: center; min-width: 0; padding: 16px; border-radius: 12px; background: #eaf3f8; }
 .hourly-controls { min-width: 0; margin: 0; }
+.hourly-controls legend { font-size: .8rem; }
 .hourly-toolbar .stats-filter span { color: #47637f; font-size: .8rem; font-weight: 750; }
 .hourly-swatch { width: 14px; height: 14px; border-radius: 3px; }
 .hourly-landing { fill: #167a99; background: #167a99; }

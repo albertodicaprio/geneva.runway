@@ -45,7 +45,7 @@ const GenevaStats = (() => {
         } else {
             summary.innerHTML = `<div class="stats-totals">
                 <div><strong data-stats-total aria-live="polite">${group.total}</strong><span>Flights seen</span></div>
-                <label class="stats-filter"><input type="search" data-stats-filter="${prefix}" value="${escapeHtml(filter)}" placeholder="Search flights…" aria-controls="${prefix}Charts" aria-label="Filter ${prefix === 'landing' ? 'landings' : prefix === 'general' ? 'other traffic' : prefix} by airline, airport, ${prefix === 'general' ? '' : 'registration, '}or aircraft model"><span>Filter</span></label>
+                <label class="stats-filter"><span>Filter</span><input type="search" data-stats-filter="${prefix}" value="${escapeHtml(filter)}" placeholder="Search flights…" aria-controls="${prefix}Charts" aria-label="Filter ${prefix === 'landing' ? 'landings' : prefix === 'general' ? 'other traffic' : prefix} by airline, airport, ${prefix === 'general' ? '' : 'registration, '}or aircraft model"></label>
             </div>`;
         }
         const charts = [
