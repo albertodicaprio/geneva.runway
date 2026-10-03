@@ -445,6 +445,17 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Headless Chrome confirms layouts fit 320px, 390px, 700px, 768px,
       and 1040px with one pane per row on mobile and two on desktop.
 
+23. [x] Add live filters to landing, general, and takeoff statistics.
+    - Split the summary into equal Flights seen and Filter cards. Typing
+      matches airline, airport name/code, registration where shown, and both
+      aircraft model views, ignoring case and surrounding whitespace.
+    - Recalculate totals and all rankings from matching archived flights;
+      retain independent filters across tabs and date changes. Preserve input
+      focus and the model view, and debounce archive requests by 150 ms.
+    - Validation: all 67 tests pass, covering cross-field aggregation, clearing,
+      independent filters, input preservation, stale responses, and the local
+      HTTP API. Filtering does not request upstream aircraft data.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

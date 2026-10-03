@@ -33,6 +33,100 @@ function statsFetch(summary, requested = []) {
     };
 }
 
+test('text filters select flights across chart fields and recalculate all rankings', () => {
+    const flights = [
+        { category: 'arrival', airline: 'Swiss', aircraftType: 'A320', model: 'Airbus', registration: 'HB-ONE', origin: { iata: 'LHR', name: 'London Heathrow' } },
+        { category: 'arrival', airline: 'Swiss', aircraftType: 'A320', registration: 'HB-TWO', origin: { iata: 'CDG', name: 'Paris' } },
+        { category: 'arrival', airline: 'easyJet Europe', model: 'Airbus A320', registration: 'HB-THREE', origin: { iata: 'LHR', name: 'London Heathrow' } },
+        { category: 'arrival', airline: 'Swiss', aircraftType: 'B738', origin: { iata: 'CDG', name: 'Paris' } },
+        { category: 'arrival' },
+        { category: 'departure', airline: 'Swiss', aircraftType: 'B738', destination: { name: 'London Heathrow' } },
+        { category: 'other', airline: 'Other', aircraftType: 'A320', destination: { name: 'London Heathrow' } }
+    ];
+    const filtered = summarizeFlights(flights, 2, { landing: ' a320 ', general: 'london', takeoffs: 'LONDON' });
+    assert.equal(filtered.landing.total, 3);
+    assert.deepEqual(filtered.landing.airlines.items, [{ name: 'Swiss', count: 2 }, { name: 'easyJet', count: 1 }]);
+    assert.deepEqual(filtered.landing.origins.items, [{ name: 'London Heathrow', count: 2 }, { name: 'Paris', count: 1 }]);
+    assert.equal(filtered.landing.registrations.known, 3);
+    assert.equal(filtered.general.total, 1);
+    assert.equal(filtered.takeoffs.total, 1);
+    assert.deepEqual(filtered.hourly, summarizeFlights(flights, 2).hourly);
+    for (const query of ['HB-ONE', 'lhr', 'London', 'Airbus']) {
+        const result = summarizeFlights(flights, 2, { landing: query });
+        assert.ok(result.landing.total > 0, query);
+        assert.equal(result.takeoffs.total, 1);
+    }
+    assert.equal(summarizeFlights(flights, 2, { landing: 'swiss' }).landing.total, 3);
+    assert.equal(summarizeFlights(flights, 2, { landing: 'missing' }).landing.total, 0);
+    assert.equal(summarizeFlights(flights, 2, { landing: '   ' }).landing.total, 5);
+});
+
+test('typing filters automatically refreshes all charts, preserves inputs and clears independently', async () => {
+    const { elements, document } = statsDocument();
+    const flights = [
+        { category: 'arrival', airline: 'Swiss', aircraftType: 'A320', registration: 'HB-ONE' },
+        { category: 'arrival', airline: 'Other', aircraftType: 'B738' },
+        { category: 'departure', airline: 'Other', destination: { name: 'London' } }
+    ];
+    let timer;
+    const requested = [];
+    const app = GenevaStats.create({ document,
+        setTimeout(callback) { timer = callback; return 1; }, clearTimeout() { timer = null; },
+        fetch: async url => {
+            requested.push(url);
+            const params = new URL(url, 'http://localhost').searchParams;
+            return { ok: true, json: async () => params.has('available')
+                ? { today: '2026-09-28', dates: ['2026-09-27'] }
+                : summarizeFlights(flights, 1, Object.fromEntries(['landing', 'general', 'takeoffs']
+                    .map(view => [view, params.get(`${view}Filter`)]))) };
+        }
+    });
+    await app.start();
+    await app.load();
+    assert.match(elements.landingSummary.innerHTML, /data-stats-filter="landing"/);
+    const input = { dataset: { statsFilter: 'landing' }, value: 'A320' };
+    const total = { textContent: '' };
+    const summaryHtml = elements.landingSummary.innerHTML;
+    elements.landingSummary.querySelector = selector => selector === '[data-stats-filter]' ? input : total;
+    const typeChoice = {};
+    elements.landingCharts.querySelector = () => typeChoice;
+    document.oninput({ target: input });
+    await timer();
+    assert.equal(total.textContent, 1);
+    assert.equal(elements.landingSummary.innerHTML, summaryHtml);
+    assert.match(elements.landingCharts.innerHTML, /Swiss/);
+    assert.doesNotMatch(elements.landingCharts.innerHTML, /Other/);
+    assert.match(elements.landingCharts.innerHTML, /data-model-choice="type" aria-pressed="true"/);
+    document.oninput({ target: { dataset: { statsFilter: 'takeoffs' }, value: 'London & <' } });
+    await timer();
+    assert.match(requested.at(-1), /landingFilter=A320&takeoffsFilter=London\+%26\+%3C/);
+    assert.match(elements.takeoffsSummary.innerHTML, /value="London &amp; &lt;"/);
+    input.value = '';
+    document.oninput({ target: input });
+    await timer();
+    assert.equal(total.textContent, 2);
+    assert.doesNotMatch(requested.at(-1), /landingFilter/);
+    assert.match(requested.at(-1), /takeoffsFilter=/);
+});
+
+test('a response for an older query cannot overwrite charts while a new filter is pending', async () => {
+    const { elements, document } = statsDocument();
+    let resolve;
+    let defer = false;
+    const normalFetch = statsFetch(summarizeFlights([{ category: 'arrival', airline: 'Current' }], 1));
+    const app = GenevaStats.create({ document, setTimeout() { return 1; }, clearTimeout() {},
+        fetch: url => defer ? new Promise(done => { resolve = done; }) : normalFetch(url) });
+    await app.start();
+    await app.load();
+    defer = true;
+    const pending = app.load();
+    document.oninput({ target: { dataset: { statsFilter: 'landing' }, value: 'New' } });
+    resolve({ ok: true, json: async () => summarizeFlights([{ category: 'arrival', airline: 'Stale' }], 1) });
+    await pending;
+    assert.match(elements.landingCharts.innerHTML, /Current/);
+    assert.doesNotMatch(elements.landingCharts.innerHTML, /Stale/);
+});
+
 test('daily history deduplicates refreshes, upgrades details, and keeps flights across Geneva midnight', async t => {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-history-test-'));
     t.after(() => fs.rm(directory, { recursive: true, force: true }));

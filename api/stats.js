@@ -5,6 +5,8 @@ const { summarizeFlights } = require('../lib/stats');
 module.exports = async (req, res) => {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
     const params = new URL(req.url, 'http://localhost').searchParams;
+    const filters = Object.fromEntries(['landing', 'general', 'takeoffs']
+        .map(view => [view, params.get(`${view}Filter`) || '']));
     res.setHeader('Cache-Control', 'no-store');
     if (params.get('available') === '1') {
         return res.status(200).json({ today: genevaDate(Date.now()), dates: await getFlightHistoryDates() });
@@ -20,7 +22,7 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'Range endpoints must have recorded data' });
         const days = (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000 + 1;
         const flights = await getFlightHistoryRange(from, to);
-        return res.status(200).json({ from, to, ...summarizeFlights(flights, days) });
+        return res.status(200).json({ from, to, ...summarizeFlights(flights, days, filters) });
     }
     const days = params.get('days') || '7';
     const offset = params.get('offset') || '0';
@@ -28,5 +30,5 @@ module.exports = async (req, res) => {
     if (!['0', '1'].includes(offset) || (offset === '1' && days !== '1'))
         return res.status(400).json({ error: 'offset must be 0, or 1 when days is 1' });
     const flights = await getFlightHistory(Number(days), Number(offset));
-    return res.status(200).json(summarizeFlights(flights, Number(days)));
+    return res.status(200).json(summarizeFlights(flights, Number(days), filters));
 };

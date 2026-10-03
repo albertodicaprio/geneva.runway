@@ -25,23 +25,29 @@ const GenevaStats = (() => {
         return `<section class="stats-chart"><h2>${title}</h2>${chartContent(title, data, total)}</section>`;
     }
 
-    function modelChart(group) {
+    function modelChart(group, mode = 'icao') {
         return `<section class="stats-chart" data-model-chart>
             <div class="model-chart-header"><h2>Aircraft models</h2>
                 <div class="model-toggle" role="group" aria-label="Aircraft model view">
-                    <button type="button" data-model-choice="icao" aria-pressed="true">Group</button>
-                    <button type="button" data-model-choice="type" aria-pressed="false">Detail</button>
+                    <button type="button" data-model-choice="icao" aria-pressed="${mode === 'icao'}">Group</button>
+                    <button type="button" data-model-choice="type" aria-pressed="${mode === 'type'}">Detail</button>
                 </div>
             </div>
-            <div data-model-mode="icao">${chartContent('Aircraft models', group.icaoTypes, group.total)}</div>
-            <div data-model-mode="type" hidden>${chartContent('Aircraft models', group.models, group.total)}</div>
+            <div data-model-mode="icao"${mode === 'icao' ? '' : ' hidden'}>${chartContent('Aircraft models', group.icaoTypes, group.total)}</div>
+            <div data-model-mode="type"${mode === 'type' ? '' : ' hidden'}>${chartContent('Aircraft models', group.models, group.total)}</div>
         </section>`;
     }
 
-    function renderGroup(group, prefix, document) {
-        document.getElementById(`${prefix}Summary`).innerHTML = `<div class="stats-totals">
-            <div><strong>${group.total}</strong><span>Flights seen</span></div>
-        </div>`;
+    function renderGroup(group, prefix, document, filter = '') {
+        const summary = document.getElementById(`${prefix}Summary`);
+        if (summary.querySelector?.('[data-stats-filter]')) {
+            summary.querySelector('[data-stats-total]').textContent = group.total;
+        } else {
+            summary.innerHTML = `<div class="stats-totals">
+                <div><strong data-stats-total aria-live="polite">${group.total}</strong><span>Flights seen</span></div>
+                <label class="stats-filter"><input type="search" data-stats-filter="${prefix}" value="${escapeHtml(filter)}" placeholder="Search flights…" aria-controls="${prefix}Charts" aria-label="Filter ${prefix === 'landing' ? 'landings' : prefix} by airline, airport, ${prefix === 'general' ? '' : 'registration, '}or aircraft model"><span>Filter</span></label>
+            </div>`;
+        }
         const charts = [
             ['Airlines', group.airlines],
             ...(prefix === 'landing'
@@ -50,11 +56,13 @@ const GenevaStats = (() => {
                     ? [['Registrations', group.registrations], ['Destination airports', group.destinations]]
                     : [['Origin airports', group.origins], ['Destination airports', group.destinations]])
         ];
-        document.getElementById(`${prefix}Charts`).innerHTML = charts.map(([title, data]) => chart(title, data, group.total)).join('') + modelChart(group);
+        const container = document.getElementById(`${prefix}Charts`);
+        const mode = container.querySelector?.('[data-model-choice="type"][aria-pressed="true"]') ? 'type' : 'icao';
+        container.innerHTML = charts.map(([title, data]) => chart(title, data, group.total)).join('') + modelChart(group, mode);
     }
 
-    function render(data, document) {
-        for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document);
+    function render(data, document, filters) {
+        for (const view of ['landing', 'general', 'takeoffs']) renderGroup(data[view], view, document, filters[view]);
     }
 
     function renderHourly(hours, document) {
@@ -107,8 +115,10 @@ const GenevaStats = (() => {
             .format(new Date(`${date}T00:00:00Z`));
     }
 
-    function create({ document, fetch, logger = console }) {
+    function create({ document, fetch, logger = console, setTimeout = globalThis.setTimeout, clearTimeout = globalThis.clearTimeout }) {
         let requestId = 0;
+        const filters = { landing: '', general: '', takeoffs: '' };
+        let filterTimer;
         let today;
         let available = new Set();
         let month;
@@ -182,13 +192,18 @@ const GenevaStats = (() => {
         }
         async function load() {
             if (!from || !to) return;
+            clearTimeout(filterTimer);
             const current = ++requestId;
             try {
-                const response = await fetch(`/api/stats?from=${from}&to=${to}`, { cache: 'no-store' });
+                const params = new URLSearchParams({ from, to });
+                for (const [view, query] of Object.entries(filters)) {
+                    if (query.trim()) params.set(`${view}Filter`, query);
+                }
+                const response = await fetch(`/api/stats?${params}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 const data = await response.json();
                 if (current === requestId) {
-                    render(data, document);
+                    render(data, document, filters);
                     hourly = data.hourly;
                     renderHourly(hourly, document);
                 }
@@ -198,7 +213,11 @@ const GenevaStats = (() => {
                     hourly = null;
                     document.getElementById('hourlyChart').innerHTML = '<p class="error">Unable to load hourly stats.</p>';
                     for (const prefix of ['landing', 'general', 'takeoffs']) {
-                        document.getElementById(`${prefix}Summary`).innerHTML = '<p class="error">Unable to load flight stats.</p>';
+                        document.getElementById(`${prefix}Charts`).innerHTML = '<p class="error">Unable to load flight stats.</p>';
+                        const summary = document.getElementById(`${prefix}Summary`);
+                        const total = summary.querySelector?.('[data-stats-total]');
+                        if (total) total.textContent = '—';
+                        else summary.innerHTML = '<p class="error">Unable to load flight stats.</p>';
                     }
                 }
             }
@@ -239,6 +258,14 @@ const GenevaStats = (() => {
                 for (const row of chart.querySelectorAll('.stats-bars li[data-extra]')) {
                     row.hidden = !event.target.checked;
                 }
+            });
+            document.addEventListener('input', event => {
+                const view = event.target.dataset?.statsFilter;
+                if (!Object.hasOwn(filters, view)) return;
+                filters[view] = event.target.value;
+                ++requestId;
+                clearTimeout(filterTimer);
+                filterTimer = setTimeout(load, 150);
             });
             for (const id of ['showHourlyLandings', 'showHourlyTakeoffs']) {
                 document.getElementById(id).addEventListener('change', () => {

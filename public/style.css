@@ -186,9 +186,10 @@ footer a:hover { text-decoration: underline; }
 .stats-calendar button:disabled { color: #aab8c4; cursor: default; }
 .stats-range-label { margin: 8px 0 0; color: #123c64; font-size: .7rem; font-weight: 750; }
 .stats-calendar-help { margin: 4px 0 0; font-size: .65rem; }
-.stats-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
-.stats-totals div { display: grid; gap: 5px; padding: 16px; border-radius: 12px; background: #eaf3f8; }
-.stats-totals div:only-child { grid-column: 1 / -1; }
+.stats-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
+.stats-totals > div, .stats-filter { display: grid; align-content: center; gap: 5px; min-width: 0; padding: 16px; border-radius: 12px; background: #eaf3f8; }
+.stats-filter input { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #9db4c8; border-radius: 7px; padding: 8px; background: #fff; color: #123c64; font: inherit; }
+.stats-filter input:focus-visible { outline: 2px solid #123c64; outline-offset: 2px; }
 .stats-totals strong { color: #123c64; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .stats-totals span { color: #47637f; font-size: .8rem; font-weight: 750; }
 .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
