@@ -1,19 +1,21 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { createWeatherService } = require('../lib/weather-service');
+const { createWeatherService, predictRunway } = require('../lib/weather-service');
 const { createWeatherHandler } = require('../api/weather');
 const weather = require('../public/weather');
 
 const START = Date.parse('2026-10-04T10:00:00Z');
 function providerData(start = '2026-10-04') {
     const dates = Array.from({ length: 5 }, (_, index) => new Date(Date.parse(`${start}T00:00:00Z`) + index * 86400000).toISOString().slice(0, 10));
-    return { daily: {
+    return { current: {
+        time: `${start}T12:00`, weather_code: 2, temperature_2m: 18.5,
+        precipitation: 0, wind_speed_10m: 15, wind_gusts_10m: 25, wind_direction_10m: 220
+    }, daily: {
         time: dates, weather_code: [0, 2, 61, 95, null],
         temperature_2m_max: [20, 19, 18, 17, null], temperature_2m_min: [10, 9, 8, 7, null],
         precipitation_probability_max: [0, 10, 70, 90, null], precipitation_sum: [0, 0, 3.2, 5, null],
         wind_speed_10m_max: [10, 20, 25, 30, null], wind_gusts_10m_max: [20, 30, 40, 50, null],
-        wind_direction_10m_dominant: [0, 90, 220, 360, null],
-        sunrise: dates.map(date => `${date}T07:30`), sunset: dates.map(date => `${date}T19:00`)
+        wind_direction_10m_dominant: [0, 90, 220, 360, null]
     } };
 }
 
@@ -28,6 +30,9 @@ test('weather uses five Geneva days, metric units, and shares/cache requests', a
         assert.equal(url.searchParams.get('forecast_days'), '5');
         assert.equal(url.searchParams.get('latitude'), '46.2381');
         assert.equal(url.searchParams.get('wind_speed_unit'), 'kmh');
+        assert.ok(url.searchParams.get('current').includes('temperature_2m'));
+        assert.ok(url.searchParams.get('current').includes('wind_direction_10m'));
+        assert.doesNotMatch(url.searchParams.get('daily'), /sunrise|sunset/);
         assert.ok(options.signal);
         if (calls === 1) await new Promise(resolve => { release = resolve; });
         return { ok: true, json: async () => providerData() };
@@ -41,6 +46,11 @@ test('weather uses five Geneva days, metric units, and shares/cache requests', a
     assert.equal(results[0].days.length, 5);
     assert.equal(results[0].days[2].precipitation, 3.2);
     assert.equal(results[0].days[4].temperatureMax, null);
+    assert.equal(results[0].current.temperature, 18.5);
+    assert.equal(results[0].current.runway.direction, '22');
+    assert.equal(results[0].days[0].runway.direction, '04');
+    assert.equal(results[0].days[4].runway.direction, 'unknown');
+    assert.equal(results[0].days[0].sunrise, undefined);
     now += 29 * 60 * 1000;
     await service.getForecast();
     assert.equal(calls, 1);
@@ -65,6 +75,7 @@ test('failed refresh keeps the last forecast, throttles retries, and recovers', 
     assert.equal(stale.stale, true);
     assert.equal(stale.updatedAt, first.updatedAt);
     assert.deepEqual(stale.days, first.days);
+    assert.deepEqual(stale.current, first.current);
     await service.getForecast();
     assert.equal(calls, 2);
     now += 60 * 1000;
@@ -90,6 +101,7 @@ test('empty cache failures and malformed provider responses do not masquerade as
     for (const response of [
         { ok: false },
         { ok: true, json: async () => ({ daily: {} }) },
+        { ok: true, json: async () => { const data = providerData(); delete data.current; return data; } },
         { ok: true, json: async () => { const data = providerData(); data.daily.temperature_2m_max.pop(); return data; } },
         { ok: true, json: async () => providerData('2026-10-03') }
     ]) {
@@ -98,6 +110,49 @@ test('empty cache failures and malformed provider responses do not masquerade as
         await assert.rejects(service.getForecast(), /unavailable/);
         await assert.rejects(service.getForecast(), /unavailable/);
         assert.equal(calls, 1);
+    }
+});
+
+test('wind-based runway estimates choose the headwind direction and remain unknown for weak or crosswinds', () => {
+    for (const direction of [0, 40, 360]) assert.equal(predictRunway(direction, 15).direction, '04');
+    for (const direction of [180, 220, 270]) assert.equal(predictRunway(direction, 15).direction, '22');
+    for (const direction of [115, 130, 145, 295, 310, 325]) {
+        assert.equal(predictRunway(direction, 30).direction, 'unknown');
+    }
+    assert.equal(predictRunway(114, 15).direction, '04');
+    assert.equal(predictRunway(146, 15).direction, '22');
+    for (const [direction, speed] of [[40, 0], [220, 4.9], [null, 20], [40, null], [NaN, 20], [-1, 20], [361, 20], [220, -10]]) {
+        assert.equal(predictRunway(direction, speed).direction, 'unknown');
+    }
+    assert.equal(predictRunway(40, 5).direction, '04');
+});
+
+test('weather cards start with Now, show runway estimates, omit daylight, and cap the count at an even six', async () => {
+    function element() {
+        return { textContent: '', children: [], append(child) { this.children.push(child); },
+            setAttribute() {}, replaceChildren(...children) { this.children = children; } };
+    }
+    const forecast = element();
+    const updated = element();
+    const document = { createElement: element,
+        getElementById: id => id === 'weatherForecast' ? forecast : updated };
+    const text = node => [node.textContent, ...node.children.map(text)].join(' ');
+    const service = createWeatherService({ now: () => START, fetchImpl: async () => ({ ok: true, json: async () => providerData() }) });
+    const data = await service.getForecast();
+    weather.renderForecast(data, document);
+    assert.equal(forecast.children.length, 6);
+    assert.equal(forecast.children[0].children[0].textContent, 'Now');
+    assert.match(text(forecast.children[0]), /18.5|19°C/);
+    assert.match(text(forecast.children[0]), /Likely runway 22/);
+    assert.match(text(forecast.children[1]), /Likely runway 04/);
+    assert.match(text(forecast.children[5]), /Runway unknown/);
+    assert.doesNotMatch(text(forecast), /Sunrise|Sunset/);
+    assert.doesNotMatch(text(forecast.children[0]), /High \/ low|Max wind/);
+    for (const days of [data.days.slice(0, 4), [...data.days, ...data.days]]) {
+        weather.renderForecast({ ...data, days }, document);
+        assert.equal(forecast.children.length % 2, 0);
+        assert.ok(forecast.children.length <= 6);
+        assert.equal(forecast.children[0].children[0].textContent, 'Now');
     }
 });
 

@@ -44,7 +44,7 @@ footer { color: #c7dae8; }
 .nav-icon { font-size: 1.3rem; line-height: 1; }
 
 .weather-section { min-width: 0; }
-.weather-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.weather-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .weather-grid > .loading { grid-column: 1 / -1; }
 .weather-day { min-width: 0; padding: 16px 12px; border: 1px solid #dce5ee; border-radius: 12px; background: #fff; }
 .weather-day h3 { font-size: 1rem; }
@@ -52,6 +52,8 @@ footer { color: #c7dae8; }
 .weather-icon { margin: 14px 0; color: #165f7a; font-size: 2.5rem; line-height: 1; }
 .weather-condition { min-height: 2.6em; margin-bottom: 12px; font-size: .88rem; font-weight: 700; }
 .weather-temperature { margin-bottom: 4px; font-size: 1.1rem; font-weight: 800; color: #123c64; }
+.weather-now { border-color: #165f7a; background: #eef8fc; }
+.weather-runway { margin: 14px 0 0; padding: 8px 10px; border-radius: 8px; color: #123c64; background: #e3eff5; font-size: .86rem; font-weight: 800; }
 .weather-metrics { display: grid; gap: 10px; margin: 18px 0 0; }
 .weather-metrics dt { color: #63758a; font-size: .72rem; }
 .weather-metrics dd { margin: 3px 0 0; font-size: .86rem; font-weight: 700; }

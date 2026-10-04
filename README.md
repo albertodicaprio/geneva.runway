@@ -7,9 +7,17 @@ The navigation links to Overview, Arrivals (including recent landings), Stats,
 and Weather.
 
 The Weather tab at `/weather.html` shows today and the following four days near
-Geneva Airport using [Open-Meteo](https://open-meteo.com/en/docs): daily conditions,
+Geneva Airport using [Open-Meteo](https://open-meteo.com/en/docs), preceded by a
+Now card with current conditions: daily conditions,
 temperature highs/lows (°C), precipitation chance and totals (mm), maximum wind
-and gusts (km/h), prevailing wind direction, and sunrise/sunset in Geneva time.
+and gusts (km/h), and prevailing wind direction. The six cards include a
+wind-based estimate for likely runway 04 or 22, preferring the direction facing
+into the wind using approximate 040°/220° bearings. Winds below 5 km/h, missing
+wind data, or wind within 15° of perpendicular to the runway show unknown.
+Daily estimates use prevailing direction and maximum wind speed, so they are
+a rough guide and do not confirm actual runway use. Current conditions show
+their Geneva-local report time. Cards are capped at six; an odd final card is
+omitted.
 `/api/weather` fetches on demand, shares concurrent requests, and caches results
 in memory for 30 minutes (refreshing when the Geneva date changes). Failed
 refreshes serve the last forecast with an explicit stale flag and retry after

@@ -14,7 +14,6 @@
     };
     const number = (value, unit, digits = 0) => Number.isFinite(value) ? `${value.toFixed(digits)}${unit}` : '—';
     const condition = code => CONDITIONS[code] || ['Conditions unavailable', '—'];
-    const daylight = value => typeof value === 'string' ? value.slice(11, 16) : '—';
 
     function windDirection(value) {
         if (!Number.isFinite(value)) return '—';
@@ -24,9 +23,11 @@
 
     function renderForecast(data, document) {
         const container = document.getElementById('weatherForecast');
-        const cards = data.days.map(day => {
+        const entries = [{ ...data.current, isCurrent: true }, ...data.days].slice(0, 6);
+        if (entries.length % 2) entries.pop();
+        const cards = entries.map(day => {
             const card = document.createElement('article');
-            card.className = 'weather-day';
+            card.className = day.isCurrent ? 'weather-day weather-now' : 'weather-day';
             const add = (tag, text, className, parent = card) => {
                 const element = document.createElement(tag);
                 element.textContent = text;
@@ -34,23 +35,27 @@
                 parent.append(element);
                 return element;
             };
-            const date = new Date(`${day.date}T12:00:00Z`);
-            add('h3', new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'Europe/Zurich' }).format(date));
-            const dateLabel = add('time', new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/Zurich' }).format(date), 'weather-date');
-            dateLabel.dateTime = day.date;
+            const dateString = day.isCurrent ? day.time.slice(0, 10) : day.date;
+            const date = new Date(`${dateString}T12:00:00Z`);
+            add('h3', day.isCurrent ? 'Now' : new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'Europe/Zurich' }).format(date));
+            const label = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/Zurich' }).format(date);
+            const dateLabel = add('time', day.isCurrent ? `${label} · ${day.time.slice(11, 16)}` : label, 'weather-date');
+            dateLabel.dateTime = day.isCurrent ? day.time : day.date;
             const [description, icon] = condition(day.weatherCode);
             add('div', icon, 'weather-icon').setAttribute('aria-hidden', 'true');
             add('p', description, 'weather-condition');
-            add('p', `${number(day.temperatureMax, '°C')} / ${number(day.temperatureMin, '°C')}`, 'weather-temperature');
-            add('p', 'High / low', 'weather-date');
+            add('p', day.isCurrent ? number(day.temperature, '°C') : `${number(day.temperatureMax, '°C')} / ${number(day.temperatureMin, '°C')}`, 'weather-temperature');
+            add('p', day.isCurrent ? 'Current temperature' : 'High / low', 'weather-date');
+            const direction = day.runway?.direction;
+            const runway = add('p', direction === '04' || direction === '22' ? `Likely runway ${direction}` : 'Runway unknown', 'weather-runway');
+            runway.title = day.runway?.reason || 'Wind data unavailable';
             const metrics = add('dl', '', 'weather-metrics');
             for (const [label, value] of [
-                ['Precipitation chance', number(day.precipitationProbability, '%')],
-                ['Precipitation', number(day.precipitation, ' mm', 1)],
-                ['Max wind', number(day.windSpeed, ' km/h')],
-                ['Max gusts', number(day.windGusts, ' km/h')],
-                ['Wind from', windDirection(day.windDirection)],
-                ['Sunrise', daylight(day.sunrise)], ['Sunset', daylight(day.sunset)]
+                ...(day.isCurrent ? [] : [['Precipitation chance', number(day.precipitationProbability, '%')]]),
+                [day.isCurrent ? 'Recent precipitation' : 'Precipitation', number(day.precipitation, ' mm', 1)],
+                [day.isCurrent ? 'Wind' : 'Max wind', number(day.windSpeed, ' km/h')],
+                [day.isCurrent ? 'Gusts' : 'Max gusts', number(day.windGusts, ' km/h')],
+                ['Wind from', windDirection(day.windDirection)]
             ]) {
                 const row = add('div', '', '', metrics);
                 add('dt', label, '', row);

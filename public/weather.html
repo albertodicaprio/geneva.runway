@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather · Geneva Air Traffic</title>
-    <meta name="description" content="Five-day weather forecast near Geneva Airport: temperatures, rain, wind and daylight for plane spotting.">
+    <meta name="description" content="Current conditions and five-day weather forecast near Geneva Airport with wind-based runway estimates for plane spotting.">
     <link rel="icon" href="plane_ico.ico" sizes="any">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -33,11 +33,12 @@
                 <div class="section-heading">
                     <div>
                         <p class="eyebrow">GENEVA AIRPORT</p>
-                        <h2 id="forecastHeading">Five-day forecast</h2>
+                        <h2 id="forecastHeading">Current conditions &amp; forecast</h2>
                     </div>
                     <button type="button" class="weather-refresh" id="weatherRefresh">Refresh</button>
                 </div>
-                <p class="history-note">Today and the next four days. Dates and daylight times are in Geneva local time. Wind shows daily maximums and the prevailing direction.</p>
+                <p class="history-note">Current conditions, then today and the next four days. All times are in Geneva local time. Forecast wind shows daily maximums and the prevailing direction.</p>
+                <p class="history-note">Runway estimates favour landing into the wind. Light or mainly crosswind conditions show unknown. Daily estimates use the prevailing wind; actual runway use may change during the day.</p>
                 <p class="last-updated" id="weatherUpdated"></p>
                 <p class="error" id="weatherError" role="alert" hidden></p>
                 <div class="weather-grid" id="weatherForecast" aria-busy="true"><p class="loading">Loading forecast…</p></div>

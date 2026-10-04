@@ -504,6 +504,18 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       five days. Headless Chrome confirms cards fit at 320px, 390px, 700px and
       1040px, and a failed refresh keeps the forecast with an error message.
 
+29. [x] Add current weather and wind-based runway estimates.
+    - Prepend Now with current temperature, conditions, precipitation and wind.
+      Remove sunrise/sunset and show six cards in a responsive grid, trimming
+      any excess or odd final card.
+    - Predict likely runway 04/22 facing into the wind, with unknown for missing,
+      light or mainly crosswind conditions. Keep daily estimates explicitly
+      approximate and preserve forecast caching and stale fallback.
+    - Validation: all 79 tests pass, including runway direction/boundaries and
+      even card counts. Live API and Chrome confirm current conditions, six
+      runway labels, no daylight rows, no overflow at 320/390/700/1040px, and
+      retained cards after a failed refresh.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
