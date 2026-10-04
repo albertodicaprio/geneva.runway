@@ -21,6 +21,19 @@
         return `${directions[Math.round(((value % 360 + 360) % 360) / 45) % 8]} · ${Math.round(value)}°`;
     }
 
+    function runwayText(runway) {
+        return ['04', '22'].includes(runway?.direction)
+            ? `Likely runway ${runway.direction}${runway.calmConditions ? ' (calm conditions)' : ''}` : 'Runway unknown';
+    }
+
+    function addLastArrival(add, arrival) {
+        const known = arrival && ['04', '22'].includes(arrival.direction);
+        const badge = add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
+        badge.title = arrival ? `Landing estimated ${new Intl.DateTimeFormat('en-GB', {
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
+        }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';
+    }
+
     function renderForecast(data, document) {
         const container = document.getElementById('weatherForecast');
         const entries = [{ ...data.current, isCurrent: true }, ...data.days].slice(0, 6);
@@ -46,16 +59,10 @@
             add('p', description, 'weather-condition');
             add('p', day.isCurrent ? number(day.temperature, '°C') : `${number(day.temperatureMax, '°C')} / ${number(day.temperatureMin, '°C')}`, 'weather-temperature');
             add('p', day.isCurrent ? 'Current temperature' : 'High / low', 'weather-date');
-            const direction = day.runway?.direction;
-            const runway = add('p', direction === '04' || direction === '22' ? `Likely runway ${direction}` : 'Runway unknown', 'weather-runway');
+            const runway = add('p', runwayText(day.runway), 'weather-runway');
             runway.title = day.runway?.reason || 'Wind data unavailable';
             if (day.isCurrent) {
-                const arrival = data.lastArrival;
-                const known = arrival && ['04', '22'].includes(arrival.direction);
-                const lastArrival = add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
-                lastArrival.title = arrival ? `Landing estimated ${new Intl.DateTimeFormat('en-GB', {
-                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
-                }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';
+                addLastArrival(add, data.lastArrival);
             }
             const metrics = add('dl', '', 'weather-metrics');
             for (const [label, value] of [
@@ -79,7 +86,6 @@
 
     function start({ document, fetchImpl = fetch, setIntervalImpl = setInterval }) {
         const status = document.getElementById('weatherStatus');
-        const button = document.getElementById('weatherRefresh');
         const error = document.getElementById('weatherError');
         const forecast = document.getElementById('weatherForecast');
         let hasForecast = false;
@@ -88,7 +94,6 @@
         async function load() {
             if (loading) return;
             loading = true;
-            button.disabled = true;
             forecast.setAttribute('aria-busy', 'true');
             try {
                 const response = await fetchImpl('/api/weather', { signal: AbortSignal.timeout(15_000) });
@@ -105,21 +110,23 @@
                 status.classList.add('weather-status-warning');
                 error.textContent = hasForecast
                     ? 'Could not update the forecast. Showing the previously loaded forecast; check its dates and fetched time.'
-                    : 'Could not load the forecast. Please try Refresh shortly.';
+                    : 'Could not load the forecast. Retrying automatically shortly.';
                 error.hidden = false;
                 if (!hasForecast) forecast.replaceChildren();
             } finally {
                 loading = false;
-                button.disabled = false;
                 forecast.setAttribute('aria-busy', 'false');
             }
         }
-        button.addEventListener('click', load);
         setIntervalImpl(() => { if (!document.hidden) load(); }, 30 * 1000);
         load();
         return { load };
     }
 
-    if (typeof module === 'object' && module.exports) module.exports = { condition, number, windDirection, renderForecast, start };
-    else start({ document });
+    const api = { condition, number, windDirection, runwayText, addLastArrival, renderForecast, start };
+    if (typeof module === 'object' && module.exports) module.exports = api;
+    else {
+        window.GenevaWeather = api;
+        if (document.body.dataset.weatherSource !== 'aviation') start({ document });
+    }
 })();

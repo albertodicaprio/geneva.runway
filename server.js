@@ -8,6 +8,7 @@ loadLocalEnv();
 const aircraftHandler = require('./api/aircraft');
 const statsHandler = require('./api/stats');
 const weatherHandler = require('./api/weather');
+const aviationWeatherHandler = require('./api/aviation-weather');
 const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -190,6 +191,8 @@ const server = http.createServer(async (req, res) => {
             await handleApi(statsHandler, req, res);
         } else if (url.pathname === '/api/weather') {
             await handleApi(weatherHandler, req, res);
+        } else if (url.pathname === '/api/aviation-weather') {
+            await handleApi(aviationWeatherHandler, req, res);
         } else {
             await serveStatic(req, res, url.pathname);
         }

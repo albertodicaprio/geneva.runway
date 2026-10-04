@@ -533,6 +533,19 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       tracking note into its tooltip, removing the visible aircraft name.
     - Remove the unused detail-line styling and update the rendering checks.
 
+32. [x] Add a separate METAR/TAF page under Weather.
+    - Replace Refresh with METAR/TAF and provide an Open-Meteo link back.
+    - Show Now (METAR) and every available TAF interval within five days, with
+      observations, wind, visibility, clouds, temperature extrema and raw reports.
+      Preserve temporary/probability alternatives and becoming transition windows.
+    - Fetch LSGG server-side with independent shared ten-minute caches, retry
+      cooldowns, partial availability and explicit stale reports.
+    - Apply Geneva's runway 22 preference in calm, fair conditions across both
+      sources; preserve unknown for adverse, changing, stale or ambiguous winds.
+    - Validation: all 93 tests pass. Live LSGG API and local endpoints work;
+      Chrome verifies source switching, calm labels, retained cards after failed
+      polling, recovery and no overflow at 320/390/700/1040px.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

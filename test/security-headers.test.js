@@ -53,12 +53,13 @@ test('static responses include restrictive browser security headers', async () =
     assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
 
-test('all four pages provide direct navigation and arrivals includes history at the bottom', async () => {
+test('all pages provide direct navigation and arrivals includes history at the bottom', async () => {
     for (const [path, title, sectionIds] of [
         ['/', 'Geneva Airport plane spotting', ['mapSection']],
         ['/arrivals.html', 'Arrivals', ['aircraftList', 'flightHistory']],
         ['/stats.html', 'Stats', ['landingSummary']],
-        ['/weather.html', 'Weather', ['weatherForecast']]
+        ['/weather.html', 'Weather', ['weatherForecast']],
+        ['/aviation-weather.html', 'Weather', ['weatherForecast']]
     ]) {
         const response = await fetch(`${baseUrl}${path}`);
         assert.equal(response.status, 200);
