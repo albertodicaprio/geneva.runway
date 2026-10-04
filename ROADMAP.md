@@ -528,6 +528,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       legacy timestamps, no upstream requests and tracking failures. Chrome
       confirms the exact badge colors and no overflow at 320/390/700/1040px.
 
+31. [x] Remove the aircraft detail line beneath the Now runway badge.
+    - Keep the last-arrival badge and move the estimated landing time and stale
+      tracking note into its tooltip, removing the visible aircraft name.
+    - Remove the unused detail-line styling and update the rendering checks.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

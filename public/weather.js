@@ -52,11 +52,10 @@
             if (day.isCurrent) {
                 const arrival = data.lastArrival;
                 const known = arrival && ['04', '22'].includes(arrival.direction);
-                add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
-                const detail = arrival ? `${arrival.callsign} · landing estimated ${new Intl.DateTimeFormat('en-GB', {
+                const lastArrival = add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
+                lastArrival.title = arrival ? `Landing estimated ${new Intl.DateTimeFormat('en-GB', {
                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
                 }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';
-                add('p', detail, 'weather-arrival-note');
             }
             const metrics = add('dl', '', 'weather-metrics');
             for (const [label, value] of [

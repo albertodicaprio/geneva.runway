@@ -54,7 +54,6 @@ footer { color: #c7dae8; }
 .weather-temperature { margin-bottom: 4px; font-size: 1.1rem; font-weight: 800; color: #123c64; }
 .weather-now { border-color: #165f7a; background: #eef8fc; }
 .weather-runway { margin: 14px 0 0; padding: 8px 10px; border-radius: 8px; color: #255d44; background: #dff6e8; font-size: .86rem; font-weight: 800; }
-.weather-arrival-note { margin: 6px 0 0; color: #536c83; font-size: .75rem; line-height: 1.5; }
 .weather-metrics { display: grid; gap: 10px; margin: 18px 0 0; }
 .weather-metrics dt { color: #63758a; font-size: .72rem; }
 .weather-metrics dd { margin: 3px 0 0; font-size: .86rem; font-weight: 700; }

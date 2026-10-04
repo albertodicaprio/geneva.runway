@@ -153,8 +153,10 @@ test('weather cards start with Now, show runway estimates, omit daylight, and ca
         direction: '04', callsign: 'SWR123', estimatedLandingAt: START - 60000, stale: true
     } }, document);
     assert.match(text(forecast.children[0]), /Last arrival: runway 04/);
-    assert.match(text(forecast.children[0]), /SWR123 · landing estimated/);
-    assert.match(text(forecast.children[0]), /tracking stale/);
+    assert.doesNotMatch(text(forecast.children[0]), /SWR123|landing estimated|tracking stale/);
+    const lastArrivalBadge = forecast.children[0].children.find(child => child.textContent === 'Last arrival: runway 04');
+    assert.match(lastArrivalBadge.title, /Landing estimated/);
+    assert.match(lastArrivalBadge.title, /tracking stale/);
     assert.match(text(forecast.children[0]), /Likely runway 22/);
     assert.doesNotMatch(text(forecast.children[1]), /Last arrival/);
     for (const days of [data.days.slice(0, 4), [...data.days, ...data.days]]) {
