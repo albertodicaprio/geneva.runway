@@ -494,6 +494,16 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 71 tests pass. Headless Chrome confirms desktop cards
       and stacked mobile controls fit without page overflow.
 
+28. [x] Add a Weather main tab.
+    - Show a five-day Open-Meteo forecast near Geneva Airport, with temperatures,
+      precipitation, wind/gusts, prevailing wind direction and daylight times.
+    - Fetch through `/api/weather` with a shared 30-minute in-memory cache,
+      Geneva-date rollover refresh, one-minute failure backoff and stale fallback.
+    - Add responsive cards, loading/error states, manual refresh and attribution.
+    - Validation: all 77 tests pass; live Open-Meteo and local API requests return
+      five days. Headless Chrome confirms cards fit at 320px, 390px, 700px and
+      1040px, and a failed refresh keeps the forecast with an error message.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

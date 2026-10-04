@@ -3,7 +3,21 @@
 A small, self-hosted Geneva Airport (LSGG/GVA) plane-spotting app. Its overview shows
 nearby airborne flights whose ADSBdb route is confirmed to end at Geneva,
 along with the likely runway approach direction (`04`, `22`, or `unknown`).
-The navigation links directly to separate Arrivals and Recent landings pages.
+The navigation links to Overview, Arrivals (including recent landings), Stats,
+and Weather.
+
+The Weather tab at `/weather.html` shows today and the following four days near
+Geneva Airport using [Open-Meteo](https://open-meteo.com/en/docs): daily conditions,
+temperature highs/lows (°C), precipitation chance and totals (mm), maximum wind
+and gusts (km/h), prevailing wind direction, and sunrise/sunset in Geneva time.
+`/api/weather` fetches on demand, shares concurrent requests, and caches results
+in memory for 30 minutes (refreshing when the Geneva date changes). Failed
+refreshes serve the last forecast with an explicit stale flag and retry after
+one minute; without a cached forecast the API returns 503. The browser refreshes
+every 30 minutes while visible and offers a manual Refresh button. Restarting
+the server clears the weather cache. This uses no API key or new dependency and
+does not affect OpenSky polling. Weather data is attributed to Open-Meteo under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 The Node server uses `lib/aircraft-service.js` to own the saved snapshot,
 refresh schedule, and stale fallback. `lib/opensky.js` fetches OpenSky data,

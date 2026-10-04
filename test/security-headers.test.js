@@ -53,11 +53,12 @@ test('static responses include restrictive browser security headers', async () =
     assert.match(response.headers.get('content-security-policy'), /frame-ancestors 'none'/);
 });
 
-test('all three pages provide direct navigation and arrivals includes history at the bottom', async () => {
+test('all four pages provide direct navigation and arrivals includes history at the bottom', async () => {
     for (const [path, title, sectionIds] of [
         ['/', 'Geneva Airport plane spotting', ['mapSection']],
         ['/arrivals.html', 'Arrivals', ['aircraftList', 'flightHistory']],
-        ['/stats.html', 'Stats', ['landingSummary']]
+        ['/stats.html', 'Stats', ['landingSummary']],
+        ['/weather.html', 'Weather', ['weatherForecast']]
     ]) {
         const response = await fetch(`${baseUrl}${path}`);
         assert.equal(response.status, 200);
@@ -67,6 +68,7 @@ test('all three pages provide direct navigation and arrivals includes history at
         assert.match(html, /href="\/arrivals.html"/);
         assert.doesNotMatch(html, /href="\/history.html"/);
         assert.match(html, /href="\/stats.html"/);
+        assert.match(html, /href="\/weather.html"/);
         assert.ok(html.includes(`href="${path}" aria-current="page"`));
         for (const sectionId of sectionIds) assert.ok(html.includes(`id="${sectionId}"`));
         if (path === '/arrivals.html') {
