@@ -516,6 +516,18 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       runway labels, no daylight rows, no overflow at 320/390/700/1040px, and
       retained cards after a failed refresh.
 
+30. [x] Match weather runway badges to arrivals and show the latest arrival.
+    - Use the same green text/background for weather runway badges.
+    - Show the latest unexpired arrival's inferred runway, aircraft and estimated
+      landing time on Now beside the wind prediction. Show unknown for missing
+      directions and mark old tracking as stale; explain that touchdown is not
+      confirmed by disappearing from tracking.
+    - Read only the existing aircraft cache; refresh the visible weather page
+      every 30 seconds while retaining the 30-minute provider cache.
+    - Validation: all 81 tests pass, covering newest/unknown/expired records,
+      legacy timestamps, no upstream requests and tracking failures. Chrome
+      confirms the exact badge colors and no overflow at 320/390/700/1040px.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

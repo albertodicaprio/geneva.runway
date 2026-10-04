@@ -49,6 +49,15 @@
             const direction = day.runway?.direction;
             const runway = add('p', direction === '04' || direction === '22' ? `Likely runway ${direction}` : 'Runway unknown', 'weather-runway');
             runway.title = day.runway?.reason || 'Wind data unavailable';
+            if (day.isCurrent) {
+                const arrival = data.lastArrival;
+                const known = arrival && ['04', '22'].includes(arrival.direction);
+                add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
+                const detail = arrival ? `${arrival.callsign} · landing estimated ${new Intl.DateTimeFormat('en-GB', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
+                }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';
+                add('p', detail, 'weather-arrival-note');
+            }
             const metrics = add('dl', '', 'weather-metrics');
             for (const [label, value] of [
                 ...(day.isCurrent ? [] : [['Precipitation chance', number(day.precipitationProbability, '%')]]),
@@ -107,7 +116,7 @@
             }
         }
         button.addEventListener('click', load);
-        setIntervalImpl(() => { if (!document.hidden) load(); }, 30 * 60 * 1000);
+        setIntervalImpl(() => { if (!document.hidden) load(); }, 30 * 1000);
         load();
         return { load };
     }

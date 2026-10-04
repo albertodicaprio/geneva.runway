@@ -22,7 +22,13 @@ omitted.
 in memory for 30 minutes (refreshing when the Geneva date changes). Failed
 refreshes serve the last forecast with an explicit stale flag and retry after
 one minute; without a cached forecast the API returns 503. The browser refreshes
-every 30 minutes while visible and offers a manual Refresh button. Restarting
+every 30 seconds while visible and offers a manual Refresh button; weather
+provider requests still use the shared 30-minute cache. The Now card also shows
+the newest unexpired recent arrival's runway, aircraft identity and estimated
+landing time from the existing aircraft cache, without triggering an OpenSky
+request. Unknown directions remain unknown, and tracking older than ten minutes
+is marked stale. These records are inferred from arrivals leaving tracking and
+their last headings; they do not confirm touchdown or the active runway. Restarting
 the server clears the weather cache. This uses no API key or new dependency and
 does not affect OpenSky polling. Weather data is attributed to Open-Meteo under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

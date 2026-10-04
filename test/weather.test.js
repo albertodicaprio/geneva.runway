@@ -148,6 +148,15 @@ test('weather cards start with Now, show runway estimates, omit daylight, and ca
     assert.match(text(forecast.children[5]), /Runway unknown/);
     assert.doesNotMatch(text(forecast), /Sunrise|Sunset/);
     assert.doesNotMatch(text(forecast.children[0]), /High \/ low|Max wind/);
+    assert.match(text(forecast.children[0]), /Last arrival: runway unknown/);
+    weather.renderForecast({ ...data, lastArrival: {
+        direction: '04', callsign: 'SWR123', estimatedLandingAt: START - 60000, stale: true
+    } }, document);
+    assert.match(text(forecast.children[0]), /Last arrival: runway 04/);
+    assert.match(text(forecast.children[0]), /SWR123 · landing estimated/);
+    assert.match(text(forecast.children[0]), /tracking stale/);
+    assert.match(text(forecast.children[0]), /Likely runway 22/);
+    assert.doesNotMatch(text(forecast.children[1]), /Last arrival/);
     for (const days of [data.days.slice(0, 4), [...data.days, ...data.days]]) {
         weather.renderForecast({ ...data, days }, document);
         assert.equal(forecast.children.length % 2, 0);
@@ -162,20 +171,25 @@ test('weather HTTP adapter serves cached data and returns a useful 503 on failur
             status(code) { this.code = code; return this; }, json(body) { this.body = body; } };
     }
     const output = res();
-    const handler = createWeatherHandler({ getForecast: async () => ({ days: [], stale: true }) });
+    const handler = createWeatherHandler({ getForecast: async () => ({ days: [], stale: true }) }, async () => ({ direction: '22' }));
     await handler({ method: 'GET' }, output);
     assert.equal(output.code, 200);
     assert.equal(output.body.stale, true);
+    assert.equal(output.body.lastArrival.direction, '22');
     assert.equal(output.headers['Cache-Control'], 'no-store');
     const invalid = res();
     await handler({ method: 'POST' }, invalid);
     assert.equal(invalid.code, 405);
     assert.equal(invalid.headers.Allow, 'GET');
     const unavailable = res();
-    await createWeatherHandler({ getForecast: async () => { throw new Error('private provider details'); } })({ method: 'GET' }, unavailable);
+    await createWeatherHandler({ getForecast: async () => { throw new Error('private provider details'); } }, async () => null)({ method: 'GET' }, unavailable);
     assert.equal(unavailable.code, 503);
     assert.match(unavailable.body.error, /temporarily unavailable/);
     assert.doesNotMatch(unavailable.body.error, /private/);
+    const noTracking = res();
+    await createWeatherHandler({ getForecast: async () => ({ days: [], stale: false }) }, async () => { throw new Error('Cache failure'); })({ method: 'GET' }, noTracking);
+    assert.equal(noTracking.code, 200);
+    assert.equal(noTracking.body.lastArrival, null);
 });
 
 test('forecast labels handle missing data, zero values, and prevailing wind from north', () => {
