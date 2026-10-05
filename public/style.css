@@ -1,8 +1,16 @@
 :root {
+    color-scheme: light;
     color: #152237;
     background: #123c64;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
+.page-tools { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.theme-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid #83a6bf; border-radius: 999px; background: rgba(255,255,255,.08); color: #eaf7ff; font: inherit; font-size: .86rem; font-weight: 750; cursor: pointer; }
+.theme-toggle[hidden] { display: none; }
+.theme-toggle:hover { background: rgba(255,255,255,.16); }
+.theme-toggle:focus-visible { outline: 2px solid #eaf7ff; outline-offset: 3px; }
+.theme-toggle[aria-pressed="true"] { background: #284b65; border-color: #a6c9df; }
 
 * { box-sizing: border-box; }
 
@@ -278,4 +286,62 @@ footer a:hover { text-decoration: underline; }
     .stats-grid { grid-template-columns: 1fr; }
     .hourly-toolbar { grid-template-columns: 1fr; }
     .stats-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+:root[data-theme="night"] {
+    color-scheme: dark;
+    color: #e0eaf3;
+    background: #0a1523;
+    --night-panel: #142334;
+    --night-card: #1b2d40;
+    --night-inset: #233a50;
+    --night-border: #395169;
+    --night-muted: #b0c3d5;
+    --night-accent: #9bd7ee;
+}
+
+[data-theme="night"] section { background: var(--night-panel); border-color: var(--night-border); box-shadow: none; }
+[data-theme="night"] :is(.weather-day, .arrival-card, .history-table-wrap, .stats-chart, .stats-date-picker, .stats-filter input) { background: var(--night-card); border-color: var(--night-border); }
+[data-theme="night"] :is(.history-table th, .history-table td, .aircraft-map) { border-color: var(--night-border); }
+[data-theme="night"] :is(.history-table thead, .stats-totals > div, .stats-filter, .hourly-options, .model-toggle, .stats-calendar-header button, .map-details button, .card-photo-wrap) { background: var(--night-inset); }
+[data-theme="night"] :is(.eyebrow, .last-updated, .arrival-count, .map-note, .weather-date, .weather-metrics dt, .weather-period, .weather-raw, .airline, .aircraft-model, .history-note, .loading, .no-aircraft, .metrics span, .photo-unavailable, .map-details-photo p, .stats-weekday, .stats-totals span, .hourly-toolbar .stats-filter span, .map-controls legend, .history-table thead) { color: var(--night-muted); }
+[data-theme="night"] :is(.route, .route span, .stats-month-title, .stats-calendar-header, .stats-calendar-header button, .stats-calendar button, .stats-range-label, .stats-totals strong, .stats-filter input, .model-toggle button, .stats-show-all, .hourly-table, .map-details button) { color: #e0eaf3; }
+[data-theme="night"] .weather-now { background: #1a3545; border-color: #78b9d0; }
+[data-theme="night"] :is(.weather-temperature, .weather-icon) { color: var(--night-accent); }
+[data-theme="night"] .weather-refresh { color: var(--night-accent); background: var(--night-inset); border-color: var(--night-border); }
+[data-theme="night"] :is(.data-status, .weather-runway, .approach-badge) { color: #b5f1cd; background: #214a39; }
+[data-theme="night"] :is(.weather-status-warning, .approach-badge.low) { color: #ffe1a0; background: #554323; }
+[data-theme="night"] .approach-badge.none { color: #ded2eb; background: #40364c; }
+[data-theme="night"] .error { color: #ffc2cb; background: #542b38; }
+[data-theme="night"] .next-arrival { background: linear-gradient(120deg, #1d3d58, #1b4c5c); }
+[data-theme="night"] .next-arrival :is(.airline, .aircraft-model, .photo-unavailable) { color: #c7dae8; }
+[data-theme="night"] .next-arrival .route { color: #f2f8fc; }
+[data-theme="night"] .next-arrival .approach-badge { color: #eaf7ff; background: rgba(255,255,255,.16); }
+[data-theme="night"] :is(.page-nav a[aria-current="page"], .stats-nav button[aria-pressed="true"]) { color: #eaf7ff; background: #284b65; }
+[data-theme="night"] .stats-calendar button[data-range="middle"] { color: #e0eaf3; background: #284b65; }
+[data-theme="night"] :is(.stats-calendar button[aria-pressed="true"], .model-toggle button[aria-pressed="true"]) { color: #f6fbff; background: #28647b; }
+[data-theme="night"] :is(.model-toggle button:hover, .model-toggle button:focus-visible) { background: #284b65; }
+[data-theme="night"] .stats-calendar button:disabled { color: #899cae; }
+[data-theme="night"] :is(.stats-filter input:focus-visible, .weather-refresh:focus-visible, .stats-calendar button:hover:not(:disabled), .stats-calendar button:focus-visible) { outline-color: var(--night-accent); }
+[data-theme="night"] :is(.stats-show-all input, .map-controls input) { accent-color: #75c8e6; }
+[data-theme="night"] .stats-bars progress { accent-color: #75c8e6; }
+[data-theme="night"] .stats-bars progress::-webkit-progress-bar { background: var(--night-inset); }
+[data-theme="night"] .stats-bars progress::-webkit-progress-value { background: #75c8e6; }
+[data-theme="night"] .stats-bars progress::-moz-progress-bar { background: #75c8e6; }
+[data-theme="night"] .hourly-axis { fill: var(--night-muted); }
+[data-theme="night"] .hourly-gridline { stroke: var(--night-border); }
+[data-theme="night"] .hourly-landing { fill: #75c8e6; background: #75c8e6; }
+[data-theme="night"] .hourly-takeoff { fill: #f2a56f; background: #f2a56f; }
+
+/* Dim only the base map: aircraft, paths and selection stay bright. */
+[data-theme="night"] .aircraft-map { background: #182d3a; }
+[data-theme="night"] .aircraft-map > img { filter: brightness(.55) saturate(.65); }
+[data-theme="night"] .map-aircraft-label { fill: #f0f7ff; stroke: #142334; }
+[data-theme="night"] .map-empty { fill: #f0f7ff; }
+
+@media (max-width: 700px) {
+    [data-theme="night"] .history-section .history-table-wrap { background: transparent; }
+    [data-theme="night"] .history-section .history-table tr { background: var(--night-card); border-color: var(--night-border); }
+    [data-theme="night"] .history-section .history-table th[scope="row"] { color: #e0eaf3; }
+    [data-theme="night"] .history-section .history-table td::before { color: var(--night-muted); }
 }

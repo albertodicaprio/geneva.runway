@@ -546,6 +546,17 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Chrome verifies source switching, calm labels, retained cards after failed
       polling, recovery and no overflow at 320/390/700/1040px.
 
+33. [x] Add a shared night-mode toggle at the top of every app page.
+    - Use dark navy panels, readable text and status colors, and a dimmed base
+      map with bright aircraft overlays. Theme stats, calendars and both weather
+      sources alongside the overview and arrivals list.
+    - Follow the device theme initially, then save the user's explicit choice
+      across visits and tabs. Apply it before rendering to avoid a bright flash;
+      keep the toggle usable when browser storage is unavailable.
+    - Validation: all 93 tests pass. Chrome checks all five pages at
+      320/390/700/1040px without overflow, saved choices across navigation,
+      system-theme changes, Space-key activation and blocked storage.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
