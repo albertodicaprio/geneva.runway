@@ -67,30 +67,23 @@
         }
         if (directional) {
             const wind = shape('g', { transform: `rotate(${data.windDirection} 80 80)`, class: 'compass-wind' });
-            // Use the same fixed scale for every card. Cap the drawing at 60 km/h
-            // to keep it inside the compass; the readout retains the actual value.
-            function arrowPath(speed) {
-                const strength = Math.min(speed / 60, 1);
-                const tip = 26 + 22 + 30 * strength;
-                const neck = tip - (6 + 7 * strength);
-                const shaft = 1.7 + 2.3 * strength;
-                const head = 5 + 5 * strength;
-                return `M ${80 - shaft} 26 L ${80 + shaft} 26 L ${80 + shaft} ${neck} L ${80 + head} ${neck} L 80 ${tip} L ${80 - head} ${neck} L ${80 - shaft} ${neck} Z`;
-            }
-            if (gustKnown && data.windGusts > 0) {
-                shape('path', { d: arrowPath(data.windGusts), class: 'compass-gust-arrow' }, null, wind);
-            }
-            if (data.windSpeed > 0) {
-                shape('path', { d: arrowPath(data.windSpeed), class: 'compass-wind-arrow' }, null, wind);
-            }
+            // A square-root scale keeps light winds visible; at 60 km/h the
+            // arrow spans nearly the full circle. Gusts control width separately.
+            const speedStrength = Math.sqrt(Math.min(data.windSpeed / 60, 1));
+            const gustStrength = gustKnown ? Math.sqrt(Math.min(data.windGusts / 60, 1)) : 0;
+            const tail = 27;
+            const tip = tail + 36 + 68 * speedStrength;
+            const neck = tip - (10 + 6 * gustStrength);
+            const shaft = 2.5 + 3.5 * gustStrength;
+            const head = 7 + 7 * gustStrength;
+            const path = `M ${80 - shaft} ${tail} L ${80 + shaft} ${tail} L ${80 + shaft} ${neck} L ${80 + head} ${neck} L 80 ${tip} L ${80 - head} ${neck} L ${80 - shaft} ${neck} Z`;
+            shape('path', { d: path, class: 'compass-wind-arrow' }, null, wind);
         } else {
             shape('circle', { cx: 80, cy: 80, r: 25, class: 'compass-uncertain' });
         }
         add('figcaption', '04/22 · 046°/226° true', 'compass-caption', figure);
-        const legend = add('div', '', 'compass-legend', figure);
-        legend.title = 'Arrow length and width show strength on a shared scale, capped at 60 km/h. Solid: wind; outline: gusts.';
-        add('span', 'Wind', 'compass-wind-key', legend);
-        add('span', 'Gusts', 'compass-gust-key', legend);
+        const legend = add('div', 'Length: wind · Width: gusts', 'compass-legend', figure);
+        legend.title = 'Length shows wind speed; width shows gust strength. Light winds have a visible minimum size; both scales reach their maximum at 60 km/h. Missing gusts use the minimum width.';
         const metrics = add('dl', '', 'weather-metrics wind-metrics', panel);
         for (const [label, value] of [
             [daily ? 'Max wind' : 'Wind', number(data.windSpeed, ' km/h')],

@@ -80,11 +80,8 @@ footer { color: #c7dae8; }
 .compass-runway-label { fill: #fff; font-size: 9px; font-weight: 800; }
 .compass-centerline { stroke: #fff; stroke-width: 1.5; stroke-dasharray: 5 4; }
 .compass-wind { color: #c65b14; stroke-linejoin: round; }
-.compass-wind-arrow { fill: currentColor; }
-.compass-gust-arrow { fill: rgba(198,91,20,.1); stroke: currentColor; stroke-width: 1.5; opacity: .7; }
-.compass-legend { display: flex; justify-content: center; gap: 12px; margin-top: 7px; color: #a24b12; font-size: .7rem; }
-.compass-legend span::before { content: ''; display: inline-block; width: 13px; margin-right: 4px; vertical-align: middle; border-top: 3px solid currentColor; }
-.compass-legend .compass-gust-key::before { height: 4px; border: 1px solid currentColor; opacity: .7; }
+.compass-wind-arrow { fill: currentColor; fill-opacity: .88; stroke: #fff; stroke-width: .8; }
+.compass-legend { margin-top: 7px; color: #a24b12; font-size: .7rem; line-height: 1.4; text-align: center; }
 .compass-uncertain { fill: none; stroke: #c65b14; stroke-width: 2; stroke-dasharray: 3 4; }
 .compass-caption { color: #47637f; font-size: .65rem; text-align: center; }
 .wind-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 0; }
@@ -98,7 +95,7 @@ footer { color: #c7dae8; }
 [data-theme="night"] :is(.compass-cardinal, .compass-caption) { fill: var(--night-muted); color: var(--night-muted); }
 [data-theme="night"] .compass-runway rect { fill: #526e88; }
 [data-theme="night"] :is(.compass-wind, .compass-legend) { color: #f2a56f; }
-[data-theme="night"] .compass-gust-arrow { fill: rgba(242,165,111,.1); }
+[data-theme="night"] .compass-wind-arrow { stroke: #142334; }
 [data-theme="night"] .compass-uncertain { stroke: #f2a56f; }
 .weather-refresh { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border: 1px solid #d4e1ea; border-radius: 8px; background: #fff; color: #123c64; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
 .weather-refresh:disabled { opacity: .6; cursor: wait; }

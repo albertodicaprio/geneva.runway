@@ -238,15 +238,17 @@ test('wind compasses use true runway bearing and inward arrows for north, east a
         return { length: coordinates[9] - coordinates[1], width: coordinates[6] - coordinates[10] };
     }
     const light = dimensions(3, 8, 'compass-wind-arrow');
-    const strong = dimensions(30, 45, 'compass-wind-arrow');
-    assert.ok(strong.length > light.length && strong.width > light.width);
-    const gust = dimensions(30, 45, 'compass-gust-arrow');
-    assert.ok(gust.length > strong.length && gust.width > strong.width);
-    assert.deepEqual(dimensions(30, 60, 'compass-wind-arrow'), strong, 'gusts do not resize the sustained wind');
+    const strongerWind = dimensions(30, 8, 'compass-wind-arrow');
+    assert.ok(strongerWind.length > light.length);
+    assert.equal(strongerWind.width, light.width, 'wind speed controls only length');
+    const strongerGusts = dimensions(3, 45, 'compass-wind-arrow');
+    assert.equal(strongerGusts.length, light.length, 'gusts do not resize arrow length');
+    assert.ok(strongerGusts.width > light.width);
+    assert.ok(dimensions(0.1, 0, 'compass-wind-arrow').length >= 36, 'light winds stay visible');
+    assert.ok(dimensions(60, 60, 'compass-wind-arrow').length >= 100, 'strong winds span nearly the 114-unit circle');
     assert.deepEqual(dimensions(100, 150, 'compass-wind-arrow'), dimensions(60, 60, 'compass-wind-arrow'));
-    assert.equal(dimensions(12, null, 'compass-gust-arrow'), null);
-    assert.equal(dimensions(0, 20, 'compass-wind-arrow'), null);
-    assert.ok(dimensions(0, 20, 'compass-gust-arrow').length > 0);
+    assert.equal(dimensions(12, null, 'compass-wind-arrow').width, dimensions(12, 0, 'compass-wind-arrow').width);
+    assert.ok(dimensions(0, 20, 'compass-wind-arrow').width > 0);
     for (const extra of [{ windSpeed: 0 }, { variableWind: true }, { windDirection: null },
         { windDirection: -1 }, { windDirection: 361 }, { windSpeed: null }]) {
         const svg = render({ windDirection: 40, windSpeed: 12, windGusts: null, ...extra });
