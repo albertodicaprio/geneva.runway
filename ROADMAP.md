@@ -583,6 +583,8 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Replace wind rows with speed, gusts and direction readouts below the diagram;
       retain daily maximum/dominant labels and explicit calm/variable/missing states.
     - Use one arrow: length represents wind speed, width represents gusts.
+      Low-speed arrows use a slightly shorter minimum and translucent fill.
+      Unknown estimates read “Cannot estimate runway” on both weather views.
       Independent square-root scales keep light wind visible and span nearly the
       whole circle at 60 km/h. A legend explains both dimensions; drawing limits
       preserve numeric readouts above the cap, with minimum width for missing gusts.

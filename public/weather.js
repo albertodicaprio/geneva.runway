@@ -23,7 +23,7 @@
 
     function runwayText(runway) {
         return ['04', '22'].includes(runway?.direction)
-            ? `Likely runway ${runway.direction}${runway.calmConditions ? ' (calm conditions)' : ''}` : 'Runway unknown';
+            ? `Likely runway ${runway.direction}${runway.calmConditions ? ' (calm conditions)' : ''}` : 'Cannot estimate runway';
     }
 
     function addLastArrival(add, arrival) {
@@ -72,7 +72,7 @@
             const speedStrength = Math.sqrt(Math.min(data.windSpeed / 60, 1));
             const gustStrength = gustKnown ? Math.sqrt(Math.min(data.windGusts / 60, 1)) : 0;
             const tail = 27;
-            const tip = tail + 36 + 68 * speedStrength;
+            const tip = tail + 30 + 74 * speedStrength;
             const neck = tip - (10 + 6 * gustStrength);
             const shaft = 2.5 + 3.5 * gustStrength;
             const head = 7 + 7 * gustStrength;

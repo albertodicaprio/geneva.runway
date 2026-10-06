@@ -80,7 +80,7 @@ footer { color: #c7dae8; }
 .compass-runway-label { fill: #fff; font-size: 9px; font-weight: 800; }
 .compass-centerline { stroke: #fff; stroke-width: 1.5; stroke-dasharray: 5 4; }
 .compass-wind { color: #c65b14; stroke-linejoin: round; }
-.compass-wind-arrow { fill: currentColor; fill-opacity: .88; stroke: #fff; stroke-width: .8; }
+.compass-wind-arrow { fill: currentColor; fill-opacity: .76; stroke: #fff; stroke-width: .8; }
 .compass-legend { margin-top: 7px; color: #a24b12; font-size: .7rem; line-height: 1.4; text-align: center; }
 .compass-uncertain { fill: none; stroke: #c65b14; stroke-width: 2; stroke-dasharray: 3 4; }
 .compass-caption { color: #47637f; font-size: .65rem; text-align: center; }

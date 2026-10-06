@@ -145,7 +145,7 @@ test('weather cards start with Now, show runway estimates, omit daylight, and ca
     assert.match(text(forecast.children[0]), /18.5|19°C/);
     assert.match(text(forecast.children[0]), /Likely runway 22/);
     assert.match(text(forecast.children[1]), /Likely runway 04/);
-    assert.match(text(forecast.children[5]), /Runway unknown/);
+    assert.match(text(forecast.children[5]), /Cannot estimate runway/);
     assert.doesNotMatch(text(forecast), /Sunrise|Sunset/);
     assert.doesNotMatch(text(forecast.children[0]), /High \/ low|Max wind/);
     assert.match(text(forecast.children[0]), /Last arrival: runway unknown/);
@@ -244,7 +244,7 @@ test('wind compasses use true runway bearing and inward arrows for north, east a
     const strongerGusts = dimensions(3, 45, 'compass-wind-arrow');
     assert.equal(strongerGusts.length, light.length, 'gusts do not resize arrow length');
     assert.ok(strongerGusts.width > light.width);
-    assert.ok(dimensions(0.1, 0, 'compass-wind-arrow').length >= 36, 'light winds stay visible');
+    assert.ok(dimensions(0.1, 0, 'compass-wind-arrow').length >= 30, 'light winds stay visible');
     assert.ok(dimensions(60, 60, 'compass-wind-arrow').length >= 100, 'strong winds span nearly the 114-unit circle');
     assert.deepEqual(dimensions(100, 150, 'compass-wind-arrow'), dimensions(60, 60, 'compass-wind-arrow'));
     assert.equal(dimensions(12, null, 'compass-wind-arrow').width, dimensions(12, 0, 'compass-wind-arrow').width);
