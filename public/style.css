@@ -10,7 +10,7 @@
 .theme-toggle[hidden] { display: none; }
 .theme-toggle:hover { background: rgba(255,255,255,.16); }
 .theme-toggle:focus-visible { outline: 2px solid #eaf7ff; outline-offset: 3px; }
-.theme-toggle[aria-pressed="true"] { background: #284b65; border-color: #a6c9df; }
+.theme-toggle[data-mode="night"] { background: #284b65; border-color: #a6c9df; }
 
 * { box-sizing: border-box; }
 

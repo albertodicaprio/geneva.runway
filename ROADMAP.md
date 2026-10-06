@@ -550,12 +550,17 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Use dark navy panels, readable text and status colors, and a dimmed base
       map with bright aircraft overlays. Theme stats, calendars and both weather
       sources alongside the overview and arrivals list.
-    - Follow the device theme initially, then save the user's explicit choice
-      across visits and tabs. Apply it before rendering to avoid a bright flash;
-      keep the toggle usable when browser storage is unavailable.
+    - Cycle through Auto, Night mode (moon), and Day mode (sun), saving the
+      choice across visits and tabs. Default to Auto: day from 07:00 until
+      19:00 Geneva time, night otherwise, with live clock updates. Apply it
+      before rendering to avoid a bright flash; keep the toggle usable when
+      browser storage is unavailable.
     - Validation: all 93 tests pass. Chrome checks all five pages at
       320/390/700/1040px without overflow, saved choices across navigation,
-      system-theme changes, Space-key activation and blocked storage.
+      Space-key activation and blocked storage. Three-state refinement: all
+      93 tests pass; isolated browser-script checks cover summer/winter time
+      boundaries, cycling, icons/labels, persistence, clock updates and blocked
+      storage across all five pages.
 
 Remaining maintenance:
 
