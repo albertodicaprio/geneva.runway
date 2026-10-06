@@ -13,18 +13,18 @@
 
 <body data-weather-source="aviation">
     <div class="container">
-        <div class="page-tools">
-            <button class="theme-toggle" id="nightModeToggle" type="button" hidden>
-                <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
-            </button>
-        </div>
         <header class="page-header">
-            <div>
+            <div class="header-top">
                 <p class="eyebrow">LSGG · GENEVA</p>
-                <h1>Weather</h1>
-                <p class="page-intro">Airport observations and forecasts for your next plane-spotting visit.</p>
+                <button class="theme-toggle" id="nightModeToggle" type="button" hidden>
+                    <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
+                </button>
             </div>
-            <div class="data-status" id="weatherStatus" aria-live="polite">Loading airport weather…</div>
+            <h1>Weather</h1>
+            <div class="header-details">
+                <p class="page-intro">Airport observations and forecasts for your next plane-spotting visit.</p>
+                <div class="data-status" id="weatherStatus" aria-live="polite">Loading airport weather…</div>
+            </div>
         </header>
 
         <nav class="page-nav" aria-label="Main navigation">

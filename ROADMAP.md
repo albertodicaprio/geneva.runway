@@ -550,7 +550,7 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Use dark navy panels, readable text and status colors, and a dimmed base
       map with bright aircraft overlays. Theme stats, calendars and both weather
       sources alongside the overview and arrivals list.
-    - Cycle through Auto, Night mode (moon), and Day mode (sun), saving the
+    - Cycle through Auto, Night (moon), and Day (sun), saving the
       choice across visits and tabs. Default to Auto: day from 07:00 until
       19:00 Geneva time, night otherwise, with live clock updates. Apply it
       before rendering to avoid a bright flash; keep the toggle usable when
@@ -561,6 +561,10 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       93 tests pass; isolated browser-script checks cover summer/winter time
       boundaries, cycling, icons/labels, persistence, clock updates and blocked
       storage across all five pages.
+    - Align the theme button with the airport eyebrow and status bubbles with
+      the page description; stack status below the description on narrow screens.
+      Headless Chrome checks all five headers at 320/390/700/1040px for
+      alignment, overflow and the shortened Auto/Night/Day labels.
 
 Remaining maintenance:
 

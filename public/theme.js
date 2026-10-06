@@ -21,7 +21,7 @@
         const night = preference === 'auto' ? hour < 7 || hour >= 19 : preference === 'night';
         document.documentElement.dataset.theme = night ? 'night' : 'day';
         if (toggle) {
-            const labels = { auto: 'Auto', night: 'Night mode', day: 'Day mode' };
+            const labels = { auto: 'Auto', night: 'Night', day: 'Day' };
             const icons = { auto: '◷', night: '☾', day: '☀' };
             const nextMode = modes[(modes.indexOf(preference) + 1) % modes.length];
             toggle.dataset.mode = preference;
