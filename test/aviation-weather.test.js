@@ -40,6 +40,13 @@ test('calm fair weather prefers 22, including variable winds, while adverse/unkn
     ]) assert.equal(normalizeMetar(metar(extra)).runway.direction, 'unknown');
 });
 
+test('light-wind explanations distinguish gusts from adverse or missing fair weather', () => {
+    assert.match(predictRunway(342, 3.4, { fairWeather: true, windGusts: 7.6 }).reason, /gusts/i);
+    assert.match(predictRunway(260, 4, { fairWeather: false, windGusts: 21.6 }).reason, /fair conditions/i);
+    assert.equal(predictRunway(342, 3.4, { fairWeather: true, windGusts: 4.9 }).direction, '22');
+    assert.equal(predictRunway(342, 3.4, { fairWeather: true, windGusts: 5 }).direction, 'unknown');
+});
+
 test('Open-Meteo current and daily normalization also apply the calm fair-weather preference', async () => {
     const current = { time: '2026-10-04T12:00', weather_code: 0, temperature_2m: 20,
         precipitation: 0, wind_speed_10m: 2, wind_gusts_10m: 3, wind_direction_10m: 30 };

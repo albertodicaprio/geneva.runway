@@ -28,7 +28,7 @@
 
     function addLastArrival(add, arrival) {
         const known = arrival && ['04', '22'].includes(arrival.direction);
-        const badge = add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway');
+        const badge = add('p', known ? `Last arrival: runway ${arrival.direction}` : 'Last arrival: runway unknown', 'weather-runway weather-last-arrival');
         badge.title = arrival ? `Landing estimated ${new Intl.DateTimeFormat('en-GB', {
             day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich'
         }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';

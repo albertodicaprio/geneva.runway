@@ -67,6 +67,7 @@ footer { color: #c7dae8; }
 .weather-temperature { margin-bottom: 4px; font-size: 1.1rem; font-weight: 800; color: #123c64; }
 .weather-now { border-color: #165f7a; background: #eef8fc; }
 .weather-runway { margin: 14px 0 0; padding: 8px 10px; border-radius: 8px; color: #255d44; background: #dff6e8; font-size: .86rem; font-weight: 800; }
+.weather-last-arrival { color: #1d527d; background: #deefff; }
 .weather-metrics { display: grid; gap: 10px; margin: 18px 0 0; }
 .weather-metrics dt { color: #63758a; font-size: .72rem; }
 .weather-metrics dd { margin: 3px 0 0; font-size: .86rem; font-weight: 700; }
@@ -316,6 +317,7 @@ footer a:hover { text-decoration: underline; }
 [data-theme="night"] :is(.weather-temperature, .weather-icon) { color: var(--night-accent); }
 [data-theme="night"] .weather-refresh { color: var(--night-accent); background: var(--night-inset); border-color: var(--night-border); }
 [data-theme="night"] :is(.data-status, .weather-runway, .approach-badge) { color: #b5f1cd; background: #214a39; }
+[data-theme="night"] .weather-last-arrival { color: #b9ddff; background: #203e5b; }
 [data-theme="night"] :is(.weather-status-warning, .approach-badge.low) { color: #ffe1a0; background: #554323; }
 [data-theme="night"] .approach-badge.none { color: #ded2eb; background: #40364c; }
 [data-theme="night"] .error { color: #ffc2cb; background: #542b38; }

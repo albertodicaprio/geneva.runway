@@ -567,6 +567,16 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       title alignment, matching button/bubble height, overflow, right-aligned
       Arrivals status and the shortened Auto/Night/Day labels.
 
+34. [x] Clarify weather runway uncertainty and distinguish last-arrival evidence.
+    - Verified the calm/fair-weather preference is applied to current and daily
+      estimates. Now's gusts and Wednesday's rain/gusts exclude that preference
+      in the inspected Open-Meteo snapshot; preserve the existing thresholds.
+    - Explain gust-related uncertainty separately from unconfirmed fair weather.
+    - Give Last arrival badges blue text/background in both day and night themes,
+      including the shared METAR Now card.
+    - Validation: all 94 tests pass, including a regression for gust explanations
+      and calm cutoff boundaries; Chrome confirms distinct badge colors in both themes.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
