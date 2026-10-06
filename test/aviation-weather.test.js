@@ -226,10 +226,10 @@ test('five-day horizon retains every in-range TAF group without even-card trunca
     const data = await service.getForecast();
     assert.equal(data.forecast.periods.length, 7);
     assert.ok(data.forecast.periods.every(period => period.to <= START + 5 * 86400000));
-    function element() { return { textContent: '', children: [], append(child) { this.children.push(child); },
+    function element() { return { textContent: '', children: [], setAttribute() {}, append(child) { this.children.push(child); },
         replaceChildren(...children) { this.children = children; } }; }
     const elements = { weatherForecast: element(), weatherUpdated: element() };
-    const document = { createElement: element, getElementById: id => elements[id] };
+    const document = { createElement: element, createElementNS: (_, tag) => element(tag), getElementById: id => elements[id] };
     ui.renderForecast(data, document);
     assert.equal(elements.weatherForecast.children.length, 8);
     assert.equal(elements.weatherForecast.children[0].children[0].textContent, 'Now (METAR)');

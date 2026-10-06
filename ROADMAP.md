@@ -577,6 +577,17 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 94 tests pass, including a regression for gust explanations
       and calm cutoff boundaries; Chrome confirms distinct badge colors in both themes.
 
+35. [x] Add a shared runway/wind compass to weather cards.
+    - Use a larger north-up SVG diagram, runway 04/22 at published rounded
+      046°/226° true bearings, and an inward wind arrow from the reported source.
+    - Replace wind rows with speed, gusts and direction readouts below the diagram;
+      retain daily maximum/dominant labels and explicit calm/variable/missing states.
+    - Share rendering between Open-Meteo Now/daily cards and METAR/TAF cards;
+      support both themes and narrow cards without new dependencies.
+    - Validation: all 95 tests pass, including arrow direction and unavailable-wind
+      cases. Chrome checks both views in both themes at 320/390/700/1040px,
+      confirming diagrams, readouts and no overflow; inspected a rendered preview.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

@@ -34,6 +34,57 @@
         }).format(new Date(arrival.estimatedLandingAt))}${arrival.stale ? ' · tracking stale' : ''}` : 'No recent arrival recorded';
     }
 
+    function addWindCompass(add, document, data, daily = false) {
+        const panel = add('div', '', 'weather-wind');
+        const figure = add('figure', '', 'wind-compass', panel);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 160 160');
+        svg.setAttribute('role', 'img');
+        const speedKnown = Number.isFinite(data.windSpeed) && data.windSpeed >= 0;
+        const calm = speedKnown && data.windSpeed === 0;
+        const directionKnown = Number.isFinite(data.windDirection) && data.windDirection >= 0 && data.windDirection <= 360;
+        const directional = speedKnown && !calm && !data.variableWind && directionKnown;
+        const from = calm ? 'Calm' : data.variableWind ? 'Variable' : directionKnown ? windDirection(data.windDirection) : 'Direction unavailable';
+        svg.setAttribute('aria-label', `North-up compass. Geneva runway 04/22, 046°/226° true. Wind from ${from}, ${number(data.windSpeed, ' km/h')}; gusts ${number(data.windGusts, ' km/h')}.`);
+        figure.append(svg);
+        function shape(tag, attributes, text, parent = svg) {
+            const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+            if (text) node.textContent = text;
+            parent.append(node);
+            return node;
+        }
+        shape('circle', { cx: 80, cy: 80, r: 57, class: 'compass-ring' });
+        for (const [label, x, y] of [['N', 80, 13], ['E', 149, 84], ['S', 80, 155], ['W', 11, 84]]) {
+            shape('text', { x, y, class: 'compass-cardinal', 'text-anchor': 'middle' }, label);
+        }
+        const runway = shape('g', { transform: 'rotate(46 80 80)', class: 'compass-runway' });
+        shape('rect', { x: 72, y: 37, width: 16, height: 86, rx: 3 }, null, runway);
+        shape('line', { x1: 80, y1: 59, x2: 80, y2: 101, class: 'compass-centerline' }, null, runway);
+        for (const [label, y] of [['22', 48], ['04', 118]]) {
+            shape('text', { x: 80, y, 'text-anchor': 'middle', class: 'compass-runway-label' }, label, runway);
+        }
+        if (directional) {
+            const wind = shape('g', { transform: `rotate(${data.windDirection} 80 80)`, class: 'compass-wind' });
+            shape('line', { x1: 80, y1: 23, x2: 80, y2: 67 }, null, wind);
+            shape('path', { d: 'M 73 57 L 80 68 L 87 57' }, null, wind);
+            shape('circle', { cx: 80, cy: 23, r: 3 }, null, wind);
+        } else {
+            shape('circle', { cx: 80, cy: 80, r: 25, class: 'compass-uncertain' });
+        }
+        add('figcaption', '04/22 · 046°/226° true', 'compass-caption', figure);
+        const metrics = add('dl', '', 'weather-metrics wind-metrics', panel);
+        for (const [label, value] of [
+            [daily ? 'Max wind' : 'Wind', number(data.windSpeed, ' km/h')],
+            [daily ? 'Max gusts' : 'Gusts', number(data.windGusts, ' km/h')],
+            ['Wind from', from]
+        ]) {
+            const row = add('div', '', '', metrics);
+            add('dt', label, '', row);
+            add('dd', value, '', row);
+        }
+    }
+
     function renderForecast(data, document) {
         const container = document.getElementById('weatherForecast');
         const entries = [{ ...data.current, isCurrent: true }, ...data.days].slice(0, 6);
@@ -64,13 +115,11 @@
             if (day.isCurrent) {
                 addLastArrival(add, data.lastArrival);
             }
+            addWindCompass(add, document, day, !day.isCurrent);
             const metrics = add('dl', '', 'weather-metrics');
             for (const [label, value] of [
                 ...(day.isCurrent ? [] : [['Precipitation chance', number(day.precipitationProbability, '%')]]),
-                [day.isCurrent ? 'Recent precipitation' : 'Precipitation', number(day.precipitation, ' mm', 1)],
-                [day.isCurrent ? 'Wind' : 'Max wind', number(day.windSpeed, ' km/h')],
-                [day.isCurrent ? 'Gusts' : 'Max gusts', number(day.windGusts, ' km/h')],
-                ['Wind from', windDirection(day.windDirection)]
+                [day.isCurrent ? 'Recent precipitation' : 'Precipitation', number(day.precipitation, ' mm', 1)]
             ]) {
                 const row = add('div', '', '', metrics);
                 add('dt', label, '', row);
@@ -123,7 +172,7 @@
         return { load };
     }
 
-    const api = { condition, number, windDirection, runwayText, addLastArrival, renderForecast, start };
+    const api = { condition, number, windDirection, runwayText, addLastArrival, addWindCompass, renderForecast, start };
     if (typeof module === 'object' && module.exports) module.exports = api;
     else {
         window.GenevaWeather = api;

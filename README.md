@@ -20,7 +20,13 @@ wind data, or wind within 15° of perpendicular to the runway show unknown.
 Daily estimates use prevailing direction and maximum wind speed, so they are
 a rough guide and do not confirm actual runway use. Current conditions show
 their Geneva-local report time. Cards are capped at six; an odd final card is
-omitted.
+omitted. Each weather card includes a north-up runway/wind compass with speed,
+gusts and wind-source direction below it. The runway uses the published rounded
+046°/226° true bearings from the [OurAirports runway dataset](https://github.com/davidmegginson/ourairports-data/blob/main/runways.csv)
+(LSGG, runway 04/22, checked 6 October 2026). The orange arrow flows inward from
+the direction the wind comes from; calm, variable or missing winds have no
+fixed arrow. Daily readouts retain maximum wind/gusts and dominant direction.
+The same diagram appears on METAR/TAF cards.
 `/api/weather` fetches on demand, shares concurrent requests, and caches results
 in memory for 30 minutes (refreshing when the Geneva date changes). Failed
 refreshes serve the last forecast with an explicit stale flag and retry after

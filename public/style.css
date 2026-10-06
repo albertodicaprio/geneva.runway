@@ -71,6 +71,31 @@ footer { color: #c7dae8; }
 .weather-metrics { display: grid; gap: 10px; margin: 18px 0 0; }
 .weather-metrics dt { color: #63758a; font-size: .72rem; }
 .weather-metrics dd { margin: 3px 0 0; font-size: .86rem; font-weight: 700; }
+.weather-wind { margin-top: 18px; }
+.wind-compass { width: min(100%, 200px); margin: 0 auto; }
+.wind-compass svg { display: block; width: 100%; height: auto; }
+.compass-ring { fill: none; stroke: #c3d3e1; stroke-width: 1.5; }
+.compass-cardinal { fill: #47637f; font-size: 12px; font-weight: 800; }
+.compass-runway rect { fill: #47637f; }
+.compass-runway-label { fill: #fff; font-size: 9px; font-weight: 800; }
+.compass-centerline { stroke: #fff; stroke-width: 1.5; stroke-dasharray: 5 4; }
+.compass-wind { fill: #c65b14; stroke: #c65b14; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.compass-wind path { fill: none; }
+.compass-uncertain { fill: none; stroke: #c65b14; stroke-width: 2; stroke-dasharray: 3 4; }
+.compass-caption { color: #47637f; font-size: .65rem; text-align: center; }
+.wind-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0 0; }
+.wind-metrics > div { min-width: 0; }
+.wind-metrics dd { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .wind-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .wind-metrics > :last-child { grid-column: 1 / -1; }
+}
+[data-theme="night"] .compass-ring { stroke: var(--night-border); }
+[data-theme="night"] :is(.compass-cardinal, .compass-caption) { fill: var(--night-muted); color: var(--night-muted); }
+[data-theme="night"] .compass-runway rect { fill: #526e88; }
+[data-theme="night"] .compass-wind { fill: #f2a56f; stroke: #f2a56f; }
+[data-theme="night"] .compass-wind path { fill: none; }
+[data-theme="night"] .compass-uncertain { stroke: #f2a56f; }
 .weather-refresh { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border: 1px solid #d4e1ea; border-radius: 8px; background: #fff; color: #123c64; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
 .weather-refresh:disabled { opacity: .6; cursor: wait; }
 .weather-refresh:focus-visible { outline: 2px solid #165f7a; outline-offset: 3px; }

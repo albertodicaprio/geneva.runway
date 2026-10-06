@@ -63,10 +63,10 @@
             const runway = add('p', weather.runwayText(entry.runway), 'weather-runway');
             runway.title = entry.runway?.reason || 'Wind data unavailable';
             if (current) weather.addLastArrival(add, data.lastArrival);
+            weather.addWindCompass(add, document, entry);
             const metrics = add('dl', '', 'weather-metrics');
             const rows = [
-                ['Wind', weather.number(entry.windSpeed, ' km/h')], ['Gusts', weather.number(entry.windGusts, ' km/h')],
-                ['Wind from', windFrom(entry)], ['Visibility', visibility(entry.visibility)], ['Clouds (above airport)', cloudLabel(entry)]
+                ['Visibility', visibility(entry.visibility)], ['Clouds (above airport)', cloudLabel(entry)]
             ];
             if (current) rows.push(['Dew point', weather.number(entry.dewPoint, '°C')],
                 ['Pressure (QNH)', weather.number(entry.pressure, ' hPa')],

@@ -134,7 +134,7 @@ test('weather cards start with Now, show runway estimates, omit daylight, and ca
     }
     const forecast = element();
     const updated = element();
-    const document = { createElement: element,
+    const document = { createElement: element, createElementNS: (_, tag) => element(tag),
         getElementById: id => id === 'weatherForecast' ? forecast : updated };
     const text = node => [node.textContent, ...node.children.map(text)].join(' ');
     const service = createWeatherService({ now: () => START, fetchImpl: async () => ({ ok: true, json: async () => providerData() }) });
@@ -203,4 +203,35 @@ test('forecast labels handle missing data, zero values, and prevailing wind from
     assert.equal(weather.windDirection(null), '—');
     assert.equal(weather.condition(null)[0], 'Conditions unavailable');
     assert.equal(weather.condition(95)[0], 'Thunderstorm');
+});
+
+test('wind compasses use true runway bearing and inward arrows for north, east and wrapped bearings', () => {
+    function render(data) {
+        const root = { children: [], append(child) { this.children.push(child); } };
+        const document = { createElementNS: (_, tag) => ({ tag, attributes: {}, children: [],
+            setAttribute(name, value) { this.attributes[name] = value; }, append(child) { this.children.push(child); } }) };
+        function add(tag, text, className, parent = root) {
+            const node = { tag, textContent: text, className, children: [], append(child) { this.children.push(child); } };
+            parent.append(node);
+            return node;
+        }
+        weather.addWindCompass(add, document, data);
+        return root.children[0].children[0].children[0];
+    }
+    for (const direction of [0, 90, 220, 360]) {
+        const svg = render({ windDirection: direction, windSpeed: 12, windGusts: 20 });
+        const runway = svg.children.find(node => node.attributes.class === 'compass-runway');
+        assert.equal(runway.attributes.transform, 'rotate(46 80 80)');
+        const arrow = svg.children.find(node => node.attributes.class === 'compass-wind');
+        assert.equal(arrow.attributes.transform, `rotate(${direction} 80 80)`);
+        const line = arrow.children.find(node => node.tag === 'line');
+        assert.ok(Number(line.attributes.y2) > Number(line.attributes.y1), 'wind moves inward from its source');
+        assert.match(svg.attributes['aria-label'], /12 km\/h; gusts 20 km\/h/);
+    }
+    for (const extra of [{ windSpeed: 0 }, { variableWind: true }, { windDirection: null },
+        { windDirection: -1 }, { windDirection: 361 }, { windSpeed: null }]) {
+        const svg = render({ windDirection: 40, windSpeed: 12, windGusts: null, ...extra });
+        assert.ok(!svg.children.some(node => node.attributes.class === 'compass-wind'));
+        assert.ok(svg.children.some(node => node.attributes.class === 'compass-uncertain'));
+    }
 });
