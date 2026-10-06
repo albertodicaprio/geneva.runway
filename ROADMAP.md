@@ -561,10 +561,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       93 tests pass; isolated browser-script checks cover summer/winter time
       boundaries, cycling, icons/labels, persistence, clock updates and blocked
       storage across all five pages.
-    - Align the theme button with the airport eyebrow and status bubbles with
+    - Align the compact theme button with the top of the page title and status bubbles with
       the page description; stack status below the description on narrow screens.
       Headless Chrome checks all five headers at 320/390/700/1040px for
-      alignment, overflow and the shortened Auto/Night/Day labels.
+      title alignment, matching button/bubble height, overflow, right-aligned
+      Arrivals status and the shortened Auto/Night/Day labels.
 
 Remaining maintenance:
 
