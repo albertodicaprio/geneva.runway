@@ -58,8 +58,7 @@ test('all pages provide direct navigation and arrivals includes history at the b
         ['/', 'Geneva Airport plane spotting', ['mapSection']],
         ['/arrivals.html', 'Arrivals', ['aircraftList', 'flightHistory']],
         ['/stats.html', 'Stats', ['landingSummary']],
-        ['/weather.html', 'Weather', ['weatherForecast']],
-        ['/aviation-weather.html', 'Weather', ['weatherForecast']]
+        ['/weather.html', 'Weather', ['weatherForecast']]
     ]) {
         const response = await fetch(`${baseUrl}${path}`);
         assert.equal(response.status, 200);
@@ -88,6 +87,22 @@ test('the old history URL redirects to recent landings on arrivals', async () =>
         assert.equal(response.status, 301);
         assert.equal(response.headers.get('location'), '/arrivals.html#historyHeading');
     }
+});
+
+test('retired aviation weather links redirect to the forecast and the removed API returns 404', async () => {
+    for (const method of ['GET', 'HEAD']) {
+        const response = await fetch(`${baseUrl}/aviation-weather.html`, { method, redirect: 'manual' });
+        assert.equal(response.status, 301);
+        assert.equal(response.headers.get('location'), '/weather.html');
+    }
+    assert.equal((await fetch(`${baseUrl}/api/aviation-weather`)).status, 404);
+    const weather = await (await fetch(`${baseUrl}/weather.html`)).text();
+    assert.doesNotMatch(weather, /METAR|TAF/);
+    assert.equal((weather.match(/class="history-note"/g) || []).length, 1);
+    const overview = await (await fetch(`${baseUrl}/`)).text();
+    assert.match(overview, /Weather runway estimates:/);
+    assert.match(overview, /Wind compass:/);
+    assert.match(overview, /Last arrival:/);
 });
 
 test('the stats API serves archive summaries without requiring OpenSky', async () => {

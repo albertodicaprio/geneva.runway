@@ -256,3 +256,40 @@ test('wind compasses use true runway bearing and inward arrows for north, east a
         assert.ok(svg.children.some(node => node.attributes.class === 'compass-uncertain'));
     }
 });
+
+test('calm fair weather prefers 22, including variable winds, while adverse/unknown conditions do not', () => {
+    for (const direction of [30, 220, null]) {
+        const result = predictRunway(direction, 3.7, { fairWeather: true });
+        assert.equal(result.direction, '22');
+        assert.equal(result.calmConditions, true);
+        assert.equal(weather.runwayText(result), 'Likely runway 22 (calm conditions)');
+    }
+    for (const options of [{}, { fairWeather: false }, { fairWeather: true, windGusts: 10 }]) {
+        assert.equal(predictRunway(30, 3.7, options).direction, 'unknown');
+    }
+    assert.equal(predictRunway(null, 15, { fairWeather: true }).direction, 'unknown');
+    assert.equal(predictRunway(40, 5, { fairWeather: true }).direction, '04');
+
+});
+
+test('light-wind explanations distinguish gusts from adverse or missing fair weather', () => {
+    assert.match(predictRunway(342, 3.4, { fairWeather: true, windGusts: 7.6 }).reason, /gusts/i);
+    assert.match(predictRunway(260, 4, { fairWeather: false, windGusts: 21.6 }).reason, /fair conditions/i);
+    assert.equal(predictRunway(342, 3.4, { fairWeather: true, windGusts: 4.9 }).direction, '22');
+    assert.equal(predictRunway(342, 3.4, { fairWeather: true, windGusts: 5 }).direction, 'unknown');
+});
+
+test('Open-Meteo current and daily normalization also apply the calm fair-weather preference', async () => {
+    const current = { time: '2026-10-04T12:00', weather_code: 0, temperature_2m: 20,
+        precipitation: 0, wind_speed_10m: 2, wind_gusts_10m: 3, wind_direction_10m: 30 };
+    const daily = { time: ['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08'],
+        weather_code: [0, 45, 61, null, 0], temperature_2m_max: [20, 20, 20, 20, 20],
+        temperature_2m_min: [10, 10, 10, 10, 10], precipitation_probability_max: [0, 0, 50, 0, 0],
+        precipitation_sum: [0, 0, 1, 0, 0], wind_speed_10m_max: [2, 2, 2, 2, 2],
+        wind_gusts_10m_max: [3, 3, 3, 3, 10], wind_direction_10m_dominant: [30, 30, 30, 30, 30] };
+    const service = createWeatherService({ now: () => START, fetchImpl: async () => ({ ok: true, json: async () => ({ current, daily }) }) });
+    const result = await service.getForecast();
+    assert.equal(result.current.runway.calmConditions, true);
+    assert.equal(result.days[0].runway.calmConditions, true);
+    assert.ok(result.days.slice(1).every(day => day.runway.direction === 'unknown'));
+});

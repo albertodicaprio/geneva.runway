@@ -533,7 +533,7 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       tracking note into its tooltip, removing the visible aircraft name.
     - Remove the unused detail-line styling and update the rendering checks.
 
-32. [x] Add a separate METAR/TAF page under Weather.
+32. [x] Add a separate METAR/TAF page under Weather (retired in step 36).
     - Replace Refresh with METAR/TAF and provide an Open-Meteo link back.
     - Show Now (METAR) and every available TAF interval within five days, with
       observations, wind, visibility, clouds, temperature extrema and raw reports.
@@ -593,6 +593,17 @@ Docker deployment, cache fallback, traffic classification, and track retention.
     - Validation: all 95 tests pass, including arrow direction, independent wind/gust
       scaling, drawing limits and unavailable-wind cases. Chrome checks both views in both themes at 320/390/700/1040px,
       confirming diagrams, readouts and no overflow; inspected a rendered preview.
+
+36. [x] Simplify Weather to the Open-Meteo view.
+    - Remove the METAR/TAF page, scripts, service, API and unused styling;
+      redirect the retired page URL to Weather.
+    - Keep one brief forecast introduction; move runway, daily-wind, compass
+      and last-arrival explanations into the overview Help dropdown.
+    - Preserve calm-weather and gust-cutoff regression coverage in weather tests.
+    - Validation: all 86 remaining tests pass, including the retired-page redirect,
+      removed API, concise weather copy, Help content and Open-Meteo estimation.
+      Chrome checks Weather and expanded overview Help at 320/390/700/1040px
+      in both themes, with all six forecast cards and no overflow.
 
 Remaining maintenance:
 

@@ -187,6 +187,6 @@
     if (typeof module === 'object' && module.exports) module.exports = api;
     else {
         window.GenevaWeather = api;
-        if (document.body.dataset.weatherSource !== 'aviation') start({ document });
+        start({ document });
     }
 })();

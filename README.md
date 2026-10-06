@@ -30,14 +30,12 @@ across cards. Light winds have a visible minimum length; at 60 km/h the arrow
 spans nearly the whole circle. Drawing dimensions are capped at 60 km/h, while
 the readouts retain actual speeds. Missing gusts use the minimum arrow width.
 Calm, variable or missing winds have no fixed arrow. Daily readouts retain maximum wind/gusts and dominant direction.
-The same diagram appears on METAR/TAF cards.
 `/api/weather` fetches on demand, shares concurrent requests, and caches results
 in memory for 30 minutes (refreshing when the Geneva date changes). Failed
 refreshes serve the last forecast with an explicit stale flag and retry after
 one minute; without a cached forecast the API returns 503. The browser refreshes
 every 30 seconds while visible; weather provider requests still use the shared
-30-minute cache. The METAR/TAF button opens `/aviation-weather.html`, whose
-Open-Meteo button switches back. The Now card also shows
+30-minute cache. The Now card also shows
 the newest unexpired recent arrival's runway, with its estimated landing time
 in the badge tooltip, from the existing aircraft cache without triggering an OpenSky
 request. Unknown directions remain unknown, and tracking older than ten minutes
@@ -46,31 +44,6 @@ their last headings; they do not confirm touchdown or the active runway. Restart
 the server clears the weather cache. This uses no API key or new dependency and
 does not affect OpenSky polling. Weather data is attributed to Open-Meteo under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-
-The METAR/TAF Weather page shows `Now (METAR)` with observed temperature,
-dew point, pressure, wind/gusts/directional variation, visibility, clouds and
-the raw airport report. All available TAF periods within five days are shown
-with a `(TAF)` suffix and Geneva-local start/end times, without trimming odd
-card counts. Geneva TAFs normally cover 30 hours, so this page does not provide
-a five-day forecast. Cards distinguish prevailing, becoming, temporary and
-30/40% probability conditions, and include forecast temperature extrema when
-reported. Temporary/probability groups inherit unchanged prevailing elements;
-becoming groups show a transition window with an unknown runway. Raw TAF is
-available above the cards. Neither product confirms actual runway use.
-
-`/api/aviation-weather` fetches LSGG JSON from the
-[NOAA Aviation Weather Center](https://aviationweather.gov/data/api/) on the
-server, with independent shared ten-minute METAR and TAF caches, one-minute
-retry cooldowns, and stale fallback. No API key or dependency is needed. It can
-serve one product while the other is unavailable. METAR freshness uses its
-observation time, with reports older than 45 minutes marked stale; expired TAF
-periods are omitted. Stale products show unknown runway estimates. Aviation
-winds are converted from knots to km/h. Calm runway 22 estimates require CAVOK
-or good visibility and known clouds without significant weather, low ceilings
-or thunderstorm clouds; fog, showers and unknown conditions remain uncertain.
-The same calm preference applies to METAR and TAF, including light variable
-winds, and last-arrival evidence remains separate. Cache reads do not trigger
-OpenSky requests. [Research and source references](docs/research/aviation-weather-lsgg.md).
 
 The Node server uses `lib/aircraft-service.js` to own the saved snapshot,
 refresh schedule, and stale fallback. `lib/opensky.js` fetches OpenSky data,

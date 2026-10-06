@@ -97,14 +97,7 @@ footer { color: #c7dae8; }
 [data-theme="night"] :is(.compass-wind, .compass-legend) { color: #f2a56f; }
 [data-theme="night"] .compass-wind-arrow { stroke: #142334; }
 [data-theme="night"] .compass-uncertain { stroke: #f2a56f; }
-.weather-refresh { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border: 1px solid #d4e1ea; border-radius: 8px; background: #fff; color: #123c64; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
-.weather-refresh:disabled { opacity: .6; cursor: wait; }
-.weather-refresh:focus-visible { outline: 2px solid #165f7a; outline-offset: 3px; }
 .weather-status-warning { color: #7b5606; background: #fff3d5; }
-.weather-period { margin: 12px 0; color: #47637f; font-size: .85rem; font-weight: 700; }
-.weather-raw { margin-top: 18px; color: #47637f; font-size: .8rem; }
-.weather-raw summary { cursor: pointer; font-weight: 700; }
-.weather-raw pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 @media (max-width: 900px) {
     .weather-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -337,11 +330,10 @@ footer a:hover { text-decoration: underline; }
 [data-theme="night"] :is(.weather-day, .arrival-card, .history-table-wrap, .stats-chart, .stats-date-picker, .stats-filter input) { background: var(--night-card); border-color: var(--night-border); }
 [data-theme="night"] :is(.history-table th, .history-table td, .aircraft-map) { border-color: var(--night-border); }
 [data-theme="night"] :is(.history-table thead, .stats-totals > div, .stats-filter, .hourly-options, .model-toggle, .stats-calendar-header button, .map-details button, .card-photo-wrap) { background: var(--night-inset); }
-[data-theme="night"] :is(.eyebrow, .last-updated, .arrival-count, .map-note, .weather-date, .weather-metrics dt, .weather-period, .weather-raw, .airline, .aircraft-model, .history-note, .loading, .no-aircraft, .metrics span, .photo-unavailable, .map-details-photo p, .stats-weekday, .stats-totals span, .hourly-toolbar .stats-filter span, .map-controls legend, .history-table thead) { color: var(--night-muted); }
+[data-theme="night"] :is(.eyebrow, .last-updated, .arrival-count, .map-note, .weather-date, .weather-metrics dt, .airline, .aircraft-model, .history-note, .loading, .no-aircraft, .metrics span, .photo-unavailable, .map-details-photo p, .stats-weekday, .stats-totals span, .hourly-toolbar .stats-filter span, .map-controls legend, .history-table thead) { color: var(--night-muted); }
 [data-theme="night"] :is(.route, .route span, .stats-month-title, .stats-calendar-header, .stats-calendar-header button, .stats-calendar button, .stats-range-label, .stats-totals strong, .stats-filter input, .model-toggle button, .stats-show-all, .hourly-table, .map-details button) { color: #e0eaf3; }
 [data-theme="night"] .weather-now { background: #1a3545; border-color: #78b9d0; }
 [data-theme="night"] :is(.weather-temperature, .weather-icon) { color: var(--night-accent); }
-[data-theme="night"] .weather-refresh { color: var(--night-accent); background: var(--night-inset); border-color: var(--night-border); }
 [data-theme="night"] :is(.data-status, .weather-runway, .approach-badge) { color: #b5f1cd; background: #214a39; }
 [data-theme="night"] .weather-last-arrival { color: #b9ddff; background: #203e5b; }
 [data-theme="night"] :is(.weather-status-warning, .approach-badge.low) { color: #ffe1a0; background: #554323; }
@@ -356,7 +348,7 @@ footer a:hover { text-decoration: underline; }
 [data-theme="night"] :is(.stats-calendar button[aria-pressed="true"], .model-toggle button[aria-pressed="true"]) { color: #f6fbff; background: #28647b; }
 [data-theme="night"] :is(.model-toggle button:hover, .model-toggle button:focus-visible) { background: #284b65; }
 [data-theme="night"] .stats-calendar button:disabled { color: #899cae; }
-[data-theme="night"] :is(.stats-filter input:focus-visible, .weather-refresh:focus-visible, .stats-calendar button:hover:not(:disabled), .stats-calendar button:focus-visible) { outline-color: var(--night-accent); }
+[data-theme="night"] :is(.stats-filter input:focus-visible, .stats-calendar button:hover:not(:disabled), .stats-calendar button:focus-visible) { outline-color: var(--night-accent); }
 [data-theme="night"] :is(.stats-show-all input, .map-controls input) { accent-color: #75c8e6; }
 [data-theme="night"] .stats-bars progress { accent-color: #75c8e6; }
 [data-theme="night"] .stats-bars progress::-webkit-progress-bar { background: var(--night-inset); }
