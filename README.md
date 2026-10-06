@@ -23,9 +23,11 @@ their Geneva-local report time. Cards are capped at six; an odd final card is
 omitted. Each weather card includes a north-up runway/wind compass with speed,
 gusts and wind-source direction below it. The runway uses the published rounded
 046°/226° true bearings from the [OurAirports runway dataset](https://github.com/davidmegginson/ourairports-data/blob/main/runways.csv)
-(LSGG, runway 04/22, checked 6 October 2026). The orange arrow flows inward from
-the direction the wind comes from; calm, variable or missing winds have no
-fixed arrow. Daily readouts retain maximum wind/gusts and dominant direction.
+(LSGG, runway 04/22, checked 6 October 2026). The orange arrows flow inward from
+the direction the wind comes from: solid shows sustained wind and a lighter
+outline shows gusts. Both grow longer and wider on the same scale across cards,
+with drawing size capped at 60 km/h; the readouts retain actual speeds. Calm,
+variable or missing winds have no fixed arrow. Daily readouts retain maximum wind/gusts and dominant direction.
 The same diagram appears on METAR/TAF cards.
 `/api/weather` fetches on demand, shares concurrent requests, and caches results
 in memory for 30 minutes (refreshing when the Geneva date changes). Failed

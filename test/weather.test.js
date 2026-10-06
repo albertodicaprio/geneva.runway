@@ -224,10 +224,29 @@ test('wind compasses use true runway bearing and inward arrows for north, east a
         assert.equal(runway.attributes.transform, 'rotate(46 80 80)');
         const arrow = svg.children.find(node => node.attributes.class === 'compass-wind');
         assert.equal(arrow.attributes.transform, `rotate(${direction} 80 80)`);
-        const line = arrow.children.find(node => node.tag === 'line');
-        assert.ok(Number(line.attributes.y2) > Number(line.attributes.y1), 'wind moves inward from its source');
+        const path = arrow.children.find(node => node.attributes.class === 'compass-wind-arrow');
+        const coordinates = path.attributes.d.match(/[\d.]+/g).map(Number);
+        assert.ok(coordinates[9] > coordinates[1], 'wind moves inward from its source');
         assert.match(svg.attributes['aria-label'], /12 km\/h; gusts 20 km\/h/);
     }
+    function dimensions(speed, gusts, arrowClass) {
+        const svg = render({ windDirection: 40, windSpeed: speed, windGusts: gusts });
+        const arrow = svg.children.find(node => node.attributes.class === 'compass-wind');
+        const path = arrow.children.find(node => node.attributes.class === arrowClass);
+        if (!path) return null;
+        const coordinates = path.attributes.d.match(/[\d.]+/g).map(Number);
+        return { length: coordinates[9] - coordinates[1], width: coordinates[6] - coordinates[10] };
+    }
+    const light = dimensions(3, 8, 'compass-wind-arrow');
+    const strong = dimensions(30, 45, 'compass-wind-arrow');
+    assert.ok(strong.length > light.length && strong.width > light.width);
+    const gust = dimensions(30, 45, 'compass-gust-arrow');
+    assert.ok(gust.length > strong.length && gust.width > strong.width);
+    assert.deepEqual(dimensions(30, 60, 'compass-wind-arrow'), strong, 'gusts do not resize the sustained wind');
+    assert.deepEqual(dimensions(100, 150, 'compass-wind-arrow'), dimensions(60, 60, 'compass-wind-arrow'));
+    assert.equal(dimensions(12, null, 'compass-gust-arrow'), null);
+    assert.equal(dimensions(0, 20, 'compass-wind-arrow'), null);
+    assert.ok(dimensions(0, 20, 'compass-gust-arrow').length > 0);
     for (const extra of [{ windSpeed: 0 }, { variableWind: true }, { windDirection: null },
         { windDirection: -1 }, { windDirection: 361 }, { windSpeed: null }]) {
         const svg = render({ windDirection: 40, windSpeed: 12, windGusts: null, ...extra });

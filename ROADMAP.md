@@ -582,10 +582,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       046°/226° true bearings, and an inward wind arrow from the reported source.
     - Replace wind rows with speed, gusts and direction readouts below the diagram;
       retain daily maximum/dominant labels and explicit calm/variable/missing states.
+    - Scale arrow length and width with strength: solid sustained wind and a
+      lighter outlined gust arrow, using a shared 60 km/h drawing cap and a legend.
+      Numeric readouts retain exact values above the cap.
     - Share rendering between Open-Meteo Now/daily cards and METAR/TAF cards;
       support both themes and narrow cards without new dependencies.
-    - Validation: all 95 tests pass, including arrow direction and unavailable-wind
-      cases. Chrome checks both views in both themes at 320/390/700/1040px,
+    - Validation: all 95 tests pass, including arrow direction, independent wind/gust
+      scaling, drawing limits and unavailable-wind cases. Chrome checks both views in both themes at 320/390/700/1040px,
       confirming diagrams, readouts and no overflow; inspected a rendered preview.
 
 Remaining maintenance:
