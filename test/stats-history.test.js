@@ -82,7 +82,7 @@ test('text filters select flights across chart fields and recalculate all rankin
     const filtered = summarizeFlights(flights, 2, { landing: ' a320 ', general: 'london', takeoffs: 'LONDON' });
     assert.equal(filtered.landing.total, 3);
     assert.deepEqual(filtered.landing.airlines.items, [{ name: 'Swiss', count: 2 }, { name: 'easyJet', count: 1 }]);
-    assert.deepEqual(filtered.landing.origins.items, [{ name: 'London Heathrow', count: 2 }, { name: 'Paris', count: 1 }]);
+    assert.deepEqual(filtered.landing.origins.items, [{ name: 'LHR (London Heathrow)', count: 2 }, { name: 'CDG (Paris)', count: 1 }]);
     assert.equal(filtered.landing.registrations.known, 3);
     assert.equal(filtered.general.total, 1);
     assert.equal(filtered.takeoffs.total, 1);
@@ -261,8 +261,8 @@ test('landing, general, and takeoff stats have separate totals, rankings, and co
     assert.deepEqual(summary.landing.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
     assert.deepEqual(summary.general.airlines, { known: 0, items: [] });
     assert.deepEqual(summary.takeoffs.airlines, { known: 1, items: [{ name: 'Swiss', count: 1 }] });
-    assert.deepEqual(summary.landing.origins.items, [{ name: 'Heathrow Airport', count: 1 }]);
-    assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'Geneva Airport', count: 1 }]);
+    assert.deepEqual(summary.landing.origins.items, [{ name: 'LHR (Heathrow)', count: 1 }]);
+    assert.deepEqual(summary.takeoffs.origins.items, [{ name: 'GVA (Geneva)', count: 1 }]);
     assert.deepEqual(summary.landing.registrations.items, [{ name: 'HB-ARR', count: 1 }]);
     assert.deepEqual(summary.takeoffs.registrations.items, [{ name: 'HB-DEP', count: 1 }]);
     assert.equal(summary.general.models.known, 0);
@@ -275,7 +275,7 @@ test('airport charts group by code and show full names when any flight provides 
         { category: 'arrival', origin: { iata: 'CDG' } }
     ], 7);
     assert.deepEqual(summary.landing.origins, { known: 3, items: [
-        { name: 'Heathrow Airport', count: 2 }, { name: 'CDG', count: 1 }
+        { name: 'LHR (Heathrow)', count: 2 }, { name: 'CDG', count: 1 }
     ] });
 });
 
@@ -347,11 +347,11 @@ test('Stats page switches among independent landing, general, and takeoff charts
     assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Overflight Air/);
     assert.match(elements.landingCharts.innerHTML, /Registrations/);
     assert.match(elements.landingCharts.innerHTML, /HB-LND/);
-    assert.match(elements.landingCharts.innerHTML, /Heathrow Airport/);
+    assert.match(elements.landingCharts.innerHTML, /LHR \(Heathrow\)/);
     assert.doesNotMatch(elements.landingCharts.innerHTML, /Destination airports/);
     assert.match(elements.takeoffsCharts.innerHTML, /Registrations/);
     assert.match(elements.takeoffsCharts.innerHTML, /HB-DEP/);
-    assert.match(elements.takeoffsCharts.innerHTML, /Paris Charles de Gaulle Airport/);
+    assert.match(elements.takeoffsCharts.innerHTML, /CDG \(Paris Charles de Gaulle\)/);
     assert.doesNotMatch(elements.takeoffsCharts.innerHTML, /Origin airports/);
     assert.match(elements.generalCharts.innerHTML, /Origin airports/);
     assert.match(elements.generalCharts.innerHTML, /Destination airports/);
