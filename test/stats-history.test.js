@@ -33,6 +33,42 @@ function statsFetch(summary, requested = []) {
     };
 }
 
+test('other traffic ranks directional routes and filters registrations', async () => {
+    const flight = (origin, destination, registration = 'HB-OTHER') => ({
+        category: 'other', registration, origin, destination
+    });
+    const flights = [
+        flight({ iata: 'lhr' }, { iata: 'cdg' }),
+        flight({ iata: 'LHR' }, { iata: 'CDG' }),
+        flight({ iata: 'CDG' }, { iata: 'LHR' }, 'HB-REVERSE'),
+        flight({ icao: 'LSZH' }, { name: 'Small airport' }),
+        flight({ iata: 'LHR' }, null),
+        { category: 'arrival', origin: { iata: 'LHR' }, destination: { iata: 'CDG' } }
+    ];
+    const summary = summarizeFlights(flights, 2);
+    assert.deepEqual(summary.general.routes, { known: 4, items: [
+        { name: 'LHR → CDG', count: 2 },
+        { name: 'CDG → LHR', count: 1 },
+        { name: 'LSZH → Small airport', count: 1 }
+    ] });
+    const filtered = summarizeFlights(flights, 2, { general: 'hb-reverse' });
+    assert.equal(filtered.general.total, 1);
+    assert.deepEqual(filtered.general.routes.items, [{ name: 'CDG → LHR', count: 1 }]);
+    const { elements, document } = statsDocument();
+    const many = Array.from({ length: 10 }, (_, index) => flight({ iata: `AAA${index}` }, { iata: 'CDG' }));
+    const app = GenevaStats.create({ document, fetch: statsFetch(summarizeFlights(many, 2)) });
+    await app.start();
+    await app.load();
+    assert.match(elements.generalCharts.innerHTML, /<h2>Registrations<\/h2>/);
+    assert.match(elements.generalCharts.innerHTML, /HB-OTHER/);
+    const routes = elements.generalCharts.innerHTML.split('<h2>Busiest routes</h2>')[1].split('</section>')[0];
+    assert.equal((routes.match(/<li/g) || []).length, 10);
+    assert.equal((routes.match(/data-extra hidden/g) || []).length, 2);
+    assert.match(routes, /Show all 10 busiest routes/);
+    assert.match(elements.generalSummary.innerHTML, /airport, registration, or aircraft model/);
+    assert.deepEqual(summarizeFlights([], 1).general.routes, { known: 0, items: [] });
+});
+
 test('text filters select flights across chart fields and recalculate all rankings', () => {
     const flights = [
         { category: 'arrival', airline: 'Swiss', aircraftType: 'A320', model: 'Airbus', registration: 'HB-ONE', origin: { iata: 'LHR', name: 'London Heathrow' } },
