@@ -649,6 +649,16 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Tagged browser-test visits are removed after validation. Frontend and
       aircraft API still return HTTP 200; aircraft polling code is unchanged.
 
+39. [x] Capture analytics on dev addresses as well as public domains.
+    - Remove the optional `data-domains` filter from all four tracker tags so
+      the same integration works on localhost, LAN and production addresses.
+      Retain Do Not Track and query/fragment exclusion; update the docs.
+    - Validation: rebuilt the app and confirmed browser page views from all
+      four pages via `127.0.0.1`, plus `localhost` and the server LAN IP. Those
+      six verification visits are retained in Umami for dashboard inspection.
+      Do Not Track and failed tracker requests still produce no collection
+      while the pages render normally.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

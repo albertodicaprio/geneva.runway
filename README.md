@@ -303,9 +303,11 @@ configuration, not a secret, and appears in the tracker tag in each of the four
 HTML files. If moving to a new Umami database, register the website again and
 update these four `data-website-id` attributes with the new ID.
 
-Tracking is limited to `gva-runway.ahpc.ch` and `gva-runway.duckdns.org` using
-`data-domains`; both domains use the same website entry. Localhost and LAN
-testing do not count as production visits. The tracker respects Do Not Track
+Tracking runs on whichever hostname serves the app, including localhost, LAN
+addresses and both public domains; there is no `data-domains` restriction. All
+visits go to the configured website entry in that deployment's Umami database.
+Dev and production hosts can use separate Umami databases; configure the
+appropriate website ID in each deployment. The tracker respects Do Not Track
 and excludes URL query strings and fragments. It records page views, visits,
 referrers and page usage; no custom interaction events, user IDs or performance
 tracking are configured. It does not affect aircraft polling or OpenSky's

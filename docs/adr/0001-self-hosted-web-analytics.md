@@ -20,6 +20,8 @@ step's scope.
 After validating the infrastructure, serve the tracker and collection endpoint
 through the website's existing Caddy origin. Publish only `GET`/`HEAD /script.js`
 and `POST /api/send` to Umami; dashboard and administrative routes stay on the
-LAN port. One website entry covers both public domains, while local development
-is excluded from automatic tracking. This enables public collection without
-making the dashboard public or expanding the app's browser security policy.
+LAN port. One website entry covers both public domains and local development
+addresses, with no tracker domain restriction so dev traffic can be verified
+in Umami before deployment to the target host. This enables public collection
+without making the dashboard public or expanding the app's browser security
+policy.
