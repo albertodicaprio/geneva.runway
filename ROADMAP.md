@@ -605,6 +605,32 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Chrome checks Weather and expanded overview Help at 320/390/700/1040px
       in both themes, with all six forecast cards and no overflow.
 
+37. [x] Set up self-hosted Umami infrastructure before website tracking.
+    - Add Umami and PostgreSQL to normal Docker Compose startup, using a fixed
+      Umami release and PostgreSQL major version, database readiness and Umami
+      health checks.
+    - Publish Umami on a configurable server LAN address, port 3001 by default;
+      leave Caddy routing and website tracking unchanged in this step.
+    - Keep PostgreSQL inside Docker with no published port, and persist its data
+      in a dedicated named volume. Do not add backups or backup instructions.
+    - Configure analytics secrets through ignored local environment settings;
+      document initial login and changing the default administrator password.
+    - Keep app/Caddy startup independent of analytics availability. Document
+      startup, dashboard access and validation; commit the completed step.
+    - Validate Compose configuration, Umami health/login, database persistence
+      across container recreation, and existing frontend/API access through
+      local Caddy. Confirm analytics adds no OpenSky requests.
+    - After Umami is checked, plan website integration for visits, page views,
+      referrers and page usage. Public collection routing is a later decision.
+    - Design: [self-hosted web analytics](docs/adr/0001-self-hosted-web-analytics.md).
+    - Validation: all 87 tests pass; `npm start` serves the frontend. Normal
+      Compose startup runs all four services, with Umami/database healthy and
+      local Caddy serving `/` and `/api/aircraft` with HTTP 200. Administrator
+      login and a test page view succeed; the test website and event survive
+      recreation of both analytics containers, then are removed. Verified LAN
+      binding, database isolation, independent app startup and no configured
+      secrets in the aircraft JSON. App polling and upstream code are unchanged.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

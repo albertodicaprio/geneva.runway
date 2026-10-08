@@ -13,6 +13,49 @@ services:
       - aircraft_data:/app/data
     restart: unless-stopped
 
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.0
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:?Set UMAMI_DB_PASSWORD to a random hex string in .env}@umami-db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:?Set UMAMI_APP_SECRET in .env}
+      TWO_FACTOR_ENCRYPTION_KEY: ${UMAMI_TWO_FACTOR_ENCRYPTION_KEY:?Set UMAMI_TWO_FACTOR_ENCRYPTION_KEY to 64 hex characters in .env}
+      DISABLE_TELEMETRY: "1"
+      ENABLE_TEST_CONSOLE: "1"
+    ports:
+      - "${UMAMI_BIND_ADDRESS:?Set UMAMI_BIND_ADDRESS to the server LAN IPv4 address in .env}:${UMAMI_PORT:-3001}:3000"
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    networks:
+      - default
+      - analytics
+    init: true
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:3000/api/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    restart: unless-stopped
+
+  umami-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:?Set UMAMI_DB_PASSWORD to a random hex string in .env}
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    networks:
+      - analytics
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 10
+    restart: unless-stopped
+
   caddy:
     build:
       context: .
@@ -34,3 +77,8 @@ volumes:
   aircraft_data:
   caddy_data:
   caddy_config:
+  umami_db_data:
+
+networks:
+  analytics:
+    internal: true

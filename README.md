@@ -111,6 +111,14 @@ OPENSKY_NETWORK_CLIENT_SECRET=your-client-secret
 
 # How to expose the site via Caddy. Use both public domains in production.
 CADDY_SITE_ADDRESS=http://:80
+
+# Umami dashboard: the Docker host's LAN IPv4 address (not a client's address).
+UMAMI_BIND_ADDRESS=192.168.0.184
+UMAMI_PORT=3001
+# Generate three different values with: openssl rand -hex 32
+UMAMI_DB_PASSWORD=replace-with-first-generated-hex-string
+UMAMI_APP_SECRET=replace-with-second-generated-hex-string
+UMAMI_TWO_FACTOR_ENCRYPTION_KEY=replace-with-third-generated-hex-string
 ```
 
 Build and start the app:
@@ -119,10 +127,14 @@ Build and start the app:
 docker compose up --build -d
 ```
 
-Open `https://gva-runway.duckdns.org` or `https://gva-runway.ahpc.ch`. Caddy is the only published service:
+Open `https://gva-runway.duckdns.org` or `https://gva-runway.ahpc.ch`. Caddy publishes the website:
 it redirects HTTP to HTTPS, obtains and renews the Let's Encrypt certificate,
 and proxies requests to the Node app over Docker's private network. The app's
 port 3000 is not reachable from the host network.
+
+Umami also publishes a dashboard on the configured LAN address and port; see
+the setup instructions below. All four services start with the normal Compose
+command. The app and Caddy do not depend on the analytics services.
 
 Both public DNS records and port forwarding must be in place before the first
 startup so Let's Encrypt can validate each domain. Keep the named Caddy volumes;
@@ -204,6 +216,79 @@ Caddy access logs are written to its container stdout; view them with:
 ```sh
 docker compose logs -f caddy
 ```
+
+### Umami analytics: LAN dashboard
+
+Compose runs Umami `3.4.0` and PostgreSQL `15-alpine` alongside the app and
+Caddy. The Umami release is fixed; PostgreSQL stays on major version 15 while
+allowing patch updates when the image is pulled. PostgreSQL is on an internal
+analytics network with no published host port. Only Umami shares that network
+with it. Umami waits for database readiness and applies its schema migrations
+automatically on startup. Caddy has no Umami route.
+
+Set `UMAMI_BIND_ADDRESS` to the Docker host's LAN IPv4 address and reserve that
+address in your router's DHCP settings so it remains stable. The example above
+uses `192.168.0.184`; use the appropriate address for your host. Set `UMAMI_PORT`
+if port 3001 is occupied. The dashboard listens on that specific address, so
+`localhost:3001` is not the dashboard URL. Keep this port available only to your
+LAN; do not forward it on the router. The dashboard uses HTTP in this step.
+
+Generate a separate value for each of the three analytics secrets:
+
+```sh
+openssl rand -hex 32
+```
+
+Copy the generated values into the ignored `.env` file. Hexadecimal database
+passwords work directly in the database connection URL. The encryption key
+must contain exactly 64 hexadecimal characters and prepares Umami for optional
+two-factor authentication. Keep these values stable across container rebuilds
+and recreation. Changing `UMAMI_DB_PASSWORD` in `.env` does not change the
+password of an already initialized PostgreSQL database.
+
+Check configuration and start the services:
+
+```sh
+docker compose config --quiet
+docker compose up --build -d --wait --wait-timeout 180
+docker compose ps
+```
+
+Avoid sharing unredacted `docker compose config` output: it contains the
+resolved secrets. Open `http://<server-LAN-IP>:3001` from a LAN device, log in
+with the initial **admin / umami** credentials, and immediately change the
+administrator password in **Settings → Profile**. Verify that the changed
+password works before proceeding to website integration.
+
+The PostgreSQL data is stored in the dedicated `umami_db_data` named volume
+(prefixed with the Compose project name). It survives container recreation
+and `docker compose down`. `docker compose down -v` deletes this volume too.
+No backup tooling is configured.
+
+For a manual check before adding a tracker to the website:
+
+1. Confirm both analytics services are healthy with `docker compose ps`.
+2. Open `http://<server-LAN-IP>:3001/api/heartbeat`; expect HTTP 200.
+3. In Umami, add a temporary test website and copy its website ID from the
+   generated tracking code's `data-website-id` attribute. Open
+   `http://<server-LAN-IP>:3001/console/<website-id>` while logged in as
+   administrator. Send a test page view and confirm it appears in Umami.
+   The test console is enabled for this initial check; it requires admin access.
+4. Recreate the two analytics containers with
+   `docker compose up -d --force-recreate --wait --wait-timeout 180 umami-db umami`.
+   Confirm the login, test website and page view remain present.
+5. With local `CADDY_SITE_ADDRESS=http://:80`, check `http://127.0.0.1/` and
+   `http://127.0.0.1/api/aircraft` still serve the app and JSON respectively.
+
+This step adds no tracker to the app and does not change its polling or
+OpenSky refresh schedule. Public visitors cannot send analytics to a LAN-only
+Umami URL. Website tracking and its public collection endpoints will be
+configured after the Umami check, initially for visits, page views, referrers
+and page usage. Umami's own anonymous telemetry is disabled.
+
+Upstream references: [Docker configuration](https://github.com/umami-software/umami/blob/v3.4.0/docker-compose.yml),
+[environment settings](https://docs.umami.is/docs/environment-variables),
+and [initial login](https://docs.umami.is/docs/login).
 
 ## Run the unit tests
 
