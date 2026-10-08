@@ -45,12 +45,31 @@
 		}
 	}
 
-	reverse_proxy app:3000 {
-		transport http {
-			dial_timeout 5s
-			response_header_timeout 30s
-			read_timeout 30s
-			write_timeout 30s
+	# Publish only the browser tracker and collection endpoint. Umami's
+	# dashboard and administrative API stay on its dedicated LAN port.
+	@umami_script {
+		method GET HEAD
+		path /script.js
+	}
+	handle @umami_script {
+		reverse_proxy umami:3000
+	}
+	@umami_collect {
+		method POST
+		path /api/send
+	}
+	handle @umami_collect {
+		reverse_proxy umami:3000
+	}
+
+	handle {
+		reverse_proxy app:3000 {
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+				read_timeout 30s
+				write_timeout 30s
+			}
 		}
 	}
 }

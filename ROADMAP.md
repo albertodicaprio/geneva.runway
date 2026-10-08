@@ -631,6 +631,24 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       binding, database isolation, independent app startup and no configured
       secrets in the aircraft JSON. App polling and upstream code are unchanged.
 
+38. [x] Connect public website page views to the LAN Umami instance.
+    - Register one Geneva Runway website entry for both public domains and add
+      its deferred tracker to Overview, Arrivals, Stats and Weather.
+    - Proxy only `GET`/`HEAD /script.js` and `POST /api/send` through Caddy;
+      keep the dashboard and administrative API on the LAN port. Use the same
+      website origin without expanding the browser security policy.
+    - Limit automatic tracking to the two public domains, respect Do Not Track,
+      and omit URL query strings and fragments. Keep custom events, user IDs
+      and performance tracking outside this step.
+    - Validation: all 87 tests pass. Caddy validates and serves the tracker;
+      public dashboard/admin/heartbeat paths return 404. Headless Chrome,
+      mapping both public hostnames to local HTTP Caddy, confirms one collected
+      page view per page and successful collection from both domains. PostgreSQL
+      contains those events with query strings omitted. Localhost, Do Not Track
+      and failed tracker requests produce no events while pages still render.
+      Tagged browser-test visits are removed after validation. Frontend and
+      aircraft API still return HTTP 200; aircraft polling code is unchanged.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

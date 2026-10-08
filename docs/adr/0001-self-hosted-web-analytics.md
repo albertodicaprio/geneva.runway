@@ -16,3 +16,10 @@ Bind the dashboard to the server's configurable LAN address, using host port
 the app and Caddy do not depend on them. Store PostgreSQL data in a dedicated
 Docker named volume. Backup tooling and backup instructions are outside this
 step's scope.
+
+After validating the infrastructure, serve the tracker and collection endpoint
+through the website's existing Caddy origin. Publish only `GET`/`HEAD /script.js`
+and `POST /api/send` to Umami; dashboard and administrative routes stay on the
+LAN port. One website entry covers both public domains, while local development
+is excluded from automatic tracking. This enables public collection without
+making the dashboard public or expanding the app's browser security policy.

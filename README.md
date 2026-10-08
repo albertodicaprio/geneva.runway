@@ -224,7 +224,8 @@ Caddy. The Umami release is fixed; PostgreSQL stays on major version 15 while
 allowing patch updates when the image is pulled. PostgreSQL is on an internal
 analytics network with no published host port. Only Umami shares that network
 with it. Umami waits for database readiness and applies its schema migrations
-automatically on startup. Caddy has no Umami route.
+automatically on startup. Caddy exposes only the tracker script and page-view
+collection endpoint; dashboard access uses the dedicated LAN port.
 
 Set `UMAMI_BIND_ADDRESS` to the Docker host's LAN IPv4 address and reserve that
 address in your router's DHCP settings so it remains stable. The example above
@@ -280,15 +281,50 @@ For a manual check before adding a tracker to the website:
 5. With local `CADDY_SITE_ADDRESS=http://:80`, check `http://127.0.0.1/` and
    `http://127.0.0.1/api/aircraft` still serve the app and JSON respectively.
 
-This step adds no tracker to the app and does not change its polling or
-OpenSky refresh schedule. Public visitors cannot send analytics to a LAN-only
-Umami URL. Website tracking and its public collection endpoints will be
-configured after the Umami check, initially for visits, page views, referrers
-and page usage. Umami's own anonymous telemetry is disabled.
+Umami's own anonymous telemetry is disabled.
 
 Upstream references: [Docker configuration](https://github.com/umami-software/umami/blob/v3.4.0/docker-compose.yml),
 [environment settings](https://docs.umami.is/docs/environment-variables),
 and [initial login](https://docs.umami.is/docs/login).
+
+### Website analytics
+
+The Overview, Arrivals, Stats and Weather pages load Umami's deferred tracker
+from `/script.js`. Caddy forwards only `GET`/`HEAD /script.js` and
+`POST /api/send` to Umami. All other paths go to the app, so the Umami dashboard,
+login and administrative API are not exposed through the public website.
+Tracker requests use the website's own origin, including HTTPS in production,
+and work with the app's existing browser security policy. Caddy's existing
+request limits apply to analytics too.
+
+Register one website named **Geneva Runway**, with domain
+**gva-runway.ahpc.ch**, in the LAN Umami dashboard. Its website ID is public
+configuration, not a secret, and appears in the tracker tag in each of the four
+HTML files. If moving to a new Umami database, register the website again and
+update these four `data-website-id` attributes with the new ID.
+
+Tracking is limited to `gva-runway.ahpc.ch` and `gva-runway.duckdns.org` using
+`data-domains`; both domains use the same website entry. Localhost and LAN
+testing do not count as production visits. The tracker respects Do Not Track
+and excludes URL query strings and fragments. It records page views, visits,
+referrers and page usage; no custom interaction events, user IDs or performance
+tracking are configured. It does not affect aircraft polling or OpenSky's
+shared refresh schedule.
+
+Rebuild the app and reload Caddy after changing the integration:
+
+```sh
+docker compose up -d --build app
+docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+```
+
+Visit a public website page and check its browser Network tab for a successful
+`/script.js` load and `POST /api/send`, then check Umami for the visit. A blocker
+or Do Not Track can prevent collection. Umami being unavailable does not stop
+the app from loading; tracker requests fail independently.
+
+Reference: [Umami tracker configuration](https://docs.umami.is/docs/tracker-configuration).
 
 ## Run the unit tests
 
