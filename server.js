@@ -13,6 +13,15 @@ const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const websiteId = (process.env.UMAMI_WEBSITE_ID || '').trim();
+const validWebsiteId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(websiteId);
+const analyticsScript = validWebsiteId
+    ? `<script defer src="/script.js" data-website-id="${websiteId}" data-do-not-track="true" data-exclude-search="true" data-exclude-hash="true"></script>`
+    : '';
+
+if (websiteId && !validWebsiteId) {
+    console.warn('UMAMI_WEBSITE_ID must be a UUID; analytics is disabled.');
+}
 
 const CONTENT_TYPES = {
     '.css': 'text/css; charset=utf-8',
@@ -170,7 +179,10 @@ async function serveStatic(req, res, urlPathname) {
             return;
         }
 
-        res.end(contents);
+        const body = path.extname(filePath) === '.html'
+            ? contents.toString('utf8').replace('<!-- UMAMI_TRACKER -->', analyticsScript)
+            : contents;
+        res.end(body);
     } catch (error) {
         if (error.code === 'ENOENT' || error.code === 'EISDIR') {
             res.statusCode = 404;

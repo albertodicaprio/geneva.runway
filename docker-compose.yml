@@ -7,6 +7,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3000
       AIRCRAFT_CACHE_FILE: /app/data/aircraft-cache.json
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
     expose:
       - "3000"
     volumes:

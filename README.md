@@ -115,6 +115,9 @@ CADDY_SITE_ADDRESS=http://:80
 # Umami dashboard: the Docker host's LAN IPv4 address (not a client's address).
 UMAMI_BIND_ADDRESS=192.168.0.184
 UMAMI_PORT=3001
+# Optional: website UUID from this deployment's Umami dashboard.
+# Leave blank until the website entry has been created.
+UMAMI_WEBSITE_ID=
 # Generate three different values with: openssl rand -hex 32
 UMAMI_DB_PASSWORD=replace-with-first-generated-hex-string
 UMAMI_APP_SECRET=replace-with-second-generated-hex-string
@@ -299,9 +302,22 @@ request limits apply to analytics too.
 
 Register one website named **Geneva Runway**, with domain
 **gva-runway.ahpc.ch**, in the LAN Umami dashboard. Its website ID is public
-configuration, not a secret, and appears in the tracker tag in each of the four
-HTML files. If moving to a new Umami database, register the website again and
-update these four `data-website-id` attributes with the new ID.
+configuration, not a secret. Copy the ID from its tracking code into `.env`:
+
+```dotenv
+UMAMI_WEBSITE_ID=your-website-uuid
+```
+
+The Node server inserts the tracker tag into each page using this runtime
+setting. When it is blank, tracking is disabled; an invalid UUID disables
+tracking and logs a warning without preventing the app from starting. Only the
+website ID is inserted; analytics credentials remain on the server.
+
+On a fresh production database, create the website entry there and set its new
+ID in production's `.env`. Reusing the existing database preserves the ID.
+After changing the value, run `docker compose up -d app` to recreate the app
+with the new environment. No image rebuild or Caddy reload is needed for an
+ID change. For `npm start`, restart the Node process after editing `.env`.
 
 Tracking runs on whichever hostname serves the app, including localhost, LAN
 addresses and both public domains; there is no `data-domains` restriction. All

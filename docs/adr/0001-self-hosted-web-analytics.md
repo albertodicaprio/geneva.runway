@@ -25,3 +25,9 @@ addresses, with no tracker domain restriction so dev traffic can be verified
 in Umami before deployment to the target host. This enables public collection
 without making the dashboard public or expanding the app's browser security
 policy.
+
+Configure the website ID at runtime through `UMAMI_WEBSITE_ID` rather than
+committing an ID into the pages. Dev and production can point to their own
+website entries without changing or rebuilding the source; the server inserts
+the configured UUID into the tracker tag. Missing or invalid IDs disable
+tracking so analytics configuration cannot prevent the app from running.

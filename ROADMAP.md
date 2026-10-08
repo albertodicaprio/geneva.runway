@@ -659,6 +659,19 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Do Not Track and failed tracker requests still produce no collection
       while the pages render normally.
 
+40. [x] Configure the Umami website ID per deployment at runtime.
+    - Replace hardcoded HTML tracker tags with server-rendered tags using
+      `UMAMI_WEBSITE_ID` from the runtime environment. Keep the current dev ID
+      in ignored `.env`, and pass the setting explicitly through Compose.
+    - Disable analytics for a missing or invalid UUID while preserving page
+      rendering. Document production website registration and app recreation
+      after changing the ID, without an image rebuild or Caddy reload.
+    - Validation: all 90 tests pass, including per-deployment IDs on all four
+      pages, absent/invalid settings, injection rejection, HEAD responses and
+      no analytics credentials in HTML. Rebuilt the local deployment; browser
+      checks confirm collection still reaches Umami and Do Not Track and failed
+      tracker handling remain intact. Frontend and aircraft API return HTTP 200.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
