@@ -69,6 +69,10 @@ test('all pages provide direct navigation and arrivals includes history at the b
         assert.doesNotMatch(html, /href="\/history.html"/);
         assert.match(html, /href="\/stats.html"/);
         assert.match(html, /href="\/weather.html"/);
+        assert.match(html, /id="signIn"/);
+        assert.match(html, /id="signOut"/);
+        assert.match(html, /src="auth.js"/);
+        assert.match(html, /data-user-id=""/);
         assert.ok(html.includes(`href="${path}" aria-current="page"`));
         for (const sectionId of sectionIds) assert.ok(html.includes(`id="${sectionId}"`));
         if (path === '/arrivals.html') {

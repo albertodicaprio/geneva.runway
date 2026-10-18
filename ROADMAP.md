@@ -672,6 +672,24 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       checks confirm collection still reaches Umami and Do Not Track and failed
       tracker handling remain intact. Frontend and aircraft API return HTTP 200.
 
+41. [x] Add optional Google sign-in and account theme controls.
+    - Keep the dashboard public; replace the guest theme toggle with Sign in
+      with Google and show theme controls plus Sign out for signed-in users.
+    - Use Auto for guests and remember theme choices per account/browser.
+    - Add server-side Google OpenID Connect with state, nonce, PKCE, verified
+      ID tokens, expiring opaque sessions, and CSRF-protected sign-out.
+    - Document production/local callback URLs and add `.env.example` settings.
+      Sessions last seven days and clear on restart; Google tokens are discarded.
+    - Add Google's official authentication library and install locked
+      dependencies in the Docker image.
+    - Upgrade the application to Node.js 24 LTS in Docker, package engines,
+      and `.nvmrc`, retaining the current Google authentication library.
+    - Validation: 105 tests pass locally and in the Node 24.22.0 container
+      using isolated test cache paths. Docker builds without engine warnings;
+      homepage and aircraft JSON return HTTP 200 through local Caddy, and the
+      guest account controls render correctly at mobile width. Live Google
+      consent remains to be checked after credentials and callback registration.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

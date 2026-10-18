@@ -7,6 +7,7 @@
     <title>Arrivals · Geneva Air Traffic</title>
     <link rel="icon" href="plane_ico.ico" sizes="any">
     <script src="theme.js"></script>
+    <script defer src="auth.js"></script>
     <!-- UMAMI_TRACKER -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -17,9 +18,14 @@
             <p class="eyebrow">LSGG · GENEVA</p>
             <div class="header-title">
                 <h1>Arrivals</h1>
-                <button class="theme-toggle" id="nightModeToggle" type="button" hidden>
-                    <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
-                </button>
+                <div class="account-controls">
+                    <a class="theme-toggle" id="signIn" href="/auth/google" hidden>Sign in with Google</a>
+                    <button class="theme-toggle" id="nightModeToggle" type="button" hidden>
+                        <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
+                    </button>
+                    <button class="theme-toggle" id="signOut" type="button" hidden>Sign out</button>
+                    <p class="account-status" id="accountStatus" role="status"></p>
+                </div>
             </div>
             <div class="header-details">
                 <div class="data-status" id="dataStatus" aria-live="polite">Loading live data…</div>

@@ -344,22 +344,78 @@ the app from loading; tracker requests fail independently.
 
 Reference: [Umami tracker configuration](https://docs.umami.is/docs/tracker-configuration).
 
+## Optional Google sign-in
+
+The dashboard stays public. Signing in unlocks the Auto/Night/Day theme
+control beside Sign out on every page. Signed-out visitors always use Auto
+(Day 07:00–19:00, Night 19:00–07:00, Geneva time). Theme preferences are saved
+per Google account in the current browser; they do not sync between devices.
+Signing out restores Auto and preserves the account's preference for next time.
+
+Copy the settings from `.env.example` into your existing ignored `.env`:
+
+```dotenv
+APP_ORIGIN=https://gva-runway.ahpc.ch
+GOOGLE_OAUTH_CLIENT_ID=your-google-web-client-id
+GOOGLE_OAUTH_CLIENT_SECRET=your-google-web-client-secret
+```
+
+In your existing Google OAuth **Web application** client, add this exact
+**Authorized redirect URI**:
+
+```text
+https://gva-runway.ahpc.ch/auth/google/callback
+```
+
+The website origin alone is not the callback URI. If the Google consent screen
+is in Testing, add the Google accounts you want to use as test users. The app
+requests only OpenID identity, basic profile and email scopes. It uses Google's
+official `google-auth-library` to exchange authorization codes and verify ID
+tokens, with state, nonce and PKCE checks. No Google tokens or client secrets
+are sent to browser storage, saved to disk, or logged by the application.
+See [Google's OpenID Connect documentation](https://developers.google.com/identity/openid-connect/openid-connect).
+
+After deploying the updated image, restart/recreate `app` after changing these
+environment values. Compose already loads `.env` into the app. Do not copy
+`.env.example` over an existing `.env` containing OpenSky and Umami settings.
+Without all three Google settings, the dashboard works and the sign-in button
+explains that sign-in is not configured. `APP_ORIGIN` must match the address
+used in the browser; production session cookies require HTTPS.
+
+For `npm start` locally, set `APP_ORIGIN=http://127.0.0.1:3000` and register
+`http://127.0.0.1:3000/auth/google/callback` in Google. For local Docker Compose,
+keep `CADDY_SITE_ADDRESS=http://:80`, run both `app` and `caddy`, use
+`APP_ORIGIN=http://127.0.0.1`, and register
+`http://127.0.0.1/auth/google/callback`. Use separate local credentials if desired.
+Always use the matching browser address when testing sign-in.
+
+Sessions use random opaque IDs in HttpOnly, SameSite=Lax cookies (Secure on
+HTTPS). They expire after seven days and are kept in memory: restarting the
+app signs everyone out. This fits the current single-instance home deployment.
+Sign-out ends the local app session; it does not sign the user out of Google.
+
 ## Run the unit tests
 
 The tests use Node's built-in test runner and do not require OpenSky
-credentials or network access. With Node.js 20 or newer installed, run:
+credentials or network access. With Node.js 24 LTS installed (`nvm use` if you
+use nvm), run:
 
 ```sh
+npm ci
 npm test
 ```
 
-There are no npm package dependencies to install for the current test suite.
+Authentication tests substitute the Google client, so they need no real Google
+credentials or live sign-in. Completing the Google consent flow must also be
+checked manually after configuring your client.
 
 ## Local development without Docker
 
+The project targets Node.js 24 LTS (`.nvmrc`); Docker uses `node:24-alpine`.
 Use the same `.env` file described above, then run:
 
 ```sh
+npm ci
 npm start
 ```
 

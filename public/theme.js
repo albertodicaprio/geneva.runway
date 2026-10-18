@@ -1,5 +1,6 @@
 (() => {
-    const storageKey = 'geneva-night-mode';
+    let userId = document.documentElement.dataset.userId || '';
+    const storageKey = () => `geneva-night-mode:${userId}`;
     const modes = ['auto', 'night', 'day'];
     const genevaHour = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'Europe/Zurich', hour: 'numeric', hourCycle: 'h23'
@@ -8,8 +9,9 @@
     let toggle;
 
     function readPreference() {
+        if (!userId) return 'auto';
         try {
-            const saved = window.localStorage.getItem(storageKey);
+            const saved = window.localStorage.getItem(storageKey());
             return modes.includes(saved) ? saved : 'auto';
         } catch {
             return 'auto';
@@ -42,11 +44,12 @@
         toggle = document.getElementById('nightModeToggle');
         if (!toggle) return;
         applyTheme();
-        toggle.hidden = false;
+        toggle.hidden = !userId;
         toggle.addEventListener('click', () => {
+            if (!userId) return;
             preference = modes[(modes.indexOf(preference) + 1) % modes.length];
             try {
-                window.localStorage.setItem(storageKey, preference);
+                window.localStorage.setItem(storageKey(), preference);
             } catch {
                 // The toggle still works for this page when storage is blocked.
             }
@@ -59,9 +62,15 @@
     document.addEventListener('visibilitychange', applyTheme);
     window.addEventListener('pageshow', applyTheme);
     window.addEventListener('storage', event => {
-        if (event.key === storageKey || event.key === null) {
+        if (event.key === storageKey() || event.key === null) {
             preference = readPreference();
             applyTheme();
         }
+    });
+    window.addEventListener('authchange', () => {
+        userId = document.documentElement.dataset.userId || '';
+        preference = readPreference();
+        if (toggle) toggle.hidden = !userId;
+        applyTheme();
     });
 })();

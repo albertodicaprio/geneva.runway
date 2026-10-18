@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -6,7 +6,8 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
 
-COPY --chown=node:node package.json ./
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 COPY --chown=node:node server.js ./
 COPY --chown=node:node api ./api
 COPY --chown=node:node lib ./lib

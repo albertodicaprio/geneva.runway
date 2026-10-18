@@ -9,6 +9,8 @@ const aircraftHandler = require('./api/aircraft');
 const statsHandler = require('./api/stats');
 const weatherHandler = require('./api/weather');
 const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
+const { createAuth } = require('./lib/auth');
+const auth = createAuth();
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -179,8 +181,10 @@ async function serveStatic(req, res, urlPathname) {
             return;
         }
 
+        const user = path.extname(filePath) === '.html' ? auth.getUser(req) : null;
         const body = path.extname(filePath) === '.html'
             ? contents.toString('utf8').replace('<!-- UMAMI_TRACKER -->', analyticsScript)
+                .replace('<html lang="en">', `<html lang="en" data-user-id="${user ? encodeURIComponent(user.id).replace(/'/g, '%27') : ''}">`)
             : contents;
         res.end(body);
     } catch (error) {
@@ -203,7 +207,9 @@ const server = http.createServer(async (req, res) => {
 
     try {
         const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-        if (url.pathname === '/api/aircraft') {
+        if (await auth.handle(req, res, url)) {
+            return;
+        } else if (url.pathname === '/api/aircraft') {
             await handleApi(aircraftHandler, req, res);
         } else if (url.pathname === '/api/stats') {
             await handleApi(statsHandler, req, res);
