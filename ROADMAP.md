@@ -691,9 +691,9 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       consent remains to be checked after credentials and callback registration.
 
 42. [x] Log successful Google sign-ins.
-    - Write the user's profile name and a UTC timestamp as a single JSON
+    - Write the user's profile name, verified email and a UTC timestamp as a single JSON
       server log entry after identity verification and session creation.
-    - Exclude tokens, credentials, email addresses and session IDs; escape
+    - Exclude tokens, credentials and session IDs; escape
       name control characters so one sign-in always occupies one log line.
     - Cover successful, rejected and replayed callbacks in authentication tests.
 

@@ -85,16 +85,17 @@ test('Google login uses PKCE, verified identity, opaque expiring sessions, and C
     assert.equal(JSON.parse(f.logs[0]).name, '<Spotter>');
 });
 
-test('successful sign-in logs the full name and timestamp as one line without credentials', async t => {
+test('successful sign-in logs the full name, verified email and timestamp as one line without credentials', async t => {
     const f = await fixture(t);
     const flow = await f.begin();
     const name = 'Alice\nExample';
-    f.payload({ sub: 'google-user-123', name, given_name: 'Alice', email_verified: true,
+    const email = 'alice@example.com';
+    f.payload({ sub: 'google-user-123', name, given_name: 'Alice', email, email_verified: true,
         nonce: flow.url.searchParams.get('nonce') });
     await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
     assert.equal(f.logs.length, 1);
     const entry = JSON.parse(f.logs[0]);
-    assert.deepEqual(entry, { event: 'google_sign_in', timestamp: entry.timestamp, name });
+    assert.deepEqual(entry, { event: 'google_sign_in', timestamp: entry.timestamp, name, email });
     assert.equal(new Date(entry.timestamp).toISOString(), entry.timestamp);
     assert.doesNotMatch(f.logs[0], /\n|private-secret|private-google-token|one-time-code|google-user-123/);
 });

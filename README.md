@@ -395,9 +395,10 @@ app signs everyone out. This fits the current single-instance home deployment.
 Sign-out ends the local app session; it does not sign the user out of Google.
 
 Each successful sign-in writes one JSON log entry with `event: "google_sign_in"`,
-a UTC timestamp, and the user's Google profile name. View these entries with
+a UTC timestamp, the user's Google profile name, and their verified email
+address. View these entries with
 `docker compose logs -f app` (or the terminal running `npm start`). Tokens,
-credentials, email addresses and session IDs are excluded from these entries.
+credentials and session IDs are excluded from these entries.
 
 ## Run the unit tests
 
