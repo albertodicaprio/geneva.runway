@@ -754,6 +754,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       endpoint returns its expected 503 JSON with OpenSky credentials disabled.
       Live Google consent was not repeated for this UI change.
 
+47. [x] Simplify the guest account control.
+    - Remove the Login tooltip and clear the account status after successful
+      logout. Keep actionable authentication and settings errors visible.
+    - Validation: all 12 account UI tests pass; diff whitespace checks pass.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

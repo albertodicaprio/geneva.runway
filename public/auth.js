@@ -125,7 +125,6 @@
                 queuedTheme = document.documentElement.dataset.themePreference;
             }
             signIn.setAttribute('aria-disabled', String(!session.enabled));
-            signIn.title = session.enabled ? 'Sign in to choose your theme' : 'Google sign-in is not configured yet';
         } catch {
             status.textContent = 'Could not check sign-in. Please refresh to try again.';
         } finally {
@@ -152,7 +151,7 @@
             csrfToken = null;
             setUser(null);
             signIn.focus();
-            status.textContent = 'Signed out. Theme set to Auto.';
+            status.textContent = '';
             try { window.localStorage.setItem('geneva-auth-change', String(Date.now())); } catch { /* Storage is optional. */ }
         } catch {
             status.textContent = 'Could not sign out. Please refresh and try again.';
