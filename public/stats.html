@@ -19,11 +19,26 @@
             <div class="header-title">
                 <h1>Stats</h1>
                 <div class="account-controls">
-                    <a class="theme-toggle" id="signIn" href="/auth/google" hidden>Sign in with Google</a>
-                    <button class="theme-toggle" id="nightModeToggle" type="button" hidden>
-                        <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
-                    </button>
-                    <button class="theme-toggle" id="signOut" type="button" hidden>Sign out</button>
+                    <!-- User icon: Carbon Design System (see THIRD_PARTY_NOTICES.md). -->
+                    <a class="theme-toggle" id="signIn" href="/auth/google" hidden><svg class="account-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8,2c1.4,0,2.5,1.1,2.5,2.5S9.4,7,8,7S5.5,5.9,5.5,4.5S6.6,2,8,2 M8,1C6.1,1,4.5,2.6,4.5,4.5S6.1,8,8,8s3.5-1.6,3.5-3.5S9.9,1,8,1z"/><path d="M13,15h-1v-2.5c0-1.4-1.1-2.5-2.5-2.5h-3C5.1,10,4,11.1,4,12.5V15H3v-2.5C3,10.6,4.6,9,6.5,9h3c1.9,0,3.5,1.6,3.5,3.5V15z"/></svg><span>Login</span></a>
+                    <details class="account-menu" id="accountMenu" hidden>
+                        <summary class="theme-toggle" id="accountToggle"><svg class="account-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M8,2c1.4,0,2.5,1.1,2.5,2.5S9.4,7,8,7S5.5,5.9,5.5,4.5S6.6,2,8,2 M8,1C6.1,1,4.5,2.6,4.5,4.5S6.1,8,8,8s3.5-1.6,3.5-3.5S9.9,1,8,1z"/><path d="M13,15h-1v-2.5c0-1.4-1.1-2.5-2.5-2.5h-3C5.1,10,4,11.1,4,12.5V15H3v-2.5C3,10.6,4.6,9,6.5,9h3c1.9,0,3.5,1.6,3.5,3.5V15z"/></svg><span id="accountName">Account</span><span class="account-chevron" aria-hidden="true">⌄</span></summary>
+                        <div class="account-panel">
+                            <h2>Profile</h2>
+                            <dl class="account-profile">
+                                <div><dt>Name</dt><dd id="profileName">—</dd></div>
+                                <div><dt>Email</dt><dd id="profileEmail">—</dd></div>
+                            </dl>
+                            <h2>Settings</h2>
+                            <div class="account-setting">
+                                <span id="themeSettingLabel">Theme</span>
+                                <button class="theme-toggle" id="nightModeToggle" type="button" aria-describedby="themeSettingLabel" hidden>
+                                    <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
+                                </button>
+                            </div>
+                            <button class="account-logout" id="signOut" type="button" hidden>Log out</button>
+                        </div>
+                    </details>
                     <p class="account-status" id="accountStatus" role="status"></p>
                 </div>
             </div>

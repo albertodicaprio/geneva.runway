@@ -16,6 +16,34 @@
 .account-status { flex-basis: 100%; margin: 0; color: #c7dae8; font-size: .75rem; text-align: right; }
 .account-status:empty { display: none; }
 
+.account-menu { position: relative; min-width: 0; max-width: 100%; }
+.account-menu[hidden] { display: none; }
+.account-menu summary { list-style: none; }
+.account-menu summary::-webkit-details-marker { display: none; }
+.account-icon { flex: none; }
+#accountName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-chevron { flex: none; margin-left: 2px; transition: transform .15s; }
+.account-menu[open] .account-chevron { transform: rotate(180deg); }
+.account-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 30; width: min(320px, calc(100vw - 40px)); padding: 20px; border: 1px solid #cedce8; border-radius: 16px; color: #152237; background: #fff; box-shadow: 0 12px 36px #071e3640; text-align: left; }
+.account-panel h2 { margin: 0 0 14px; font-size: .75rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #54708d; }
+.account-profile { margin: 0 0 20px; padding-bottom: 20px; border-bottom: 1px solid #dbe5ee; }
+.account-profile > div + div { margin-top: 12px; }
+.account-profile dt { margin-bottom: 3px; color: #63758a; font-size: .78rem; }
+.account-profile dd { margin: 0; font-size: .9rem; overflow-wrap: anywhere; }
+.account-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: .9rem; }
+.account-panel .theme-toggle { color: #123c64; background: #edf4f9; border-color: #a9c1d5; }
+.account-panel .theme-toggle:hover { background: #dcebf5; }
+.account-panel :is(.theme-toggle, .account-logout):focus-visible { outline: 2px solid #287797; outline-offset: 3px; }
+.account-logout { width: 100%; margin-top: 20px; padding: 10px 12px; border: 1px solid #cedce8; border-radius: 9px; color: #123c64; background: transparent; font: inherit; font-size: .85rem; font-weight: 750; cursor: pointer; }
+.account-logout[hidden] { display: none; }
+.account-logout:hover { background: #edf4f9; }
+[data-theme="night"] .account-panel { color: #e0eaf3; background: var(--night-panel); border-color: var(--night-border); }
+[data-theme="night"] .account-profile { border-color: var(--night-border); }
+[data-theme="night"] :is(.account-panel h2, .account-profile dt) { color: var(--night-muted); }
+[data-theme="night"] .account-panel :is(.theme-toggle, .account-logout) { color: #e0eaf3; border-color: var(--night-border); background: var(--night-inset); }
+[data-theme="night"] .account-panel :is(.theme-toggle, .account-logout):hover { background: #284b65; }
+[data-theme="night"] .account-panel :is(.theme-toggle, .account-logout):focus-visible { outline-color: var(--night-accent); }
+
 * { box-sizing: border-box; }
 
 body { margin: 0; min-width: 320px; background: inherit; }
@@ -189,6 +217,7 @@ footer a:hover { text-decoration: underline; }
     .header-title { flex-wrap: wrap; gap: 12px; }
     .account-controls { flex: 1 0 100%; justify-content: flex-start; }
     .account-status { text-align: left; }
+    .account-panel { left: 0; right: auto; }
     .header-details { flex-direction: column; align-items: flex-start; gap: 11px; }
     .page-nav, .stats-nav { gap: 3px; padding: 4px; }
     .page-nav a { flex-direction: column; gap: 2px; min-height: 58px; font-size: .78rem; }

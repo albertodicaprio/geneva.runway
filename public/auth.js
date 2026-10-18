@@ -3,7 +3,30 @@
     const signOut = document.getElementById('signOut');
     const status = document.getElementById('accountStatus');
     const themeToggle = document.getElementById('nightModeToggle');
-    if (!signIn || !signOut || !status) return;
+    const accountMenu = document.getElementById('accountMenu');
+    const accountToggle = document.getElementById('accountToggle');
+    const accountName = document.getElementById('accountName');
+    const profileName = document.getElementById('profileName');
+    const profileEmail = document.getElementById('profileEmail');
+    if (!signIn || !signOut || !status || !accountMenu) return;
+    accountMenu.hidden = !document.documentElement.dataset.userId;
+
+    function closeMenu(restoreFocus = false) {
+        accountMenu.open = false;
+        if (restoreFocus) accountToggle.focus();
+    }
+    document.addEventListener('click', event => {
+        if (!accountMenu.contains(event.target)) closeMenu();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && accountMenu.open) {
+            event.preventDefault();
+            closeMenu(true);
+        }
+    });
+    document.addEventListener('focusin', event => {
+        if (!accountMenu.contains(event.target)) closeMenu();
+    });
     signIn.hidden = Boolean(document.documentElement.dataset.userId);
     signOut.hidden = !document.documentElement.dataset.userId;
     if (themeToggle) themeToggle.disabled = true;
@@ -37,6 +60,11 @@
         signIn.hidden = Boolean(user);
         signOut.hidden = !user;
         signOut.title = user ? `Signed in as ${user.name}` : '';
+        accountMenu.hidden = !user;
+        accountName.textContent = user?.name || 'Account';
+        profileName.textContent = user?.fullName || user?.name || '—';
+        profileEmail.textContent = user?.email || '—';
+        if (!user || changed) closeMenu();
         if (!user) queuedTheme = null;
         if (themeToggle) themeToggle.disabled = !user || !csrfToken;
         if (changed || themeChanged) window.dispatchEvent(new Event('authchange'));
@@ -123,6 +151,7 @@
             if (!response.ok) throw new Error('Sign-out failed');
             csrfToken = null;
             setUser(null);
+            signIn.focus();
             status.textContent = 'Signed out. Theme set to Auto.';
             try { window.localStorage.setItem('geneva-auth-change', String(Date.now())); } catch { /* Storage is optional. */ }
         } catch {

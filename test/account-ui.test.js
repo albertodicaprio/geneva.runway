@@ -6,9 +6,11 @@ const path = require('node:path');
 
 function browser({ userId = '', stored = {}, blockedStorage = false, savedTheme = '' } = {}) {
     const events = {};
-    const nodes = Object.fromEntries(['nightModeToggle', 'signIn', 'signOut', 'accountStatus'].map(id => [id, {
+    const nodes = Object.fromEntries(['nightModeToggle', 'signIn', 'signOut', 'accountStatus', 'accountMenu', 'accountToggle', 'accountName', 'profileName', 'profileEmail'].map(id => [id, {
         hidden: true, dataset: {}, handlers: {}, attributes: {}, textContent: '',
         addEventListener(name, fn) { this.handlers[name] = fn; },
+        contains(node) { return node === this || node === nodes.accountToggle || node === nodes.nightModeToggle || node === nodes.signOut; },
+        focus() { document.activeElement = this; },
         setAttribute(name, value) { this.attributes[name] = value; },
         getAttribute(name) { return this.attributes[name]; },
         querySelector(selector) { return this[selector] ||= {}; }
@@ -42,7 +44,7 @@ function browser({ userId = '', stored = {}, blockedStorage = false, savedTheme 
     function run(file) { vm.runInContext(fs.readFileSync(path.join(__dirname, '../public', file), 'utf8'), context); }
     run('theme.js');
     events['document:DOMContentLoaded']();
-    return { nodes, document, window, storage, requests, run, respond: fn => { responder = fn; }, session: value => {
+    return { nodes, document, window, storage, requests, run, events, respond: fn => { responder = fn; }, session: value => {
         session = { ...value, settings: value.settings ?? (value.user ? { theme: null } : null) };
     } };
 }
@@ -186,4 +188,50 @@ test('temporary session check failures preserve the initial account controls', a
         assert.equal(b.document.documentElement.dataset.userId, userId);
         assert.match(b.nodes.accountStatus.textContent, /Could not check sign-in/);
     }
+});
+
+test('account dropdown displays Google profile safely and closes on Escape, outside click and logout', async () => {
+    const b = browser();
+    b.session({ enabled: true, user: { id: 'user', name: '<Alice>', fullName: '<Alice> Example', email: 'alice@example.com' },
+        csrfToken: 'csrf', settings: { theme: 'auto' } });
+    b.run('auth.js');
+    await flush();
+    assert.equal(b.nodes.accountMenu.hidden, false);
+    assert.equal(b.nodes.accountName.textContent, '<Alice>');
+    assert.equal(b.nodes.profileName.textContent, '<Alice> Example');
+    assert.equal(b.nodes.profileEmail.textContent, 'alice@example.com');
+    b.nodes.accountMenu.open = true;
+    let prevented = false;
+    b.events['document:keydown']({ key: 'Escape', preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(b.nodes.accountMenu.open, false);
+    assert.equal(b.document.activeElement, b.nodes.accountToggle);
+    b.nodes.accountMenu.open = true;
+    b.events['document:click']({ target: b.nodes.nightModeToggle });
+    assert.equal(b.nodes.accountMenu.open, true);
+    b.events['document:click']({ target: {} });
+    assert.equal(b.nodes.accountMenu.open, false);
+    b.nodes.accountMenu.open = true;
+    b.events['document:focusin']({ target: {} });
+    assert.equal(b.nodes.accountMenu.open, false);
+    b.nodes.accountMenu.open = true;
+    await b.nodes.signOut.handlers.click();
+    assert.equal(b.nodes.accountMenu.hidden, true);
+    assert.equal(b.nodes.accountMenu.open, false);
+    assert.equal(b.nodes.profileEmail.textContent, '—');
+    assert.equal(b.document.activeElement, b.nodes.signIn);
+});
+
+test('session expiration closes the account dropdown and clears the profile', async () => {
+    const b = browser({ userId: 'user', savedTheme: 'night' });
+    b.run('auth.js');
+    await flush();
+    b.nodes.accountMenu.open = true;
+    b.session({ enabled: true, user: null, csrfToken: null });
+    b.window.dispatchEvent({ type: 'focus' });
+    await flush();
+    assert.equal(b.nodes.accountMenu.open, false);
+    assert.equal(b.nodes.accountMenu.hidden, true);
+    assert.equal(b.nodes.accountName.textContent, 'Account');
+    assert.equal(b.nodes.profileName.textContent, '—');
 });

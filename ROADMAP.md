@@ -738,6 +738,22 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       on sign-in and sign-out; a Do Not Track login emitted no additional
       events. Synthetic records use Auth Analytics Check / auth-check@example.invalid.
 
+46. [x] Move account details and settings into a profile dropdown.
+    - Show the Carbon user icon with Login for guests and the Google first
+      name for signed-in users on all four pages.
+    - Include Profile with Google's full name and verified email, Settings
+      with the existing saved theme control, and a Log out button.
+    - Close the dropdown on outside clicks, focus leaving, Escape, logout,
+      and session expiration; return keyboard focus after Escape and logout.
+    - Style the panel for Day/Night and mobile widths. Include Carbon icon
+      attribution and its Apache 2.0 license without adding dependencies.
+    - Validation: all 134 tests pass, including profile fields, dropdown
+      dismissal, logout and expired sessions. Headless Chrome checks pass at
+      mobile and desktop widths with mocked Google profile data. The local
+      app starts and serves the homepage and guest session JSON; the aircraft
+      endpoint returns its expected 503 JSON with OpenSky credentials disabled.
+      Live Google consent was not repeated for this UI change.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

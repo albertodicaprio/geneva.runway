@@ -80,7 +80,8 @@ test('Google login uses PKCE, verified identity, opaque expiring sessions, and C
     const response = await f.request('/api/auth/session', { headers: { Cookie: cookie } });
     assert.equal(response.headers.get('cache-control'), 'no-store');
     const session = await response.json();
-    assert.deepEqual(session.user, { id: 'google-user-123', name: '<Spotter>' });
+    assert.deepEqual(session.user, { id: 'google-user-123', name: '<Spotter>',
+        fullName: '<Spotter>', email: 'spotter@example.com' });
     assert.ok(session.csrfToken);
     const headers = { Cookie: cookie, Origin: f.env.APP_ORIGIN, 'X-CSRF-Token': session.csrfToken };
     assert.equal((await f.request('/auth/logout', { headers })).status, 405);
@@ -102,7 +103,10 @@ test('successful sign-in logs the full name, verified email and timestamp as one
     const email = 'alice@example.com';
     f.payload({ sub: 'google-user-123', name, given_name: 'Alice', email, email_verified: true,
         nonce: flow.url.searchParams.get('nonce') });
-    await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    const callback = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    const cookie = callback.headers.getSetCookie().find(value => value.startsWith('gva-session=')).split(';')[0];
+    const session = await (await f.request('/api/auth/session', { headers: { Cookie: cookie } })).json();
+    assert.deepEqual(session.user, { id: 'google-user-123', name: 'Alice', fullName: name, email });
     assert.equal(f.logs.length, 1);
     const entry = JSON.parse(f.logs[0]);
     assert.deepEqual(entry, { event: 'google_sign_in', timestamp: entry.timestamp, name, email });
