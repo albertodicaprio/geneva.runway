@@ -154,7 +154,21 @@ test('missing configuration keeps public access and reports disabled sign-in', a
 });
 
 test('production requires HTTPS and an explicit origin without paths or credentials', () => {
-    for (const APP_ORIGIN of ['http://gva-runway.ahpc.ch', 'https://gva-runway.ahpc.ch/path', 'https://user:secret@example.com', 'https://example.com/']) {
+    for (const APP_ORIGIN of ['http://gva-runway.ahpc.ch', 'https://gva-runway.ahpc.ch/path', 'https://user:secret@example.com', 'https://example.com/?query=1', 'https://example.com/#fragment']) {
         assert.throws(() => createAuth({ env: { APP_ORIGIN } }));
+    }
+});
+
+test('callback URLs in APP_ORIGIN explain that only the website origin belongs there', () => {
+    assert.throws(() => createAuth({ env: {
+        APP_ORIGIN: 'https://gva-runway.ahpc.ch/auth/google/callback'
+    } }), /website origin only.*https:\/\/gva-runway\.ahpc\.ch.*without \/auth\/google\/callback/);
+});
+
+test('website origins accept an optional trailing slash', () => {
+    for (const APP_ORIGIN of ['https://gva-runway.ahpc.ch/', 'http://127.0.0.1:3000/']) {
+        assert.doesNotThrow(() => createAuth({ env: {
+            APP_ORIGIN, GOOGLE_OAUTH_CLIENT_ID: 'test', GOOGLE_OAUTH_CLIENT_SECRET: 'test'
+        } }));
     }
 });

@@ -367,7 +367,9 @@ In your existing Google OAuth **Web application** client, add this exact
 https://gva-runway.ahpc.ch/auth/google/callback
 ```
 
-The website origin alone is not the callback URI. If the Google consent screen
+`APP_ORIGIN` is only the website address (`https://gva-runway.ahpc.ch`); do not
+include `/auth/google/callback` there. The full callback URI above belongs in
+Google's Authorized redirect URIs. If the Google consent screen
 is in Testing, add the Google accounts you want to use as test users. The app
 requests only OpenID identity, basic profile and email scopes. It uses Google's
 official `google-auth-library` to exchange authorization codes and verify ID

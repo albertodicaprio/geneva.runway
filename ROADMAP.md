@@ -697,6 +697,14 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       name control characters so one sign-in always occupies one log line.
     - Cover successful, rejected and replayed callbacks in authentication tests.
 
+43. [x] Clarify Google sign-in origin configuration.
+    - Explain that APP_ORIGIN takes the website address, while the callback
+      path belongs in Google's Authorized redirect URIs. A callback path in
+      APP_ORIGIN caused the reported startup failure.
+    - Accept an optional trailing slash and normalize it to the URL origin;
+      continue rejecting paths, queries, fragments and public HTTP origins.
+    - Add regression tests for both the configuration error and trailing slash.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
