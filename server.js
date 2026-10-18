@@ -10,13 +10,14 @@ const statsHandler = require('./api/stats');
 const weatherHandler = require('./api/weather');
 const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 const { createAuth } = require('./lib/auth');
-const auth = createAuth();
+const { createAuthAnalytics, validWebsiteId: isValidWebsiteId } = require('./lib/auth-analytics');
+const auth = createAuth({ analytics: createAuthAnalytics() });
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const websiteId = (process.env.UMAMI_WEBSITE_ID || '').trim();
-const validWebsiteId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(websiteId);
+const validWebsiteId = isValidWebsiteId(websiteId);
 const analyticsScript = validWebsiteId
     ? `<script defer src="/script.js" data-website-id="${websiteId}" data-do-not-track="true" data-exclude-search="true" data-exclude-hash="true"></script>`
     : '';

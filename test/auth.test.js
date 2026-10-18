@@ -9,7 +9,7 @@ const { createHash } = require('node:crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { createAuth } = require('../lib/auth');
 
-async function fixture(t, { enabled = true, secure = false, settings } = {}) {
+async function fixture(t, { enabled = true, secure = false, settings, analytics } = {}) {
     const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-account-test-'));
     t.after(() => fs.rm(directory, { recursive: true, force: true }));
     const settingsFile = path.join(directory, 'user-settings.json');
@@ -22,6 +22,7 @@ async function fixture(t, { enabled = true, secure = false, settings } = {}) {
     let exchange;
     let calls = 0;
     const logs = [];
+    const events = [];
     let failVerification = false;
     const client = new OAuth2Client({ clientId: env.GOOGLE_OAUTH_CLIENT_ID,
         clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET, redirectUri: `${env.APP_ORIGIN}/auth/google/callback` });
@@ -36,6 +37,7 @@ async function fixture(t, { enabled = true, secure = false, settings } = {}) {
         return { getPayload: () => payload };
     };
     const auth = createAuth({ env, client, clock: () => now, logger: { info: line => logs.push(line) },
+        analytics: analytics || { track(event, req, data) { events.push({ event, ...data }); } },
         settings: settings || createUserSettings({ filePath: settingsFile }) });
     const server = http.createServer(async (req, res) => {
         if (!await auth.handle(req, res, new URL(req.url, 'http://localhost'))) {
@@ -46,8 +48,8 @@ async function fixture(t, { enabled = true, secure = false, settings } = {}) {
     t.after(() => { server.closeAllConnections(); server.close(); });
     const base = `http://127.0.0.1:${server.address().port}`;
     const request = (path, options = {}) => fetch(base + path, { redirect: 'manual', ...options });
-    async function begin(returnTo = '/weather.html', email = 'spotter@example.com') {
-        const response = await request(`/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+    async function begin(returnTo = '/weather.html', email = 'spotter@example.com', headers = {}) {
+        const response = await request(`/auth/google?returnTo=${encodeURIComponent(returnTo)}`, { headers });
         assert.equal(response.status, 303);
         const url = new URL(response.headers.get('location'));
         const cookie = response.headers.getSetCookie()[0].split(';')[0];
@@ -55,7 +57,7 @@ async function fixture(t, { enabled = true, secure = false, settings } = {}) {
             nonce: url.searchParams.get('nonce') };
         return { url, cookie, callback: `/auth/google/callback?code=one-time-code&state=${url.searchParams.get('state')}` };
     }
-    return { env, request, begin, logs, settingsFile, advance: ms => { now += ms; }, payload: value => { payload = value; },
+    return { env, request, begin, logs, events, settingsFile, advance: ms => { now += ms; }, payload: value => { payload = value; },
         exchange: () => exchange, calls: () => calls, fail: () => { failVerification = true; } };
 }
 
@@ -239,4 +241,66 @@ test('unreadable settings keep the user signed in and failed saves report an err
     });
     assert.equal(response.status, 503);
     assert.match((await response.json()).error, /Could not save/);
+});
+
+test('successful auth events include the verified full name/email and skip polling and rejected logout', async t => {
+    const f = await fixture(t);
+    const flow = await f.begin();
+    f.payload({ sub: 'verified-user', name: 'Alice Example', given_name: 'Alice', email: 'Alice@Example.com',
+        email_verified: true, nonce: flow.url.searchParams.get('nonce') });
+    const callback = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    const cookie = callback.headers.getSetCookie().find(value => value.startsWith('gva-session=')).split(';')[0];
+    const session = await (await f.request('/api/auth/session', { headers: { Cookie: cookie } })).json();
+    assert.deepEqual(f.events.map(value => value.event), ['sign_in_started', 'sign_in_succeeded']);
+    assert.equal(f.events[0].name, undefined);
+    assert.deepEqual(f.events[1], { event: 'sign_in_succeeded', name: 'Alice Example', email: 'alice@example.com', doNotTrack: false });
+    assert.equal((await f.request('/auth/logout', { method: 'POST', headers: { Cookie: cookie } })).status, 403);
+    assert.equal(f.events.length, 2);
+    assert.equal((await f.request('/auth/logout', { method: 'POST', headers: { Cookie: cookie,
+        Origin: f.env.APP_ORIGIN, 'X-CSRF-Token': session.csrfToken } })).status, 200);
+    assert.deepEqual(f.events[2], { event: 'sign_out_succeeded', name: 'Alice Example', email: 'alice@example.com', doNotTrack: false });
+});
+
+test('cancelled, provider-failed and invalid-state callbacks report only general anonymous outcomes', async t => {
+    const f = await fixture(t);
+    for (const [error, event] of [['access_denied', 'sign_in_cancelled'], ['server_error', 'sign_in_failed']]) {
+        const flow = await f.begin();
+        await f.request(flow.callback + `&error=${error}&error_description=private-token`, { headers: { Cookie: flow.cookie } });
+        assert.equal(f.events.at(-1).event, event);
+        assert.equal(f.events.at(-1).reason, 'provider_error');
+    }
+    await f.request('/auth/google/callback?code=private-token&state=forged&name=Untrusted&email=untrusted@example.com');
+    assert.equal(f.events.at(-1).reason, 'invalid_state');
+    assert.doesNotMatch(JSON.stringify(f.events), /private-token|Untrusted|untrusted@example.com/);
+});
+
+test('invalid verified identity reports failure without including unverified identity fields', async t => {
+    const f = await fixture(t);
+    const flow = await f.begin();
+    f.payload({ sub: 'user', name: 'Unverified', email: 'unverified@example.com', email_verified: false,
+        nonce: flow.url.searchParams.get('nonce') });
+    await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    assert.deepEqual(f.events.at(-1), { event: 'sign_in_failed', reason: 'invalid_identity', doNotTrack: false });
+});
+
+test('the original login Do Not Track preference is retained for success and sign-out', async t => {
+    const f = await fixture(t);
+    const flow = await f.begin('/weather.html', 'alice@example.com', { DNT: '1' });
+    const callback = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    const cookie = callback.headers.getSetCookie().find(value => value.startsWith('gva-session=')).split(';')[0];
+    const session = await (await f.request('/api/auth/session', { headers: { Cookie: cookie } })).json();
+    await f.request('/auth/logout', { method: 'POST', headers: { Cookie: cookie,
+        Origin: f.env.APP_ORIGIN, 'X-CSRF-Token': session.csrfToken } });
+    assert.ok(f.events.every(value => value.doNotTrack === true));
+    assert.equal(f.events.length, 3);
+});
+
+test('throwing, rejecting and stalled analytics cannot block sign-in or sign-out', { timeout: 1500 }, async t => {
+    for (const track of [() => { throw new Error('collector failure'); },
+        () => Promise.reject(new Error('collector failure')), () => new Promise(() => {})]) {
+        const f = await fixture(t, { analytics: { track } });
+        const account = await login(f);
+        assert.ok(account.session.user);
+        assert.equal((await f.request('/auth/logout', { method: 'POST', headers: account.headers })).status, 200);
+    }
 });

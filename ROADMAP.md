@@ -721,6 +721,23 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       and failure handling. Docker builds successfully; local Caddy returns
       HTTP 200 for the homepage and aircraft API and 401 for guest updates.
 
+45. [x] Send auth endpoint events to Umami.
+    - Capture login starts, successful sign-ins, cancellations, categorized
+      failures and successful sign-outs. Attach verified full name and email
+      to success/sign-out events; other outcomes remain anonymous.
+    - Reuse the deployment website ID and send to the local Umami collector
+      through Docker's private network. Forward client IP only when explicitly
+      behind Caddy; retain browser User-Agent for normal Umami attribution.
+    - Honor Do Not Track across the login flow/session. Keep tokens, cookies,
+      callback parameters and raw errors out of payloads. Do not send events
+      for session polling or account settings requests.
+    - Bound asynchronous delivery with a timeout and concurrency cap, without
+      retries or authentication delays. Document event fields and configuration.
+    - Validation: all 132 tests pass and the app image builds. Local Umami
+      accepted six synthetic auth events, including verified sample name/email
+      on sign-in and sign-out; a Do Not Track login emitted no additional
+      events. Synthetic records use Auth Analytics Check / auth-check@example.invalid.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

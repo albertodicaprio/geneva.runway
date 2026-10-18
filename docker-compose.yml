@@ -9,6 +9,8 @@ services:
       AIRCRAFT_CACHE_FILE: /app/data/aircraft-cache.json
       USER_SETTINGS_FILE: /app/data/user-settings.json
       UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      UMAMI_AUTH_EVENTS_URL: http://umami:3000/api/send
+      UMAMI_AUTH_EVENTS_TRUST_PROXY: "true"
     expose:
       - "3000"
     volumes:

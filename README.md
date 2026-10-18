@@ -325,9 +325,9 @@ visits go to the configured website entry in that deployment's Umami database.
 Dev and production hosts can use separate Umami databases; configure the
 appropriate website ID in each deployment. The tracker respects Do Not Track
 and excludes URL query strings and fragments. It records page views, visits,
-referrers and page usage; no custom interaction events, user IDs or performance
-tracking are configured. It does not affect aircraft polling or OpenSky's
-shared refresh schedule.
+referrers and page usage. Authentication also sends the custom server events
+described below. No distinct user IDs or performance tracking are configured.
+Analytics does not affect aircraft polling or OpenSky's shared refresh schedule.
 
 Rebuild the app and reload Caddy after changing the integration:
 
@@ -343,6 +343,56 @@ or Do Not Track can prevent collection. Umami being unavailable does not stop
 the app from loading; tracker requests fail independently.
 
 Reference: [Umami tracker configuration](https://docs.umami.is/docs/tracker-configuration).
+
+### Authentication analytics
+
+The auth endpoints send custom events to the same Umami website entry:
+
+| Event | When | Event properties |
+| --- | --- | --- |
+| `sign_in_started` | A Google login flow is created | `provider` |
+| `sign_in_succeeded` | Google identity is verified and a session is created | `provider`, verified full `name`, `email` |
+| `sign_in_cancelled` | Google returns `access_denied` | `provider` |
+| `sign_in_failed` | Configuration, callback or identity validation fails | `provider`, general `reason` |
+| `sign_out_succeeded` | The authenticated sign-out request succeeds | `provider`, verified full `name`, `email` |
+
+All events use `provider: "google"`. Failure reasons are limited to
+`not_configured`, `busy`, `invalid_state`, `provider_error`, `invalid_callback`,
+`token_exchange`, `token_validation`, and `invalid_identity`. Names and emails
+are collected only after verification and remain properties of these auth
+events; they are not attached to every page view. Umami stores this personal
+data alongside the event, independently of the application's sign-in logs.
+Session polling and settings requests do not generate auth events.
+
+Compose sets `UMAMI_AUTH_EVENTS_URL=http://umami:3000/api/send`. Together with
+the existing `UMAMI_WEBSITE_ID`, this enables events without an API key or
+dashboard credentials. For `npm start`, set `UMAMI_AUTH_EVENTS_URL` to the
+reachable local Umami collection endpoint, for example
+`http://<server-LAN-IP>:3001/api/send`. A missing URL or missing/invalid website
+ID disables server events. Only `/api/send` endpoints without query strings or
+credentials are accepted. Caddy's public routes do not need changes.
+
+`UMAMI_AUTH_EVENTS_TRUST_PROXY=true` is set by Compose because Caddy is the
+controlled ingress and the app has no published port. It uses the forwarded
+client IP with the browser's User-Agent for Umami's usual visit attribution.
+Leave the flag unset/false for direct Node access. Auth paths are fixed in the
+payload: OAuth codes, state, tokens, cookies, CSRF values, callback query
+parameters and raw error messages are never sent to Umami.
+
+Server events honor `DNT: 1`. A login started with Do Not Track remains opted
+out for its callback and the resulting session's sign-out. Browser blockers
+do not suppress these direct server requests. Delivery runs independently of
+authentication, with a 1.5-second deadline, at most 32 concurrent sends and no
+retries. Failed or excess events are dropped; generic delivery warnings are
+limited to one per minute. Sign-in and sign-out continue if Umami is unavailable.
+
+In Umami, open the website's Events view to inspect counts and event properties,
+or use its live test console. After deploying, sign in and out once to verify
+the success events and their name/email properties. Use a separate development
+website entry if you do not want test activity included in production counts.
+
+The payload follows the installed
+[Umami 3.4.0 collection endpoint](https://github.com/umami-software/umami/blob/v3.4.0/src/app/api/send/route.ts).
 
 ## Optional Google sign-in
 
