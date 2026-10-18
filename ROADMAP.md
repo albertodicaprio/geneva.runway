@@ -759,6 +759,11 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       logout. Keep actionable authentication and settings errors visible.
     - Validation: all 12 account UI tests pass; diff whitespace checks pass.
 
+48. [x] Remove per-aircraft route lookup logs.
+    - Remove the Route lookup log loop and its unused formatting helpers.
+      Keep arrival filtering summaries and upstream failure warnings.
+    - Validation: all 15 aircraft service and general traffic tests pass.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
