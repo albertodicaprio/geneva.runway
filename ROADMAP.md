@@ -690,6 +690,13 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       guest account controls render correctly at mobile width. Live Google
       consent remains to be checked after credentials and callback registration.
 
+42. [x] Log successful Google sign-ins.
+    - Write the user's profile name and a UTC timestamp as a single JSON
+      server log entry after identity verification and session creation.
+    - Exclude tokens, credentials, email addresses and session IDs; escape
+      name control characters so one sign-in always occupies one log line.
+    - Cover successful, rejected and replayed callbacks in authentication tests.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

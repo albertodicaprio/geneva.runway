@@ -14,6 +14,7 @@ async function fixture(t, { enabled = true, secure = false } = {}) {
     let payload;
     let exchange;
     let calls = 0;
+    const logs = [];
     let failVerification = false;
     const client = new OAuth2Client({ clientId: env.GOOGLE_OAUTH_CLIENT_ID,
         clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET, redirectUri: `${env.APP_ORIGIN}/auth/google/callback` });
@@ -27,7 +28,7 @@ async function fixture(t, { enabled = true, secure = false } = {}) {
         if (failVerification) throw new Error('bad signature / audience / expiry');
         return { getPayload: () => payload };
     };
-    const auth = createAuth({ env, client, clock: () => now });
+    const auth = createAuth({ env, client, clock: () => now, logger: { info: line => logs.push(line) } });
     const server = http.createServer(async (req, res) => {
         if (!await auth.handle(req, res, new URL(req.url, 'http://localhost'))) {
             res.end(JSON.stringify(auth.getUser(req)));
@@ -46,7 +47,7 @@ async function fixture(t, { enabled = true, secure = false } = {}) {
             nonce: url.searchParams.get('nonce') };
         return { url, cookie, callback: `/auth/google/callback?code=one-time-code&state=${url.searchParams.get('state')}` };
     }
-    return { env, request, begin, advance: ms => { now += ms; }, payload: value => { payload = value; },
+    return { env, request, begin, logs, advance: ms => { now += ms; }, payload: value => { payload = value; },
         exchange: () => exchange, calls: () => calls, fail: () => { failVerification = true; } };
 }
 
@@ -80,6 +81,22 @@ test('Google login uses PKCE, verified identity, opaque expiring sessions, and C
     assert.match(logout.headers.getSetCookie()[0], /Max-Age=0/);
     assert.equal((await (await f.request('/api/auth/session', { headers: { Cookie: cookie } })).json()).user, null);
     assert.equal((await f.request(flow.callback, { headers: { Cookie: flow.cookie } })).headers.get('location'), '/?auth=expired');
+    assert.equal(f.logs.length, 1);
+    assert.equal(JSON.parse(f.logs[0]).name, '<Spotter>');
+});
+
+test('successful sign-in logs the full name and timestamp as one line without credentials', async t => {
+    const f = await fixture(t);
+    const flow = await f.begin();
+    const name = 'Alice\nExample';
+    f.payload({ sub: 'google-user-123', name, given_name: 'Alice', email_verified: true,
+        nonce: flow.url.searchParams.get('nonce') });
+    await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    assert.equal(f.logs.length, 1);
+    const entry = JSON.parse(f.logs[0]);
+    assert.deepEqual(entry, { event: 'google_sign_in', timestamp: entry.timestamp, name });
+    assert.equal(new Date(entry.timestamp).toISOString(), entry.timestamp);
+    assert.doesNotMatch(f.logs[0], /\n|private-secret|private-google-token|one-time-code|google-user-123/);
 });
 
 test('callbacks require matching state and browser cookie, and login attempts expire', async t => {
@@ -91,6 +108,7 @@ test('callbacks require matching state and browser cookie, and login attempts ex
     f.advance(10 * 60 * 1000);
     assert.equal((await f.request(flow.callback, { headers: { Cookie: flow.cookie } })).headers.get('location'), '/?auth=expired');
     assert.equal(f.calls(), 0);
+    assert.equal(f.logs.length, 0);
 });
 
 test('return destinations are restricted and cancellation is recoverable', async t => {
@@ -112,6 +130,7 @@ for (const failure of ['verification', 'nonce', 'email', 'subject']) {
         const response = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
         assert.equal(response.headers.get('location'), '/weather.html?auth=failed');
         assert.ok(!response.headers.getSetCookie().some(value => value.startsWith('gva-session=')));
+        assert.equal(f.logs.length, 0);
     });
 }
 
