@@ -2,9 +2,16 @@
     const signIn = document.getElementById('signIn');
     const signOut = document.getElementById('signOut');
     const status = document.getElementById('accountStatus');
+    const themeToggle = document.getElementById('nightModeToggle');
     if (!signIn || !signOut || !status) return;
+    signIn.hidden = Boolean(document.documentElement.dataset.userId);
+    signOut.hidden = !document.documentElement.dataset.userId;
+    if (themeToggle) themeToggle.disabled = true;
     let csrfToken;
     let pending = false;
+    let saving = false;
+    let queuedTheme = null;
+    const themes = ['auto', 'night', 'day'];
     signIn.href = `/auth/google?returnTo=${encodeURIComponent(window.location.pathname)}`;
 
     const url = new URL(window.location.href);
@@ -19,32 +26,83 @@
         window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     }
 
-    function setUser(user) {
+    function setUser(user, settings) {
         const userId = user ? encodeURIComponent(user.id).replace(/'/g, '%27') : '';
         const changed = document.documentElement.dataset.userId !== userId;
+        const theme = user ? (queuedTheme !== null && !changed ? queuedTheme :
+            themes.includes(settings?.theme) ? settings.theme : '') : 'auto';
+        const themeChanged = document.documentElement.dataset.themePreference !== theme;
         document.documentElement.dataset.userId = userId;
+        document.documentElement.dataset.themePreference = theme;
         signIn.hidden = Boolean(user);
         signOut.hidden = !user;
         signOut.title = user ? `Signed in as ${user.name}` : '';
-        if (changed) window.dispatchEvent(new Event('authchange'));
+        if (!user) queuedTheme = null;
+        if (themeToggle) themeToggle.disabled = !user || !csrfToken;
+        if (changed || themeChanged) window.dispatchEvent(new Event('authchange'));
     }
 
+    async function saveTheme() {
+        if (pending || saving || !csrfToken || !document.documentElement.dataset.userId) return;
+        saving = true;
+        signOut.disabled = true;
+        try {
+            while (queuedTheme !== null) {
+                const theme = queuedTheme;
+                queuedTheme = null;
+                status.textContent = 'Saving theme…';
+                const response = await fetch('/api/account/settings', {
+                    method: 'PATCH', keepalive: true,
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+                    body: JSON.stringify({ theme })
+                });
+                if (response.status === 401) {
+                    csrfToken = null;
+                    setUser(null);
+                    throw new Error('Session expired');
+                }
+                if (!response.ok) throw new Error('Save failed');
+            }
+            status.textContent = '';
+        } catch {
+            queuedTheme = null;
+            status.textContent = 'Could not save your theme. Please try changing it again.';
+        } finally {
+            saving = false;
+            signOut.disabled = false;
+        }
+    }
+
+    window.addEventListener('themechange', () => {
+        const theme = document.documentElement.dataset.themePreference;
+        if (!themes.includes(theme)) return;
+        queuedTheme = theme;
+        saveTheme();
+    });
+
     async function refresh() {
-        if (pending) return;
+        if (pending || saving) return;
         pending = true;
         try {
             const response = await fetch('/api/auth/session', { cache: 'no-store' });
             if (!response.ok) throw new Error('Session unavailable');
             const session = await response.json();
             csrfToken = session.csrfToken;
-            setUser(session.user);
+            setUser(session.user, session.settings);
+            if (session.settings?.unavailable) {
+                status.textContent = 'Could not load your saved theme. Please try again later.';
+            } else if (session.user && session.settings?.theme === null) {
+                // Import the existing browser preference only for an account
+                // that has never saved settings on the server.
+                queuedTheme = document.documentElement.dataset.themePreference;
+            }
             signIn.setAttribute('aria-disabled', String(!session.enabled));
             signIn.title = session.enabled ? 'Sign in to choose your theme' : 'Google sign-in is not configured yet';
         } catch {
-            setUser(null);
             status.textContent = 'Could not check sign-in. Please refresh to try again.';
         } finally {
             pending = false;
+            if (queuedTheme !== null) saveTheme();
         }
     }
 
@@ -55,7 +113,7 @@
         }
     });
     signOut.addEventListener('click', async () => {
-        if (pending) return;
+        if (pending || saving) return;
         pending = true;
         signOut.disabled = true;
         try {

@@ -705,6 +705,22 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       continue rejecting paths, queries, fragments and public HTTP origins.
     - Add regression tests for both the configuration error and trailing slash.
 
+44. [x] Persist account settings and synchronize themes across devices.
+    - Store settings in a JSON object keyed by the verified lowercase Google
+      email address, beginning with each account's theme. Preserve other users
+      and future fields during updates; serialize writes and replace atomically.
+    - Save settings in the persistent Docker data volume and ignored local
+      data directory, with no new dependency. Exclude local data from builds.
+    - Add a session- and CSRF-protected settings endpoint. Render the saved
+      theme with each page, refresh it on focus/session checks, and import old
+      browser preferences only when no server theme exists yet.
+    - Guests continue using Auto; write failures are visible and do not erase
+      saved settings. Settings survive restarts while sessions remain temporary.
+    - Validation: all 120 tests pass, including disk persistence, concurrent
+      updates, account isolation, CSRF, browser migration, rapid theme changes
+      and failure handling. Docker builds successfully; local Caddy returns
+      HTTP 200 for the homepage and aircraft API and 401 for guest updates.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

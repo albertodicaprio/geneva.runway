@@ -348,9 +348,34 @@ Reference: [Umami tracker configuration](https://docs.umami.is/docs/tracker-conf
 
 The dashboard stays public. Signing in unlocks the Auto/Night/Day theme
 control beside Sign out on every page. Signed-out visitors always use Auto
-(Day 07:00–19:00, Night 19:00–07:00, Geneva time). Theme preferences are saved
-per Google account in the current browser; they do not sync between devices.
+(Day 07:00–19:00, Night 19:00–07:00, Geneva time). Theme preferences save
+automatically to the account and follow it across browsers and devices.
 Signing out restores Auto and preserves the account's preference for next time.
+The saved theme loads with each page and refreshes when the window gains focus
+or during the once-per-minute session check. Existing browser-only preferences
+are imported when an account has no theme saved on the server yet.
+
+Account settings are stored in a JSON file keyed by the verified, lowercase
+Google email address, with an object for each user's current and future settings:
+
+```json
+{
+  "alice@example.com": {
+    "theme": "night"
+  }
+}
+```
+
+Docker Compose stores the file at `/app/data/user-settings.json` in the existing
+`aircraft_data` volume. Locally it defaults to `data/user-settings.json` (ignored
+by Git); set `USER_SETTINGS_FILE` to override the local path. The file is created
+when the first preference is saved and should be included in data backups.
+Settings survive app restarts, image rebuilds and sign-out. Sessions still clear
+on restart, so users must sign in again before their saved theme is restored.
+Writes are serialized and replace the JSON file atomically; changing the theme
+preserves other users and any future settings fields. This file store is intended
+for the current single app instance. Only the signed-in user can update their
+own settings; the browser cannot choose a different email key.
 
 Copy the settings from `.env.example` into your existing ignored `.env`:
 

@@ -1,11 +1,18 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const http = require('node:http');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const { createUserSettings } = require('../lib/user-settings');
 const { createHash } = require('node:crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { createAuth } = require('../lib/auth');
 
-async function fixture(t, { enabled = true, secure = false } = {}) {
+async function fixture(t, { enabled = true, secure = false, settings } = {}) {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-account-test-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const settingsFile = path.join(directory, 'user-settings.json');
     let now = Date.now();
     const env = enabled ? {
         APP_ORIGIN: secure ? 'https://gva-runway.ahpc.ch' : 'http://localhost:3000',
@@ -28,7 +35,8 @@ async function fixture(t, { enabled = true, secure = false } = {}) {
         if (failVerification) throw new Error('bad signature / audience / expiry');
         return { getPayload: () => payload };
     };
-    const auth = createAuth({ env, client, clock: () => now, logger: { info: line => logs.push(line) } });
+    const auth = createAuth({ env, client, clock: () => now, logger: { info: line => logs.push(line) },
+        settings: settings || createUserSettings({ filePath: settingsFile }) });
     const server = http.createServer(async (req, res) => {
         if (!await auth.handle(req, res, new URL(req.url, 'http://localhost'))) {
             res.end(JSON.stringify(auth.getUser(req)));
@@ -38,16 +46,16 @@ async function fixture(t, { enabled = true, secure = false } = {}) {
     t.after(() => { server.closeAllConnections(); server.close(); });
     const base = `http://127.0.0.1:${server.address().port}`;
     const request = (path, options = {}) => fetch(base + path, { redirect: 'manual', ...options });
-    async function begin(returnTo = '/weather.html') {
+    async function begin(returnTo = '/weather.html', email = 'spotter@example.com') {
         const response = await request(`/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
         assert.equal(response.status, 303);
         const url = new URL(response.headers.get('location'));
         const cookie = response.headers.getSetCookie()[0].split(';')[0];
-        payload = { sub: 'google-user-123', given_name: '<Spotter>', email_verified: true,
+        payload = { sub: 'google-user-123', given_name: '<Spotter>', email, email_verified: true,
             nonce: url.searchParams.get('nonce') };
         return { url, cookie, callback: `/auth/google/callback?code=one-time-code&state=${url.searchParams.get('state')}` };
     }
-    return { env, request, begin, logs, advance: ms => { now += ms; }, payload: value => { payload = value; },
+    return { env, request, begin, logs, settingsFile, advance: ms => { now += ms; }, payload: value => { payload = value; },
         exchange: () => exchange, calls: () => calls, fail: () => { failVerification = true; } };
 }
 
@@ -127,7 +135,7 @@ for (const failure of ['verification', 'nonce', 'email', 'subject']) {
         const flow = await f.begin();
         if (failure === 'verification') f.fail();
         else f.payload({ sub: failure === 'subject' ? '' : 'user',
-            email_verified: failure !== 'email', nonce: failure === 'nonce' ? 'forged' : flow.url.searchParams.get('nonce') });
+            email: 'spotter@example.com', email_verified: failure !== 'email', nonce: failure === 'nonce' ? 'forged' : flow.url.searchParams.get('nonce') });
         const response = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
         assert.equal(response.headers.get('location'), '/weather.html?auth=failed');
         assert.ok(!response.headers.getSetCookie().some(value => value.startsWith('gva-session=')));
@@ -149,7 +157,7 @@ test('sessions expire after seven days and forged session cookies are anonymous'
 test('missing configuration keeps public access and reports disabled sign-in', async t => {
     const f = await fixture(t, { enabled: false });
     assert.equal((await f.request('/')).status, 200);
-    assert.deepEqual(await (await f.request('/api/auth/session')).json(), { enabled: false, user: null, csrfToken: null });
+    assert.deepEqual(await (await f.request('/api/auth/session')).json(), { enabled: false, user: null, csrfToken: null, settings: null });
     assert.equal((await f.request('/auth/google')).status, 503);
 });
 
@@ -171,4 +179,64 @@ test('website origins accept an optional trailing slash', () => {
             APP_ORIGIN, GOOGLE_OAUTH_CLIENT_ID: 'test', GOOGLE_OAUTH_CLIENT_SECRET: 'test'
         } }));
     }
+});
+
+async function login(f, email = 'spotter@example.com') {
+    const flow = await f.begin('/weather.html', email);
+    const callback = await f.request(flow.callback, { headers: { Cookie: flow.cookie } });
+    const cookie = callback.headers.getSetCookie().find(value => /^gva-session=/.test(value)).split(';')[0];
+    const session = await (await f.request('/api/auth/session', { headers: { Cookie: cookie } })).json();
+    return { cookie, session, headers: { Cookie: cookie, Origin: f.env.APP_ORIGIN,
+        'X-CSRF-Token': session.csrfToken, 'Content-Type': 'application/json' } };
+}
+
+test('theme saves use the verified email, sync between sessions, and persist after restart', async t => {
+    const f = await fixture(t);
+    const alice = await login(f, 'Alice@Example.com');
+    const bob = await login(f, 'bob@example.com');
+    assert.deepEqual(alice.session.settings, { theme: null });
+    const saved = await f.request('/api/account/settings', {
+        method: 'PATCH', headers: alice.headers, body: JSON.stringify({ theme: 'night' })
+    });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(await saved.json(), { settings: { theme: 'night' } });
+    assert.equal(saved.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(JSON.parse(await fs.readFile(f.settingsFile, 'utf8')), { 'alice@example.com': { theme: 'night' } });
+    const anotherDevice = await login(f, 'alice@example.com');
+    assert.deepEqual(anotherDevice.session.settings, { theme: 'night' });
+    assert.deepEqual((await (await f.request('/api/auth/session', { headers: bob.headers })).json()).settings, { theme: null });
+    const restarted = await fixture(t, { settings: createUserSettings({ filePath: f.settingsFile }) });
+    assert.equal((await (await restarted.request('/api/auth/session', { headers: alice.headers })).json()).user, null);
+    assert.deepEqual((await login(restarted, 'alice@example.com')).session.settings, { theme: 'night' });
+});
+
+test('settings updates require a session, same-origin CSRF token and a valid theme-only JSON body', async t => {
+    const f = await fixture(t);
+    assert.equal((await f.request('/api/account/settings', { method: 'PATCH' })).status, 401);
+    const alice = await login(f);
+    const update = (body, headers = alice.headers) => f.request('/api/account/settings', { method: 'PATCH', headers, body });
+    assert.equal((await f.request('/api/account/settings')).status, 405);
+    assert.equal((await update('{"theme":"night"}', { ...alice.headers, Origin: 'https://evil.example' })).status, 403);
+    assert.equal((await update('{"theme":"night"}', { ...alice.headers, 'X-CSRF-Token': 'forged' })).status, 403);
+    assert.equal((await update('{"theme":"night"}', { ...alice.headers, 'Content-Type': 'text/plain' })).status, 415);
+    for (const body of ['{', '{}', 'null', '[]', '{"theme":"invalid"}', '{"theme":"night","email":"other@example.com"}']) {
+        assert.equal((await update(body)).status, 400);
+    }
+    assert.equal((await update(JSON.stringify({ theme: 'x'.repeat(2000) }))).status, 413);
+    await assert.rejects(fs.readFile(f.settingsFile), { code: 'ENOENT' });
+});
+
+test('unreadable settings keep the user signed in and failed saves report an error', async t => {
+    const f = await fixture(t, { settings: {
+        async get() { throw new Error('disk unavailable'); },
+        async setTheme() { throw new Error('disk unavailable'); }
+    } });
+    const account = await login(f);
+    assert.ok(account.session.user);
+    assert.deepEqual(account.session.settings, { theme: null, unavailable: true });
+    const response = await f.request('/api/account/settings', {
+        method: 'PATCH', headers: account.headers, body: '{"theme":"night"}'
+    });
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /Could not save/);
 });

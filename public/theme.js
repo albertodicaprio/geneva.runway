@@ -8,8 +8,10 @@
     let preference;
     let toggle;
 
-    function readPreference() {
+    function readPreference(preferServer = true) {
         if (!userId) return 'auto';
+        const savedOnServer = document.documentElement.dataset.themePreference;
+        if (preferServer && modes.includes(savedOnServer)) return savedOnServer;
         try {
             const saved = window.localStorage.getItem(storageKey());
             return modes.includes(saved) ? saved : 'auto';
@@ -19,6 +21,7 @@
     }
 
     function applyTheme() {
+        document.documentElement.dataset.themePreference = preference;
         const hour = Number(genevaHour.format(new Date()));
         const night = preference === 'auto' ? hour < 7 || hour >= 19 : preference === 'night';
         document.documentElement.dataset.theme = night ? 'night' : 'day';
@@ -54,6 +57,7 @@
                 // The toggle still works for this page when storage is blocked.
             }
             applyTheme();
+            window.dispatchEvent(new Event('themechange'));
         });
     });
 
@@ -63,13 +67,14 @@
     window.addEventListener('pageshow', applyTheme);
     window.addEventListener('storage', event => {
         if (event.key === storageKey() || event.key === null) {
-            preference = readPreference();
+            preference = readPreference(false);
             applyTheme();
         }
     });
     window.addEventListener('authchange', () => {
         userId = document.documentElement.dataset.userId || '';
         preference = readPreference();
+        try { if (userId) window.localStorage.setItem(storageKey(), preference); } catch { /* Storage is optional. */ }
         if (toggle) toggle.hidden = !userId;
         applyTheme();
     });

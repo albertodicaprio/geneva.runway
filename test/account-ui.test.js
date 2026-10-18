@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function browser({ userId = '', stored = {}, blockedStorage = false } = {}) {
+function browser({ userId = '', stored = {}, blockedStorage = false, savedTheme = '' } = {}) {
     const events = {};
     const nodes = Object.fromEntries(['nightModeToggle', 'signIn', 'signOut', 'accountStatus'].map(id => [id, {
         hidden: true, dataset: {}, handlers: {}, attributes: {}, textContent: '',
@@ -14,7 +14,7 @@ function browser({ userId = '', stored = {}, blockedStorage = false } = {}) {
         querySelector(selector) { return this[selector] ||= {}; }
     }]));
     const storage = new Map(Object.entries(stored));
-    const document = { hidden: false, documentElement: { dataset: { userId } },
+    const document = { hidden: false, documentElement: { dataset: { userId, themePreference: savedTheme } },
         getElementById: id => nodes[id], addEventListener(name, fn) { events[`document:${name}`] = fn; } };
     const window = { location: { href: 'https://gva-runway.ahpc.ch/weather.html', pathname: '/weather.html' },
         history: { replaceState() {} },
@@ -27,18 +27,24 @@ function browser({ userId = '', stored = {}, blockedStorage = false } = {}) {
         setInterval() {}
     };
     const requests = [];
-    let session = { enabled: true, user: userId ? { id: userId, name: 'Spotter' } : null, csrfToken: 'csrf' };
+    let session = { enabled: true, user: userId ? { id: userId, name: 'Spotter' } : null, csrfToken: 'csrf',
+        settings: userId ? { theme: savedTheme || null } : null };
+    let responder;
     const context = vm.createContext({ window, document, URL, Intl,
         Event: class { constructor(type) { this.type = type; } },
         Date: class extends Date { constructor() { super('2026-10-18T10:00:00Z'); } },
         fetch: async (url, options) => {
             requests.push({ url, options });
-            return { ok: true, json: async () => session };
+            if (responder) return responder(url, options);
+            if (url === '/api/account/settings') session.settings = { theme: JSON.parse(options.body).theme };
+            return { ok: true, status: 200, json: async () => session };
         } });
     function run(file) { vm.runInContext(fs.readFileSync(path.join(__dirname, '../public', file), 'utf8'), context); }
     run('theme.js');
     events['document:DOMContentLoaded']();
-    return { nodes, document, window, storage, requests, run, session: value => { session = value; } };
+    return { nodes, document, window, storage, requests, run, respond: fn => { responder = fn; }, session: value => {
+        session = { ...value, settings: value.settings ?? (value.user ? { theme: null } : null) };
+    } };
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
@@ -63,6 +69,7 @@ test('sign-in unlocks per-account themes and sign-out immediately restores Auto'
     b.nodes.nightModeToggle.handlers.click(); // Night -> Day
     assert.equal(b.storage.get('geneva-night-mode:user'), 'day');
     assert.equal(b.storage.get('geneva-night-mode:other'), 'day');
+    await flush();
     await b.nodes.signOut.handlers.click();
     assert.equal(b.requests.at(-1).url, '/auth/logout');
     assert.equal(b.requests.at(-1).options.method, 'POST');
@@ -108,4 +115,75 @@ test('unconfigured sign-in stays public and explains why the button is disabled'
     assert.equal(prevented, true);
     assert.match(b.nodes.accountStatus.textContent, /not configured/);
     assert.match(b.nodes.signIn.href, /returnTo=%2Fweather.html/);
+});
+
+test('server theme overrides stale browser preferences before page rendering and syncs on focus', async () => {
+    const b = browser({ userId: 'user', savedTheme: 'night', stored: { 'geneva-night-mode:user': 'day' } });
+    assert.equal(b.document.documentElement.dataset.theme, 'night');
+    b.run('auth.js');
+    await flush();
+    assert.equal(b.nodes.nightModeToggle.disabled, false);
+    b.session({ enabled: true, user: { id: 'user', name: 'Spotter' }, csrfToken: 'csrf', settings: { theme: 'day' } });
+    b.window.dispatchEvent({ type: 'focus' });
+    await flush();
+    assert.equal(b.document.documentElement.dataset.theme, 'day');
+    assert.equal(b.storage.get('geneva-night-mode:user'), 'day');
+});
+
+test('first account visit imports the existing browser theme and later choices save automatically', async () => {
+    const b = browser({ userId: 'user', stored: { 'geneva-night-mode:user': 'night' } });
+    b.run('auth.js');
+    await flush();
+    const imported = b.requests.find(request => request.url === '/api/account/settings');
+    assert.deepEqual(JSON.parse(imported.options.body), { theme: 'night' });
+    assert.equal(imported.options.headers['X-CSRF-Token'], 'csrf');
+    b.nodes.nightModeToggle.handlers.click();
+    await flush();
+    assert.deepEqual(JSON.parse(b.requests.at(-1).options.body), { theme: 'day' });
+});
+
+test('rapid theme clicks queue the last choice and save failures are visible', async () => {
+    const b = browser({ userId: 'user', savedTheme: 'auto' });
+    b.run('auth.js');
+    await flush();
+    let finish;
+    b.respond(() => new Promise(resolve => { finish = resolve; }));
+    b.nodes.nightModeToggle.handlers.click(); // Night, save waits.
+    b.nodes.nightModeToggle.handlers.click(); // Day, queued.
+    b.nodes.nightModeToggle.handlers.click(); // Auto, replaces queued Day.
+    b.respond(async () => ({ ok: true, status: 200 }));
+    finish({ ok: true, status: 200 });
+    await flush();
+    const saves = b.requests.filter(request => request.url === '/api/account/settings');
+    assert.deepEqual(saves.map(request => JSON.parse(request.options.body).theme), ['night', 'auto']);
+    assert.equal(b.document.documentElement.dataset.themePreference, 'auto');
+    b.respond(async () => ({ ok: false, status: 503 }));
+    b.nodes.nightModeToggle.handlers.click();
+    await flush();
+    assert.match(b.nodes.accountStatus.textContent, /Could not save/);
+    assert.equal(b.nodes.signOut.disabled, false);
+});
+
+test('blocked browser storage still restores and saves account themes', async () => {
+    const b = browser({ userId: 'user', savedTheme: 'night', blockedStorage: true });
+    b.run('auth.js');
+    await flush();
+    assert.equal(b.document.documentElement.dataset.theme, 'night');
+    b.nodes.nightModeToggle.handlers.click();
+    await flush();
+    assert.equal(b.document.documentElement.dataset.theme, 'day');
+    assert.deepEqual(JSON.parse(b.requests.at(-1).options.body), { theme: 'day' });
+});
+
+test('temporary session check failures preserve the initial account controls', async () => {
+    for (const userId of ['', 'user']) {
+        const b = browser({ userId, savedTheme: 'night' });
+        b.respond(async () => { throw new Error('offline'); });
+        b.run('auth.js');
+        await flush();
+        assert.equal(b.nodes.signIn.hidden, Boolean(userId));
+        assert.equal(b.nodes.signOut.hidden, !userId);
+        assert.equal(b.document.documentElement.dataset.userId, userId);
+        assert.match(b.nodes.accountStatus.textContent, /Could not check sign-in/);
+    }
 });

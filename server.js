@@ -182,9 +182,10 @@ async function serveStatic(req, res, urlPathname) {
         }
 
         const user = path.extname(filePath) === '.html' ? auth.getUser(req) : null;
+        const settings = user ? await auth.getSettings(req) : null;
         const body = path.extname(filePath) === '.html'
             ? contents.toString('utf8').replace('<!-- UMAMI_TRACKER -->', analyticsScript)
-                .replace('<html lang="en">', `<html lang="en" data-user-id="${user ? encodeURIComponent(user.id).replace(/'/g, '%27') : ''}">`)
+                .replace('<html lang="en">', `<html lang="en" data-user-id="${user ? encodeURIComponent(user.id).replace(/'/g, '%27') : ''}" data-theme-preference="${user ? settings?.theme || '' : 'auto'}">`)
             : contents;
         res.end(body);
     } catch (error) {
