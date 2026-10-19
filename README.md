@@ -325,7 +325,7 @@ visits go to the configured website entry in that deployment's Umami database.
 Dev and production hosts can use separate Umami databases; configure the
 appropriate website ID in each deployment. The tracker respects Do Not Track
 and excludes URL query strings and fragments. It records page views, visits,
-referrers and page usage. Authentication also sends the custom server events
+referrers and page usage. Authentication and Telegram also send custom server events
 described below. No distinct user IDs or performance tracking are configured.
 Analytics does not affect aircraft polling or OpenSky's shared refresh schedule.
 
@@ -359,8 +359,8 @@ The auth endpoints send custom events to the same Umami website entry:
 All events use `provider: "google"`. Failure reasons are limited to
 `not_configured`, `busy`, `invalid_state`, `provider_error`, `invalid_callback`,
 `token_exchange`, `token_validation`, and `invalid_identity`. Names and emails
-are collected only after verification and remain properties of these auth
-events; they are not attached to every page view. Umami stores this personal
+are collected only after verification and remain properties of authenticated
+server events; they are not attached to every page view. Umami stores this personal
 data alongside the event, independently of the application's sign-in logs.
 Session polling and settings requests do not generate auth events.
 
@@ -393,6 +393,55 @@ website entry if you do not want test activity included in production counts.
 
 The payload follows the installed
 [Umami 3.4.0 collection endpoint](https://github.com/umami-software/umami/blob/v3.4.0/src/app/api/send/route.ts).
+
+### Telegram analytics and message logs
+
+Telegram reuses `UMAMI_WEBSITE_ID` and `UMAMI_AUTH_EVENTS_URL`; no additional
+configuration is needed. Server events use `provider: "telegram"` and
+`source: "server"`:
+
+| Event | When |
+| --- | --- |
+| `telegram_connected` | Telegram confirms a single-use link and the connection is saved |
+| `telegram_disconnected` | An existing connection is successfully removed |
+| `telegram_test_sent` | Telegram accepts a test message |
+| `telegram_runway_change_sent` | Telegram accepts an arrival runway change alert |
+| `telegram_busy_arrivals_sent` | Telegram accepts a busy arrival alert |
+
+Properties identify the website `accountId`, verified Google `name` and `email`,
+and the recipient's `telegramName` and `telegramUsername` when available.
+Notification events also include `notificationType` (`test`,
+`arrivalRunwayChange`, or `busyArrivals`). Events exclude the full message,
+Telegram chat IDs, tokens, links, cookies and request parameters. A sent event
+means Telegram accepted the message; it does not confirm the user read it.
+Failed or ambiguous sends do not produce sent events. Duplicate linking updates,
+conflicting links, cancelled linking attempts and repeated disconnects do not
+produce additional connection events. Polling and preference saves emit none.
+
+The connection file privately stores the verified account name/email, browser
+User-Agent and Do Not Track choice from linking, updated when the owner opens
+the account menu. Existing connections gain these fields on their next menu
+check, without reconnecting or generating a historical connection event.
+Background events use that browser agent so the collector can accept them, with
+no saved client IP. Without saved browser context they are skipped. Do Not
+Track from the Google login session or current request suppresses analytics,
+including later background events. These events share the existing 1.5-second
+deadline and 32-request limit with auth events; failures are dropped without
+retries and cannot trigger a Telegram retry.
+
+Each actual notification attempt writes one JSON log line with event
+`telegram_notification_sending`, UTC `timestamp`, `accountId`, verified `name`
+and `email` when known, `telegramName`, `telegramUsername`, `notificationType`
+and the exact `message`. JSON escapes embedded newlines in messages/names.
+A following `telegram_notification_sent` or `telegram_notification_failed` line
+records the outcome. Failures use only `blocked`, `rate_limited` or `unconfirmed`
+reasons, with no raw upstream error or secret. Delivery retries each generate an
+attempt log. Logs remain enabled independently of Umami configuration and Do
+Not Track; they contain personal details and full notification text.
+
+Local validation added five clearly synthetic Umami records under
+Telegram Analytics Check / telegram-check@example.invalid, with Telegram sends
+mocked. These records verify the real local collector accepts each event type.
 
 ## Optional Google sign-in
 

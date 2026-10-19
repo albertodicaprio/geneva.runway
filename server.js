@@ -11,10 +11,11 @@ const weatherHandler = require('./api/weather');
 const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 const { createAuth } = require('./lib/auth');
 const { createAuthAnalytics, validWebsiteId: isValidWebsiteId } = require('./lib/auth-analytics');
-const auth = createAuth({ analytics: createAuthAnalytics() });
+const analytics = createAuthAnalytics();
+const auth = createAuth({ analytics });
 const { createTelegram } = require('./lib/telegram');
 const { createTelegramHandler } = require('./api/telegram');
-const telegram = createTelegram();
+const telegram = createTelegram({ analytics });
 const telegramHandler = createTelegramHandler({ auth, telegram });
 
 const PORT = Number(process.env.PORT || 3000);

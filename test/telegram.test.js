@@ -185,8 +185,8 @@ test('blocked chats report actionable status and transient delivery failures are
     assert.equal(f.calls.length, 3);
 });
 
-async function httpFixture(t) {
-    const f = await fixture(t);
+async function httpFixture(t, options = {}) {
+    const f = await fixture(t, options);
     let identity;
     const oauth = new OAuth2Client({ clientId: env.GOOGLE_OAUTH_CLIENT_ID,
         clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET, redirectUri: `${env.APP_ORIGIN}/auth/google/callback` });
@@ -202,8 +202,8 @@ async function httpFixture(t) {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     t.after(() => { server.closeAllConnections(); server.close(); });
     const request = (url, options) => fetch(`http://127.0.0.1:${server.address().port}${url}`, { redirect: 'manual', ...options });
-    async function login(id = 'alice') {
-        const start = await request('/auth/google');
+    async function login(id = 'alice', loginHeaders = {}) {
+        const start = await request('/auth/google', { headers: loginHeaders });
         const url = new URL(start.headers.get('location'));
         identity = { sub: id, email: `${id}@example.com`, email_verified: true, nonce: url.searchParams.get('nonce') };
         const callback = await request(`/auth/google/callback?code=test&state=${url.searchParams.get('state')}`, {
@@ -372,4 +372,86 @@ test('busy arrival preferences validate partial updates, preserve runway setting
     await f.telegram.disconnect('alice');
     assert.equal((await f.telegram.status('alice')).alerts.busyArrivals, false);
     assert.equal(f.calls.length, 0);
+});
+
+test('confirmed linking, test delivery and disconnect emit recipient-specific events once after persistence', async t => {
+    const events = []; const logs = [];
+    const f = await fixture(t, { analytics: { trackTelegram: (event, context) => events.push({ event, ...context }) },
+        logger: { info: line => logs.push(JSON.parse(line)) } });
+    const context = { doNotTrack: false, userAgent: 'Mozilla/5.0 Test Browser', name: 'Google Alice', email: 'alice@example.com' };
+    const link = await f.telegram.begin('alice', context);
+    assert.equal(events.length, 0); // Clicking Connect is not yet a connection.
+    await f.telegram.accept(update(tokenOf(link)));
+    await f.telegram.accept(update(tokenOf(link)));
+    assert.deepEqual(events.map(item => item.event), ['telegram_connected']);
+    assert.deepEqual(events[0].connection.analyticsContext, context);
+    await f.telegram.send('alice');
+    assert.equal(events.at(-1).event, 'telegram_test_sent');
+    assert.equal(logs[0].message, f.calls[0].text);
+    assert.equal(logs[0].telegramUsername, 'alice');
+    assert.equal(logs[0].email, 'alice@example.com');
+    const bob = await f.telegram.begin('bob', context);
+    await f.telegram.accept(update(tokenOf(bob))); // Same Telegram identity is already owned.
+    assert.equal(events.length, 2);
+    const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client,
+        logger: {}, analytics: { trackTelegram: (event, data) => events.push({ event, ...data }) } });
+    await restarted.send('alice');
+    assert.equal(events.at(-1).connection.analyticsContext.email, 'alice@example.com');
+    await restarted.disconnect('alice');
+    await restarted.disconnect('alice');
+    assert.equal(events.filter(item => item.event === 'telegram_disconnected').length, 1);
+    assert.equal(events.at(-1).accountId, 'alice');
+    assert.doesNotMatch(JSON.stringify(logs), new RegExp(tokenOf(link)));
+});
+
+test('HTTP linking captures verified identity and login Do Not Track; old connections gain context without analytics events', async t => {
+    const events = [];
+    const f = await httpFixture(t, { logger: {}, analytics: { trackTelegram: (event, context) => events.push({ event, ...context }) } });
+    const alice = await f.login('alice', { DNT: '1' });
+    const response = await f.request('/api/account/telegram/connect', { method: 'POST', headers: alice });
+    const link = await response.json();
+    await f.telegram.accept(update(tokenOf(link)));
+    assert.equal(events.length, 1);
+    const saved = (await f.store.read()).accounts.alice.analyticsContext;
+    assert.equal(saved.doNotTrack, true); // Remembered from login, even though /connect has no DNT header.
+    assert.equal(saved.email, 'alice@example.com');
+    assert.equal(typeof saved.userAgent, 'string');
+    assert.doesNotMatch(JSON.stringify(saved), /google-secret|test|gva-session|csrf|Cookie/);
+    await f.store.update(accounts => { delete accounts.alice.analyticsContext; });
+    const status = await f.request('/api/account/telegram', { headers: alice });
+    assert.equal(status.status, 200);
+    assert.doesNotMatch(await status.text(), /analyticsContext|alice@example.com/);
+    assert.deepEqual((await f.store.read()).accounts.alice.analyticsContext, saved);
+    assert.equal(events.length, 1);
+    await f.request('/api/account/telegram/disconnect', { method: 'POST', headers: alice });
+    assert.equal(events.at(-1).event, 'telegram_disconnected');
+    assert.equal(events.at(-1).connection.analyticsContext.doNotTrack, true);
+});
+
+test('failed connection storage and delivery produce no successful analytics events', async t => {
+    const events = [];
+    const f = await fixture(t, { logger: {}, analytics: { trackTelegram: event => events.push(event) } });
+    const store = createTelegramStore({ filePath: f.filePath, storage: { ...fs, async rename() { throw new Error('Disk failure'); } } });
+    const failing = createTelegram({ env, store, logger: {}, client: f.client,
+        analytics: { trackTelegram: event => events.push(event) } });
+    const token = tokenOf(await failing.begin('alice'));
+    await assert.rejects(failing.accept(update(token)));
+    assert.equal(events.length, 0);
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice'))));
+    assert.deepEqual(events, ['telegram_connected']);
+    f.fail(new TelegramError('unavailable'));
+    await assert.rejects(f.telegram.send('alice'));
+    assert.deepEqual(events, ['telegram_connected']);
+    await assert.rejects(failing.disconnect('alice'));
+    assert.deepEqual(events, ['telegram_connected']);
+});
+
+test('a test request refreshes persisted Do Not Track for later automatic notification events', async t => {
+    const events = [];
+    const f = await fixture(t, { logger: {}, analytics: { trackTelegram: (event, context) => events.push({ event, ...context }) } });
+    const context = { userAgent: 'Mozilla/5.0 Test Browser', doNotTrack: false, email: 'alice@example.com' };
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice', context))));
+    await f.telegram.send('alice', 'test', { ...context, doNotTrack: true });
+    assert.equal(events.at(-1).connection.analyticsContext.doNotTrack, true);
+    assert.equal((await f.store.read()).accounts.alice.analyticsContext.doNotTrack, true);
 });

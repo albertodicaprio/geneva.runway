@@ -164,3 +164,15 @@ test('a long monitoring gap restarts the quiet interval instead of re-arming aft
     state = advanceBusyAlert(state, snapshot(11, start + 11 * minute), 10, start + 11 * minute);
     assert.equal(state.pending, null);
 });
+
+test('busy arrival worker supplies its exact message and recipient to the shared delivery observer', async t => {
+    const f = await fixture(t);
+    const deliveries = [];
+    const alerts = createBusyArrivalAlerts({ ...f.options, sendNotification: async delivery => { deliveries.push(delivery); } });
+    await alerts.check();
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0].accountId, 'alice');
+    assert.equal(deliveries[0].connection.chatId, '123');
+    assert.equal(deliveries[0].type, 'busyArrivals');
+    assert.match(deliveries[0].text, /11 aircraft/);
+});

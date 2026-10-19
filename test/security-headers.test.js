@@ -74,7 +74,9 @@ test('all pages provide direct navigation and arrivals includes history at the b
         assert.match(html, /src="auth.js"/);
         assert.match(html, /src="telegram.js"/);
         assert.ok(html.indexOf('<h2>Profile</h2>') < html.indexOf('<h2>Telegram Integration</h2>'));
-        assert.ok(html.indexOf('<h2>Telegram Integration</h2>') < html.indexOf('<h2>Settings</h2>'));
+        assert.doesNotMatch(html, /<h2>Settings<\/h2>/);
+        assert.ok(html.indexOf('id="nightModeToggle"') < html.indexOf('<h2>Telegram Integration</h2>'));
+        assert.ok(html.indexOf('<h2>Telegram Integration</h2>') < html.indexOf('<h3>Alerts</h3>'));
         assert.match(html, /data-user-id=""/);
         assert.ok(html.includes(`href="${path}" aria-current="page"`));
         for (const sectionId of sectionIds) assert.ok(html.includes(`id="${sectionId}"`));

@@ -205,3 +205,17 @@ test('scheduler stops without overlap and reads the cached source once for multi
     const stopping = alerts.stop(); finish(snapshot(baselineFlights)); await stopping;
     assert.equal(calls, 1); assert.equal(timers.length, 0);
 });
+
+test('runway worker supplies its exact message and recipient to the shared delivery observer', async t => {
+    const f = await fixture(t);
+    const deliveries = [];
+    const alerts = createRunwayAlerts({ ...f.options, sendNotification: async delivery => { deliveries.push(delivery); } });
+    await alerts.check();
+    f.set([flight(3, '04'), flight(4, '04')], 4);
+    await alerts.check();
+    assert.equal(deliveries.length, 1);
+    assert.equal(deliveries[0].accountId, 'alice');
+    assert.equal(deliveries[0].connection.chatId, '123');
+    assert.equal(deliveries[0].type, 'arrivalRunwayChange');
+    assert.match(deliveries[0].text, /22 → 04/);
+});

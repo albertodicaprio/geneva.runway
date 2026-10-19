@@ -876,6 +876,22 @@ outbound notification channel; notification configuration belongs in the app.
      Validation: account and Telegram UI tests pass; Chrome checks inline profile
      rows, grouping, theme placement and existing alert behavior in Day/Night
      at 320/390/700/1040px with no horizontal overflow.
+   - Log Telegram delivery attempts and collect server-side Umami events.
+     Attempt logs include exact message text and website/Telegram recipient,
+     with JSON-escaped names/messages and bounded outcome reasons. Emit
+     telegram_connected/disconnected only after successful connection changes;
+     emit telegram_test_sent, telegram_runway_change_sent and
+     telegram_busy_arrivals_sent only after Telegram accepts a send. Reuse the
+     shared bounded auth collector and persist only verified profile details,
+     browser agent and DNT context for background events; old connections pick
+     up context on the next account menu check. No secrets/chat IDs/message
+     bodies enter Umami. Telemetry failures do not cause Telegram retries.
+     Validation: all 204 tests pass, including worker integration, exact message
+     logs, accepted/failed sends, linking replay/conflict/storage failures,
+     persisted identity/DNT, account isolation and collector bounds. Updated the
+     stale Settings-heading assertion to match the compact menu. Five labelled
+     synthetic events were accepted by local Umami, DNT was suppressed, and no
+     Telegram messages were sent. Local homepage/aircraft JSON return 200.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each

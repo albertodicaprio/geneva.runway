@@ -125,3 +125,54 @@ test('stalled collector requests are aborted and release their pending slot', as
         await new Promise(resolve => setTimeout(resolve, 20));
     } finally { clearTimeout(guard); }
 });
+
+const telegramConnection = () => ({ name: 'Telegram Alice', username: 'alice', chatId: '123456',
+    analyticsContext: { name: 'Alice Example', email: 'alice@example.com',
+        doNotTrack: false, userAgent: 'Mozilla/5.0 Test Browser' } });
+
+test('Telegram collector sends distinct event names with recipient properties and no message, chat ID or saved IP', async () => {
+    const f = fixture();
+    for (const event of ['telegram_connected', 'telegram_disconnected', 'telegram_test_sent',
+        'telegram_runway_change_sent', 'telegram_busy_arrivals_sent']) {
+        f.trackTelegram(event, { accountId: 'google-alice', connection: telegramConnection(), notificationType: 'busyArrivals',
+            message: 'Private message body', token: 'private-token' });
+    }
+    await flush();
+    assert.equal(f.calls.length, 5);
+    for (const { options } of f.calls) {
+        const { payload } = JSON.parse(options.body);
+        assert.equal(payload.data.provider, 'telegram');
+        assert.equal(payload.data.source, 'server');
+        assert.equal(payload.data.accountId, 'google-alice');
+        assert.equal(payload.data.name, 'Alice Example');
+        assert.equal(payload.data.email, 'alice@example.com');
+        assert.equal(payload.data.telegramName, 'Telegram Alice');
+        assert.equal(payload.data.telegramUsername, 'alice');
+        assert.equal(payload.ip, undefined);
+        assert.equal(options.headers['User-Agent'], 'Mozilla/5.0 Test Browser');
+        assert.doesNotMatch(options.body, /123456|Private message body|private-token/);
+    }
+    f.trackTelegram('unknown', { connection: telegramConnection() });
+    const dnt = telegramConnection(); dnt.analyticsContext.doNotTrack = true;
+    f.trackTelegram('telegram_connected', { connection: dnt });
+    f.trackTelegram('telegram_connected', { connection: {} });
+    await flush();
+    assert.equal(f.calls.length, 5);
+});
+
+test('auth and Telegram events share the bounded collector queue and disabled configuration', async () => {
+    let finish;
+    const f = fixture({ maxPending: 1, fetchImpl: (url, options) => {
+        f.calls.push({ url, options });
+        return new Promise(resolve => { finish = resolve; });
+    } });
+    f.trackTelegram('telegram_busy_arrivals_sent', { connection: telegramConnection() });
+    f.track('sign_in_started', request());
+    assert.equal(f.calls.length, 1);
+    finish({ ok: true }); await flush();
+    f.track('sign_in_started', request()); assert.equal(f.calls.length, 2);
+    finish({ ok: true }); await flush();
+    const disabled = fixture({ env: {} });
+    disabled.trackTelegram('telegram_connected', { connection: telegramConnection() });
+    assert.equal(disabled.calls.length, 0);
+});

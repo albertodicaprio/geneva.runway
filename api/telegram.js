@@ -45,19 +45,20 @@ function createTelegramHandler({ auth, telegram }) {
                 json(res, 403, { error: 'Please refresh the page and try again.' });
                 return true;
             }
+            const analyticsContext = auth.getAnalyticsContext?.(req);
             if (url.pathname.endsWith('/alerts')) json(res, 200, await telegram.setAlertPreferences(user.id, await readPreferences(req)));
-            else if (url.pathname.endsWith('/connect')) json(res, 200, await telegram.begin(user.id));
+            else if (url.pathname.endsWith('/connect')) json(res, 200, await telegram.begin(user.id, analyticsContext));
             else if (url.pathname.endsWith('/disconnect')) {
-                await telegram.disconnect(user.id);
+                await telegram.disconnect(user.id, analyticsContext);
                 json(res, 200, { ok: true });
             } else if (url.pathname.endsWith('/test')) {
-                await telegram.send(user.id, 'test');
+                await telegram.send(user.id, 'test', analyticsContext);
                 json(res, 200, { ok: true });
             } else if (url.pathname.endsWith('/qr')) {
                 const svg = await telegram.qrCode(user.id);
                 res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'X-Content-Type-Options': 'nosniff' });
                 res.end(svg);
-            } else json(res, 200, await telegram.status(user.id));
+            } else json(res, 200, await telegram.status(user.id, analyticsContext));
         } catch (error) {
             // Never log upstream errors or connection tokens.
             if (error.retryAfter) res.setHeader('Retry-After', String(error.retryAfter));
