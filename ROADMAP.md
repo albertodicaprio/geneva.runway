@@ -864,6 +864,11 @@ outbound notification channel; notification configuration belongs in the app.
      all 193 tests now pass, including retry, invalid drafts, account changes,
      cross-device refresh and save/poll races. Mobile Chrome verifies a typed
      draft survives a full polling interval and saves via the visible button.
+   - Simplify threshold save feedback: keep Saving…/disabled states on the Save
+     button; remove the separate threshold status and successful threshold-save
+     message in Telegram Integration. Preserve visible errors and retry drafts.
+     Validation: Telegram UI tests and mobile Chrome checks pass, including
+     draft preservation and disabled Save after success without status text.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each

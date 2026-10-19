@@ -468,5 +468,3 @@ footer a:hover { text-decoration: underline; }
 
 .busy-arrival-threshold .theme-toggle { padding: 5px 8px; font-size: .75rem; }
 .busy-arrival-threshold .theme-toggle:disabled { opacity: .5; cursor: default; }
-.telegram-alert-settings .busy-arrival-threshold-status { margin: 6px 0 0 18px; }
-.busy-arrival-threshold-status:empty { display: none; }

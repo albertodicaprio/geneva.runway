@@ -648,8 +648,8 @@ from 1 to 100 (default 10): the default alerts at 11 or more live tracked Geneva
 arrivals, rather than counting historical landings or departures. The threshold
 is editable only while Busy arrivals is enabled. Type a value and tap **Save**
 (or press Enter); leaving the field and using its arrows do not save it.
-**Unsaved**, **Saving…**, and **Saved** show the current state below the field.
-Background checks preserve unfinished edits. Failed saves retain your draft so
+The Save button shows **Saving…** during saving and becomes disabled once
+the value is saved. Background checks preserve unfinished edits. Failed saves retain your draft so
 you can retry; saved values continue to synchronize across devices.
 
 A background check runs once per minute without an open browser. It reads the
