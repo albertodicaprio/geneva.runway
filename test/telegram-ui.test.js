@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser({ configured = true, connected = false } = {}) {
     const nodes = {};
     for (const id of ['accountMenu', 'telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect',
-        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold']) {
+        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'busyArrivalThresholdStatus']) {
         nodes[id] = { hidden: true, disabled: false, textContent: '', handlers: {},
             addEventListener(name, fn) { this.handlers[name] = fn; },
             removeAttribute(name) { delete this[name]; }, focus() { document.activeElement = this; } };
@@ -35,7 +35,7 @@ function browser({ configured = true, connected = false } = {}) {
                     return { ok: true, json: async () => ({ url: 'https://t.me/GenevaTestBot?start=secret', expiresAt: state.expiresAt }) };
                 }
                 if (url.endsWith('/alerts')) {
-                    state.alerts = JSON.parse(options.body);
+                    state.alerts = { ...state.alerts, ...JSON.parse(options.body) };
                     return { ok: true, json: async () => ({ alerts: state.alerts }) };
                 }
                 if (url.endsWith('/disconnect')) state = { ...state, connection: null, expiresAt: null, alerts: { predictedRunwayChanges: false } };
@@ -204,11 +204,13 @@ test('busy arrival controls preserve runway preferences, sync, validate threshol
     assert.equal(b.nodes.busyArrivalThreshold.value, 12);
     assert.equal(b.nodes.busyArrivalThreshold.disabled, false);
     b.nodes.busyArrivalThreshold.value = '0';
-    b.nodes.busyArrivalThreshold.handlers.change();
-    assert.equal(b.nodes.busyArrivalThreshold.value, 12);
-    assert.match(b.nodes.telegramMessage.textContent, /whole number/);
+    b.nodes.busyArrivalThreshold.handlers.input();
+    assert.equal(b.nodes.busyArrivalThreshold.value, '0');
+    assert.equal(b.nodes.busyArrivalThresholdSave.disabled, true);
+    assert.match(b.nodes.busyArrivalThresholdStatus.textContent, /whole number/);
     b.nodes.busyArrivalThreshold.value = '15';
-    await b.nodes.busyArrivalThreshold.handlers.change();
+    b.nodes.busyArrivalThreshold.handlers.input();
+    await b.nodes.busyArrivalThresholdSave.handlers.click();
     assert.deepEqual(JSON.parse(b.requests.filter(item => item.url.endsWith('/alerts')).at(-1).options.body), { busyArrivalThreshold: 15 });
     b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: true, busyArrivals: true, busyArrivalThreshold: 15 } });
     await b.open();
@@ -227,4 +229,80 @@ test('busy arrival controls preserve runway preferences, sync, validate threshol
     assert.equal(b.nodes.busyArrivalAlerts.checked, false);
     assert.equal(b.nodes.busyArrivalAlerts.disabled, true);
     assert.equal(b.nodes.busyArrivalThreshold.value, 10);
+});
+
+test('polling preserves an unfinished threshold edit without saving it', async () => {
+    const b = browser({ connected: true });
+    b.state({ enabled: true, connection: b.connection, alerts: { busyArrivals: true, busyArrivalThreshold: 10 } });
+    await b.open();
+    b.nodes.busyArrivalThreshold.value = '25';
+    b.nodes.busyArrivalThreshold.handlers.input?.();
+    b.events.interval(); await flush();
+    assert.equal(String(b.nodes.busyArrivalThreshold.value), '25');
+    assert.equal(b.requests.filter(request => request.options.method === 'POST').length, 0);
+});
+
+test('threshold drafts survive polls and validation errors, save explicitly, and remain editable after failure', async () => {
+    const b = browser({ connected: true });
+    b.state({ enabled: true, connection: b.connection, alerts: { busyArrivals: true, busyArrivalThreshold: 10 } });
+    await b.open();
+    const input = b.nodes.busyArrivalThreshold;
+    const save = b.nodes.busyArrivalThresholdSave;
+    assert.equal(save.disabled, true);
+    input.value = '';
+    input.handlers.input();
+    b.events.interval(); await flush();
+    assert.equal(input.value, '');
+    assert.equal(save.disabled, true);
+    input.value = '25'; input.handlers.input();
+    assert.equal(save.disabled, false);
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, 'Unsaved');
+    b.events.focus(); await flush();
+    assert.equal(input.value, '25');
+    assert.equal(b.requests.filter(request => request.options.method === 'POST').length, 0);
+    b.error({ status: 503, message: 'Disk unavailable' });
+    await save.handlers.click();
+    assert.equal(input.value, '25');
+    assert.equal(save.disabled, false);
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, 'Not saved. Try again.');
+    b.error(null);
+    let prevented = false;
+    await input.handlers.keydown({ key: 'Enter', preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(String(input.value), '25');
+    assert.equal(save.disabled, true);
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, 'Saved');
+    b.state({ enabled: true, connection: b.connection, alerts: { busyArrivals: true, busyArrivalThreshold: 30 } });
+    b.events.interval(); await flush();
+    assert.equal(input.value, 30); // Clean fields still sync with other devices.
+});
+
+test('a threshold save during an in-flight poll is not discarded or overwritten by the older response', async () => {
+    const b = browser({ connected: true });
+    b.state({ enabled: true, connection: b.connection, alerts: { busyArrivals: true, busyArrivalThreshold: 10 } });
+    await b.open();
+    b.nodes.busyArrivalThreshold.value = '25'; b.nodes.busyArrivalThreshold.handlers.input();
+    let finishPoll; let finishSave;
+    b.intercept((url, options) => new Promise(resolve => {
+        if (options.method === 'POST') finishSave = resolve;
+        else finishPoll = resolve;
+    }));
+    b.events.interval(); await flush();
+    const saving = b.nodes.busyArrivalThresholdSave.handlers.click();
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, 'Saving…');
+    assert.equal(b.nodes.busyArrivalThreshold.disabled, true);
+    assert.equal(b.nodes.busyArrivalThresholdSave.disabled, true);
+    finishSave({ ok: true, json: async () => ({ alerts: { busyArrivals: true, busyArrivalThreshold: 25 } }) });
+    await saving;
+    finishPoll({ ok: true, json: async () => ({ enabled: true, connection: b.connection,
+        alerts: { busyArrivals: true, busyArrivalThreshold: 10 } }) });
+    await flush();
+    assert.equal(b.nodes.busyArrivalThreshold.value, 25);
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, 'Saved');
+    assert.equal(b.nodes.busyArrivalThresholdSave.disabled, true);
+    b.intercept(null);
+    b.document.documentElement.dataset.userId = '';
+    b.events.authchange();
+    assert.equal(b.nodes.busyArrivalThreshold.value, 10);
+    assert.equal(b.nodes.busyArrivalThresholdStatus.textContent, '');
 });

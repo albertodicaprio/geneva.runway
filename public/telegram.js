@@ -1,12 +1,15 @@
 (() => {
     const ids = ['telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect', 'telegramTest',
-        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold'];
+        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'busyArrivalThresholdStatus'];
     const nodes = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const menu = document.getElementById('accountMenu');
     if (!menu || ids.some(id => !nodes[id])) return;
     let accountId = '';
     let csrfToken;
     let generation = 0;
+    let revision = 0;
+    let thresholdDraft = null;
+    let thresholdMessage = '';
     let busy = false;
     let checking = false;
     let enabled = false;
@@ -26,6 +29,9 @@
         if (accountId !== current) {
             accountId = current;
             generation++;
+            revision++;
+            thresholdDraft = null;
+            thresholdMessage = '';
             csrfToken = null;
             enabled = false;
             connection = null;
@@ -36,6 +42,10 @@
             nodes.telegramMessage.textContent = '';
             render();
         }
+    }
+    function validThresholdDraft() {
+        const value = Number(thresholdDraft);
+        return thresholdDraft !== null && thresholdDraft.trim() !== '' && Number.isInteger(value) && value >= 1 && value <= 100;
     }
     function render() {
         nodes.telegramStatus.textContent = connection ? (connection.blocked ? 'Connected · delivery unavailable' : 'Connected') :
@@ -50,11 +60,15 @@
         nodes.telegramConnect.textContent = link ? 'Create new link' : 'Connect';
         nodes.telegramConnect.disabled = busy || !enabled || !csrfToken;
         nodes.predictedRunwayAlerts.checked = alerts.predictedRunwayChanges === true;
-        nodes.predictedRunwayAlerts.disabled = busy || checking || !enabled || !csrfToken || !connection || connection.blocked;
+        nodes.predictedRunwayAlerts.disabled = busy || !enabled || !csrfToken || !connection || connection.blocked;
         nodes.busyArrivalAlerts.checked = alerts.busyArrivals === true;
         nodes.busyArrivalAlerts.disabled = nodes.predictedRunwayAlerts.disabled;
-        nodes.busyArrivalThreshold.value = alerts.busyArrivalThreshold ?? 10;
+        nodes.busyArrivalThreshold.value = thresholdDraft ?? (alerts.busyArrivalThreshold ?? 10);
         nodes.busyArrivalThreshold.disabled = nodes.busyArrivalAlerts.disabled || !nodes.busyArrivalAlerts.checked;
+        nodes.busyArrivalThresholdSave.disabled = nodes.busyArrivalThreshold.disabled || !validThresholdDraft();
+        nodes.busyArrivalThresholdSave.textContent = thresholdMessage === 'Saving…' ? 'Saving…' : 'Save';
+        nodes.busyArrivalThresholdStatus.textContent = !connection || alerts.busyArrivals !== true ? '' :
+            thresholdMessage || (thresholdDraft === null ? 'Saved' : validThresholdDraft() ? 'Unsaved' : 'Enter a whole number from 1 to 100.');
         if (connection) clearLink();
     }
     async function request(path, method = 'GET', body) {
@@ -72,6 +86,7 @@
         if (!accountId || busy || checking || !menu.open) return;
         checking = true;
         const version = generation;
+        const requestRevision = revision;
         try {
             if (!csrfToken) {
                 const response = await fetch('/api/auth/session', { cache: 'no-store' });
@@ -84,10 +99,11 @@
                 csrfToken = session.csrfToken;
             }
             const state = await request('');
-            if (version !== generation) return;
+            if (version !== generation || requestRevision !== revision) return;
             enabled = state.enabled;
             connection = state.connection;
             alerts = state.alerts || { predictedRunwayChanges: false };
+            if (!connection || alerts.busyArrivals !== true) { thresholdDraft = null; thresholdMessage = ''; }
             if (state.linkError) {
                 clearLink();
                 nodes.telegramMessage.textContent = state.linkError;
@@ -102,11 +118,14 @@
     }
     async function action(path, body) {
         synchronize();
-        if (!accountId || !csrfToken || busy || checking) return;
+        if (!accountId || !csrfToken || busy) return;
+        revision++;
         busy = true;
         let disconnected = false;
         const version = generation;
         const previousAlerts = alerts;
+        const savingThreshold = path === '/alerts' && Object.hasOwn(body, 'busyArrivalThreshold');
+        if (savingThreshold) thresholdMessage = 'Saving…';
         if (path === '/alerts') alerts = { ...alerts, ...body };
         nodes.telegramMessage.textContent = '';
         render();
@@ -123,11 +142,17 @@
             } else if (path === '/disconnect') {
                 connection = null;
                 alerts = { predictedRunwayChanges: false };
+                thresholdDraft = null;
+                thresholdMessage = '';
                 clearLink();
                 disconnected = true;
                 nodes.telegramMessage.textContent = 'Telegram disconnected.';
             } else if (path === '/alerts') {
                 alerts = result.alerts;
+                if (savingThreshold || alerts.busyArrivals !== true) {
+                    thresholdDraft = null;
+                    thresholdMessage = savingThreshold ? 'Saved' : '';
+                }
                 nodes.telegramMessage.textContent = Object.hasOwn(body, 'predictedRunwayChanges')
                     ? (alerts.predictedRunwayChanges ? 'Arrival runway alerts enabled. Current arrival history establishes a baseline.' : 'Arrival runway alerts disabled.')
                     : 'Busy arrival alert settings saved.';
@@ -135,6 +160,7 @@
         } catch (error) {
             if (version === generation) {
                 if (path === '/alerts') alerts = previousAlerts;
+                if (savingThreshold) thresholdMessage = 'Not saved. Try again.';
                 nodes.telegramMessage.textContent = error.message;
             }
         } finally {
@@ -155,14 +181,19 @@
     nodes.busyArrivalAlerts.addEventListener('change', () => action('/alerts', {
         busyArrivals: nodes.busyArrivalAlerts.checked
     }));
-    nodes.busyArrivalThreshold.addEventListener('change', () => {
-        const threshold = Number(nodes.busyArrivalThreshold.value);
-        if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) {
-            nodes.telegramMessage.textContent = 'Choose a whole number from 1 to 100.';
-            render();
-            return;
-        }
-        action('/alerts', { busyArrivalThreshold: threshold });
+    nodes.busyArrivalThreshold.addEventListener('input', () => {
+        thresholdDraft = String(nodes.busyArrivalThreshold.value);
+        if (thresholdDraft === String(alerts.busyArrivalThreshold ?? 10)) thresholdDraft = null;
+        thresholdMessage = '';
+        render();
+    });
+    function saveThreshold() {
+        if (nodes.busyArrivalThreshold.disabled || !validThresholdDraft()) return;
+        return action('/alerts', { busyArrivalThreshold: Number(thresholdDraft) });
+    }
+    nodes.busyArrivalThresholdSave.addEventListener('click', saveThreshold);
+    nodes.busyArrivalThreshold.addEventListener('keydown', event => {
+        if (event.key === 'Enter') { event.preventDefault(); return saveThreshold(); }
     });
     nodes.telegramQr.addEventListener('error', () => {
         nodes.telegramQr.hidden = true;

@@ -855,6 +855,15 @@ outbound notification channel; notification configuration belongs in the app.
      Telegram name beside Connected on all four pages. Validation: nine Telegram
      UI tests pass; Chrome checks Day/Night at 320/390/700/1040px, tooltip focus,
      disabled styling and inline account name. Local homepage/API return 200.
+   - Fix threshold editing: periodic status rendering was overwriting unfinished
+     input with the saved value. Keep a separate draft across polling and focus
+     changes, add explicit Save/Enter with Unsaved/Saving/Saved feedback on every
+     page, preserve failed-save drafts, and reject older in-flight poll responses
+     after account actions. Disable threshold editing while its alert is off.
+     Validation: the regression reproduced 25 reverting to 10 before the fix;
+     all 193 tests now pass, including retry, invalid drafts, account changes,
+     cross-device refresh and save/poll races. Mobile Chrome verifies a typed
+     draft survives a full polling interval and saves via the visible button.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each

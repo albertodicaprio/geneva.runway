@@ -76,9 +76,13 @@
                                         <p id="busyArrivalAlertHelp" role="tooltip">One alert per busy period; resets after five minutes at or below your threshold. Counts live tracked Geneva arrivals.</p>
                                     </div>
                                 </div>
-                                <label class="busy-arrival-threshold" for="busyArrivalThreshold">More than
-                                    <input id="busyArrivalThreshold" type="number" min="1" max="100" step="1" value="10" aria-describedby="busyArrivalAlertHelp" disabled> arrivals
-                                </label>
+                                <div class="busy-arrival-threshold">
+                                    <label for="busyArrivalThreshold">More than
+                                        <input id="busyArrivalThreshold" type="number" min="1" max="100" step="1" inputmode="numeric" enterkeyhint="done" value="10" aria-describedby="busyArrivalAlertHelp busyArrivalThresholdStatus" disabled> arrivals
+                                    </label>
+                                    <button class="theme-toggle" id="busyArrivalThresholdSave" type="button" aria-label="Save busy arrival threshold" disabled>Save</button>
+                                </div>
+                                <p class="busy-arrival-threshold-status" id="busyArrivalThresholdStatus" role="status"></p>
                             </div>
                             <button class="account-logout" id="signOut" type="button" hidden>Log out</button>
                         </div>

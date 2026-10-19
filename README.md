@@ -645,7 +645,12 @@ remain future work in `ROADMAP.md`.
 Under **Settings → Telegram alerts**, enable **Busy arrivals** after connecting
 Telegram. This separate opt-in defaults off. Set **More than** to a whole number
 from 1 to 100 (default 10): the default alerts at 11 or more live tracked Geneva
-arrivals, rather than counting historical landings or departures.
+arrivals, rather than counting historical landings or departures. The threshold
+is editable only while Busy arrivals is enabled. Type a value and tap **Save**
+(or press Enter); leaving the field and using its arrows do not save it.
+**Unsaved**, **Saving…**, and **Saved** show the current state below the field.
+Background checks preserve unfinished edits. Failed saves retain your draft so
+you can retry; saved values continue to synchronize across devices.
 
 A background check runs once per minute without an open browser. It reads the
 existing aircraft cache only, counts distinct aircraft with positions less than
