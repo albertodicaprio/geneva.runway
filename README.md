@@ -516,3 +516,87 @@ files are placed in `data/flight-history/` by default; set
 `AIRCRAFT_HISTORY_DIR` to use another directory. `data/` is
 ignored by Git. Docker Compose sets its own cache path, so this local setting
 does not change where container data is stored.
+
+## Optional Telegram integration
+
+Signed-in users can connect a private Telegram account from **Telegram
+Integration**, between Profile and Settings in the account dropdown on every
+page. Click Connect and open the bot link, or scan its QR code with a phone,
+then press **Start** in Telegram. Leave the dropdown open to see the connection
+appear automatically. Send test message sends a single notification; Disconnect
+removes the saved association and invalidates pending links. No automatic airport
+alerts are enabled in this first step.
+
+Setup:
+
+1. Open the verified [BotFather](https://t.me/BotFather) account in Telegram and
+   use `/newbot`. Choose the app's name and a unique username ending in `bot`.
+   Disable group joining using `/setjoingroups`; website users connect private
+   chats only. No bot commands or Telegram login/domain settings are needed.
+2. Copy the Telegram section of `.env.example` into your existing ignored
+   `.env`. Set `TELEGRAM_BOT_TOKEN` to BotFather's API token and
+   `TELEGRAM_BOT_USERNAME` to the bot username without `@`. Generate a separate
+   webhook secret with `openssl rand -hex 32` and put it in
+   `TELEGRAM_WEBHOOK_SECRET`. Never put credentials in source control, browser
+   URLs or screenshots. Keep all three blank to disable the integration.
+3. Deploy the updated app and Caddy configuration with `APP_ORIGIN` set to your
+   public HTTPS website origin. The new Caddy log filter removes Telegram's
+   secret header from access logs. The existing HTTPS route and ports suffice.
+4. Register the webhook once from the deployed container:
+
+   ```sh
+   docker compose exec app node scripts/setup-telegram.js
+   ```
+
+   Alternatively, on a host with Node 24 and the app dependencies installed:
+
+   ```sh
+   node --env-file=.env scripts/setup-telegram.js
+   ```
+
+   The script checks that the token and username identify the same bot, then
+   registers `${APP_ORIGIN}/api/telegram/webhook` with a secret request header
+   and message updates only. It does not send messages. Run it again after
+   changing the bot, public origin, or webhook secret. Server startup never
+   changes webhook registration. A bot has one webhook: use a separate bot
+   for development instead of redirecting your production bot.
+5. Sign in, connect through the link or QR code, and send a test message.
+
+Telegram calls the webhook only to complete linking. The app validates the
+secret header, private-chat sender and single-use token; it ignores ordinary
+messages and commands. There is no Telegram long polling. See Telegram's
+[deep-linking](https://core.telegram.org/bots/features#deep-linking) and
+[webhook documentation](https://core.telegram.org/bots/api#setwebhook).
+
+Connections are one-to-one and keyed by verified Google account ID, independent
+of email or Telegram username changes. The saved Telegram name/username reflect
+what was provided when linking. Connections survive logout, session expiry,
+restart and image rebuilds. Locally they are stored in ignored
+`data/telegram-connections.json`; Compose uses
+`/app/data/telegram-connections.json` in `aircraft_data`. Include this file in
+private backups; do not delete the volume when upgrading. Use
+`TELEGRAM_CONNECTIONS_FILE` to override the path. Atomic serialized writes are
+intended for one app instance. Malformed files are preserved and reported as
+unavailable rather than overwritten.
+
+Link tokens and QR codes are generated locally, expire after ten minutes, and
+are invalidated by creating a replacement, successful linking, disconnecting,
+or restarting the server. Treat them as private. If a Telegram account is
+already linked elsewhere, disconnect it from that website account first.
+QR generation uses the `qrcode` dependency to avoid sharing tokens with an
+external QR service. Account endpoints require a session; mutations also
+require same-origin requests and the session's CSRF token.
+
+The test notification is the first provider in `lib/notification-providers.js`.
+Providers render text while the Telegram service owns recipient selection and
+delivery. Test attempts have a persistent ten-second cooldown, honor Telegram's
+rate-limit delay, and time out after eight seconds. They are not retried
+automatically because a timed-out request may already have delivered. If the
+bot is blocked, unblock it in Telegram, then disconnect and reconnect in the
+app. Later notification preferences, automatic delivery and airport/aircraft
+providers are tracked in `ROADMAP.md`.
+
+For local Docker testing use both `app` and `caddy` at `http://127.0.0.1/`.
+Telegram cannot reach that local HTTP address; use simulated authenticated
+webhook requests for local checks and the deployed public HTTPS address for
+real linking. Connections and test messages never trigger OpenSky requests.

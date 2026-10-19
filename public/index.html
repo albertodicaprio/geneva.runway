@@ -14,6 +14,7 @@
     <link rel="icon" href="plane_ico.ico" sizes="any">
     <script src="theme.js"></script>
     <script defer src="auth.js"></script>
+    <script defer src="telegram.js"></script>
     <!-- UMAMI_TRACKER -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -35,6 +36,23 @@
                                 <div><dt>Name</dt><dd id="profileName">—</dd></div>
                                 <div><dt>Email</dt><dd id="profileEmail">—</dd></div>
                             </dl>
+                            <h2>Telegram Integration</h2>
+                            <div class="telegram-integration" id="telegramIntegration">
+                                <p id="telegramStatus" role="status">Open this menu to check Telegram.</p>
+                                <p id="telegramAccount" hidden></p>
+                                <div class="telegram-actions">
+                                    <button class="theme-toggle" id="telegramTest" type="button" hidden>Send test message</button>
+                                    <button class="theme-toggle" id="telegramConnect" type="button" disabled>Connect</button>
+                                    <button class="theme-toggle" id="telegramDisconnect" type="button" hidden>Disconnect</button>
+                                </div>
+                                <div class="telegram-link" id="telegramLinkPanel" hidden>
+                                    <p>Open Telegram or scan this code with your phone, then press Start.</p>
+                                    <a id="telegramLink" target="_blank" rel="noopener noreferrer">Open Telegram</a>
+                                    <img id="telegramQr" width="240" height="240" alt="Scan to connect your Telegram account" hidden>
+                                    <p id="telegramExpiry"></p>
+                                </div>
+                                <p class="telegram-message" id="telegramMessage" role="status"></p>
+                            </div>
                             <h2>Settings</h2>
                             <div class="account-setting">
                                 <span id="themeSettingLabel">Theme</span>

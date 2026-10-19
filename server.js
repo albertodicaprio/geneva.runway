@@ -12,6 +12,9 @@ const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 const { createAuth } = require('./lib/auth');
 const { createAuthAnalytics, validWebsiteId: isValidWebsiteId } = require('./lib/auth-analytics');
 const auth = createAuth({ analytics: createAuthAnalytics() });
+const { createTelegram } = require('./lib/telegram');
+const { createTelegramHandler } = require('./api/telegram');
+const telegramHandler = createTelegramHandler({ auth, telegram: createTelegram() });
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -209,7 +212,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
         const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-        if (await auth.handle(req, res, url)) {
+        if (await telegramHandler(req, res, url) || await auth.handle(req, res, url)) {
             return;
         } else if (url.pathname === '/api/aircraft') {
             await handleApi(aircraftHandler, req, res);

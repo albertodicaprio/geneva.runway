@@ -769,21 +769,32 @@ Docker deployment, cache fallback, traffic classification, and track retention.
 Implement, validate locally, and commit one step at a time. Telegram is an
 outbound notification channel; notification configuration belongs in the app.
 
-1. [ ] Connect a signed-in account to Telegram.
+1. [x] Connect a signed-in account to Telegram.
    - Add a Telegram Integration section between Profile and Settings in the
      account dropdown on all pages. Show connection status, connected account,
      Connect/Disconnect, and Send test message only when connected.
    - Offer a bot deep link and a locally generated QR code for the same
      short-lived, single-use connection token. Associate private Telegram chat
      IDs with verified Google account IDs; enforce one-to-one connections.
-   - Deep links require receiving Telegram's `/start <token>` linking event.
-     Confirm the inbound transport before implementing it; no user-facing bot
-     commands or long polling are planned.
+   - A secret-authenticated HTTPS webhook receives Telegram's `/start <token>`
+     linking event. Ordinary messages are ignored; there are no user-facing bot
+     commands or Telegram polling. Registration is an explicit setup script.
    - Persist connections in the Docker data volume, protect account changes
      with session/CSRF checks, and document BotFather and environment setup in
      `.env.example` and README. Keep secrets and linking tokens out of logs.
    - Introduce a small notification-provider interface with a test-message
      provider; test delivery is initiated only from the account dropdown.
+   - Validate link expiry/replacement/replay, private sender identity,
+     one-to-one ownership, real account sessions and CSRF, persistence and disk
+     failures, bounded webhook bodies, send cooldown/rate limits, blocked bots,
+     and late browser responses after logout. All 152 tests pass.
+   - Headless Chrome checks pass in Day/Night at 320/390/700/1040px: QR renders,
+     connection state updates, menu fits without horizontal overflow, and
+     Disconnect returns focus to Connect. Docker builds; local Caddy serves
+     homepage and aircraft JSON (200), rejects guests (401) and invalid webhook
+     secrets (403), and removes the synthetic secret header from access logs.
+   - Real Telegram linking/delivery awaits BotFather credentials and explicit
+     webhook registration against the public HTTPS deployment.
 
 2. [ ] Add notification preferences and reliable automatic delivery.
    - Add per-notification toggles/fields to Settings in the account dropdown.

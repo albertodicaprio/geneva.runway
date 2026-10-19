@@ -1,0 +1,312 @@
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const fs = require('node:fs/promises');
+const os = require('node:os');
+const path = require('node:path');
+const http = require('node:http');
+const { createTelegram, telegramConfig } = require('../lib/telegram');
+const { createTelegramStore } = require('../lib/telegram-store');
+const { createTelegramClient, TelegramError } = require('../lib/telegram-client');
+const { createTelegramHandler } = require('../api/telegram');
+const { createAuth } = require('../lib/auth');
+const { OAuth2Client } = require('google-auth-library');
+const { createUserSettings } = require('../lib/user-settings');
+const { setupTelegram } = require('../scripts/setup-telegram');
+
+const env = { TELEGRAM_BOT_TOKEN: '12345:private_bot_token', TELEGRAM_BOT_USERNAME: 'GenevaTestBot',
+    TELEGRAM_WEBHOOK_SECRET: 'private_webhook_secret_1234567890', APP_ORIGIN: 'http://localhost:3000',
+    GOOGLE_OAUTH_CLIENT_ID: 'google-client', GOOGLE_OAUTH_CLIENT_SECRET: 'google-secret' };
+const tokenOf = link => new URL(link.url).searchParams.get('start');
+function update(token, id = 123456) {
+    return { update_id: 42, message: { text: `/start ${token}`, chat: { id, type: 'private' },
+        from: { id, is_bot: false, first_name: '<Alice>', last_name: 'Example', username: 'alice' } } };
+}
+async function fixture(t, options = {}) {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'geneva-telegram-'));
+    t.after(() => fs.rm(directory, { recursive: true, force: true }));
+    const filePath = path.join(directory, 'connections.json');
+    let now = Date.parse('2026-10-19T10:00:00Z');
+    const calls = [];
+    let failure;
+    const client = { async sendMessage(chatId, text) { calls.push({ chatId, text }); if (failure) throw failure; } };
+    const store = createTelegramStore({ filePath });
+    const telegram = createTelegram({ env, store, clock: () => now, client, ...options });
+    return { telegram, store, client, calls, filePath, directory, now: () => now,
+        advance(ms) { now += ms; }, fail(error) { failure = error; } };
+}
+
+test('links are private, single-use and bind a Telegram account to the correct Google ID across restarts', async t => {
+    const f = await fixture(t);
+    const link = await f.telegram.begin('google-alice');
+    assert.equal(new URL(link.url).pathname, '/GenevaTestBot');
+    assert.equal(tokenOf(link).length, 43);
+    assert.doesNotMatch(link.url, /google-alice|private_bot_token/);
+    assert.equal(link.expiresAt, f.now() + 600_000);
+    const svg = await f.telegram.qrCode('google-alice');
+    assert.match(svg, /<svg/);
+    assert.match(svg, /viewBox=/);
+    await f.telegram.accept(update(tokenOf(link)));
+    const state = await f.telegram.status('google-alice');
+    assert.equal(state.connection.name, '<Alice> Example');
+    assert.equal(state.connection.username, 'alice');
+    assert.equal(state.expiresAt, null);
+    assert.doesNotMatch(JSON.stringify(state), /123456|chatId|token/);
+    assert.equal((await f.telegram.status('google-bob')).connection, null);
+    await f.telegram.accept(update(tokenOf(link))); // Telegram retry is a no-op.
+    await assert.rejects(f.telegram.begin('google-alice'), { status: 409 });
+    const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client });
+    assert.deepEqual((await restarted.status('google-alice')).connection, state.connection);
+    assert.equal((await fs.stat(f.filePath)).mode & 0o777, 0o600);
+    assert.doesNotMatch(await fs.readFile(f.filePath, 'utf8'), new RegExp(tokenOf(link)));
+});
+
+test('QR encodes the exact deep link and expired, replaced, disconnected or restarted links cannot connect', async t => {
+    const encoded = [];
+    const f = await fixture(t, { qr: async url => { encoded.push(url); return '<svg/>'; } });
+    const first = await f.telegram.begin('alice');
+    await f.telegram.qrCode('alice');
+    assert.deepEqual(encoded, [first.url]);
+    const replacement = await f.telegram.begin('alice');
+    await f.telegram.accept(update(tokenOf(first)));
+    assert.equal((await f.telegram.status('alice')).connection, null);
+    f.advance(600_000);
+    await f.telegram.accept(update(tokenOf(replacement)));
+    await assert.rejects(f.telegram.qrCode('alice'), { status: 410 });
+    const cancelled = await f.telegram.begin('alice');
+    await f.telegram.disconnect('alice');
+    await f.telegram.accept(update(tokenOf(cancelled)));
+    assert.equal((await f.telegram.status('alice')).connection, null);
+    const beforeRestart = await f.telegram.begin('alice');
+    const restarted = createTelegram({ env, store: f.store });
+    await restarted.accept(update(tokenOf(beforeRestart)));
+    assert.equal((await restarted.status('alice')).connection, null);
+});
+
+test('ordinary commands, group chats, bot senders and mismatched identities cannot link', async t => {
+    const f = await fixture(t);
+    const token = tokenOf(await f.telegram.begin('alice'));
+    for (const mutate of [
+        value => { value.message.text = '/help'; },
+        value => { value.message.text = '/start'; },
+        value => { value.message.chat.type = 'group'; },
+        value => { value.message.from.is_bot = true; },
+        value => { value.message.from.id++; },
+        value => { value.message.from.id = value.message.chat.id = -1; }
+    ]) {
+        const event = update(token);
+        mutate(event);
+        await f.telegram.accept(event);
+        assert.equal((await f.telegram.status('alice')).connection, null);
+    }
+    await f.telegram.accept(update(token));
+    assert.ok((await f.telegram.status('alice')).connection);
+    assert.equal(f.calls.length, 0); // Linking and commands never send a message.
+});
+
+test('concurrent connections enforce one-to-one ownership and disconnect prevents replay', async t => {
+    const f = await fixture(t);
+    const alice = await f.telegram.begin('alice');
+    const bob = await f.telegram.begin('bob');
+    await Promise.all([f.telegram.accept(update(tokenOf(alice))), f.telegram.accept(update(tokenOf(bob)))]);
+    assert.ok((await f.telegram.status('alice')).connection);
+    assert.equal((await f.telegram.status('bob')).connection, null);
+    assert.match((await f.telegram.status('bob')).linkError, /already connected/);
+    await f.telegram.disconnect('alice');
+    await f.telegram.accept(update(tokenOf(alice)));
+    assert.equal((await f.telegram.status('alice')).connection, null);
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('bob'))));
+    assert.ok((await f.telegram.status('bob')).connection);
+});
+
+test('failed atomic writes preserve connections and linking can retry after disk recovery', async t => {
+    const f = await fixture(t);
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice'))));
+    const before = await fs.readFile(f.filePath, 'utf8');
+    let fail = true;
+    const store = createTelegramStore({ filePath: f.filePath, storage: { ...fs,
+        async rename(...args) { if (fail) throw new Error('disk failure'); return fs.rename(...args); } } });
+    const telegram = createTelegram({ env, store, clock: f.now });
+    await assert.rejects(telegram.disconnect('alice'));
+    const token = tokenOf(await telegram.begin('bob'));
+    await assert.rejects(telegram.accept(update(token, 654321)));
+    assert.equal(await fs.readFile(f.filePath, 'utf8'), before);
+    fail = false;
+    await telegram.accept(update(token, 654321));
+    assert.ok((await telegram.status('bob')).connection);
+    assert.ok((await telegram.status('alice')).connection);
+    assert.deepEqual(await fs.readdir(f.directory), ['connections.json']);
+});
+
+test('malformed connection files are preserved instead of overwritten', async t => {
+    const f = await fixture(t);
+    for (const contents of ['{broken', '{"version":1,"accounts":[]}', '{"version":1,"accounts":{"alice":{}}}']) {
+        await fs.writeFile(f.filePath, contents);
+        await assert.rejects(f.telegram.status('alice'));
+        await assert.rejects(f.telegram.disconnect('alice'));
+        assert.equal(await fs.readFile(f.filePath, 'utf8'), contents);
+    }
+});
+
+test('test provider sends only to its owner, persists cooldown and honors Telegram rate limits', async t => {
+    const f = await fixture(t);
+    await assert.rejects(f.telegram.send('alice'), { status: 409 });
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice'))));
+    await assert.rejects(f.telegram.send('bob'), { status: 409 });
+    await f.telegram.send('alice');
+    assert.equal(f.calls.length, 1);
+    assert.equal(f.calls[0].chatId, '123456');
+    assert.match(f.calls[0].text, /connection is working/);
+    await assert.rejects(f.telegram.send('alice'), { status: 429, retryAfter: 10 });
+    const restarted = createTelegram({ env, store: f.store, client: f.client, clock: f.now });
+    await assert.rejects(restarted.send('alice'), { status: 429 });
+    f.advance(10_000);
+    f.fail(new TelegramError(429, 60));
+    await assert.rejects(f.telegram.send('alice'), { status: 429, retryAfter: 60 });
+    f.advance(10_000);
+    await assert.rejects(f.telegram.send('alice'), { status: 429, retryAfter: 50 });
+    assert.throws(() => f.telegram.send('alice', '__proto__'), /Unknown notification provider/);
+});
+
+test('blocked chats report actionable status and transient delivery failures are not retried', async t => {
+    const f = await fixture(t);
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice'))));
+    f.fail(new TelegramError('unavailable'));
+    await assert.rejects(f.telegram.send('alice'), { status: 503 });
+    assert.equal(f.calls.length, 1);
+    f.advance(10_000);
+    f.fail(new TelegramError(403));
+    await assert.rejects(f.telegram.send('alice'), { status: 409 });
+    assert.equal((await f.telegram.status('alice')).connection.blocked, true);
+    await assert.rejects(f.telegram.send('alice'), { status: 409 });
+    assert.equal(f.calls.length, 2);
+    await f.telegram.disconnect('alice');
+    f.fail(null);
+    await f.telegram.accept(update(tokenOf(await f.telegram.begin('alice'))));
+    await f.telegram.send('alice');
+    assert.equal(f.calls.length, 3);
+});
+
+async function httpFixture(t) {
+    const f = await fixture(t);
+    let identity;
+    const oauth = new OAuth2Client({ clientId: env.GOOGLE_OAUTH_CLIENT_ID,
+        clientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET, redirectUri: `${env.APP_ORIGIN}/auth/google/callback` });
+    oauth.getToken = async () => ({ tokens: { id_token: 'test' } });
+    oauth.verifyIdToken = async () => ({ getPayload: () => identity });
+    const auth = createAuth({ env, settings: createUserSettings({ filePath: path.join(f.directory, 'settings.json') }),
+        logger: { info() {}, warn() {} }, client: oauth });
+    const handle = createTelegramHandler({ auth, telegram: f.telegram });
+    const server = http.createServer(async (req, res) => {
+        const url = new URL(req.url, env.APP_ORIGIN);
+        if (!await handle(req, res, url) && !await auth.handle(req, res, url)) { res.writeHead(404); res.end(); }
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    t.after(() => { server.closeAllConnections(); server.close(); });
+    const request = (url, options) => fetch(`http://127.0.0.1:${server.address().port}${url}`, { redirect: 'manual', ...options });
+    async function login(id = 'alice') {
+        const start = await request('/auth/google');
+        const url = new URL(start.headers.get('location'));
+        identity = { sub: id, email: `${id}@example.com`, email_verified: true, nonce: url.searchParams.get('nonce') };
+        const callback = await request(`/auth/google/callback?code=test&state=${url.searchParams.get('state')}`, {
+            headers: { Cookie: start.headers.getSetCookie()[0].split(';')[0] }
+        });
+        const cookie = callback.headers.getSetCookie().find(value => value.startsWith('gva-session=')).split(';')[0];
+        const session = await (await request('/api/auth/session', { headers: { Cookie: cookie } })).json();
+        return { Cookie: cookie, Origin: env.APP_ORIGIN, 'X-CSRF-Token': session.csrfToken };
+    }
+    const webhook = (value, secret = env.TELEGRAM_WEBHOOK_SECRET) => request('/api/telegram/webhook', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret },
+        body: JSON.stringify(value)
+    });
+    return { ...f, request, login, webhook };
+}
+
+test('account HTTP endpoints enforce real Google sessions, account isolation, CSRF and private QR responses', async t => {
+    const f = await httpFixture(t);
+    for (const route of ['', '/qr', '/connect', '/disconnect', '/test']) {
+        const response = await f.request(`/api/account/telegram${route}`, { method: ['', '/qr'].includes(route) ? 'GET' : 'POST' });
+        assert.equal(response.status, 401);
+    }
+    const alice = await f.login('alice');
+    for (const headers of [{ ...alice, Origin: 'https://evil.example' }, { ...alice, 'X-CSRF-Token': 'forged' }]) {
+        assert.equal((await f.request('/api/account/telegram/connect', { method: 'POST', headers })).status, 403);
+    }
+    assert.equal((await f.request('/api/account/telegram/connect', { headers: alice })).status, 405);
+    const response = await f.request('/api/account/telegram/connect', { method: 'POST', headers: alice });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    const link = await response.json();
+    const bob = await f.login('bob');
+    assert.equal((await f.request('/api/account/telegram/qr', { headers: bob })).status, 410);
+    const image = await f.request('/api/account/telegram/qr', { headers: alice });
+    assert.match(image.headers.get('content-type'), /image\/svg\+xml/);
+    assert.match(await image.text(), /<svg/);
+    assert.equal((await f.webhook(update(tokenOf(link)), 'forged')).status, 403);
+    assert.equal((await f.webhook(update(tokenOf(link)))).status, 200);
+    const state = await (await f.request('/api/account/telegram', { headers: alice })).json();
+    assert.ok(state.connection);
+    assert.doesNotMatch(JSON.stringify(state), /private|123456|chatId/);
+    assert.equal((await (await f.request('/api/account/telegram', { headers: bob })).json()).connection, null);
+    assert.equal((await f.request('/api/account/telegram/test', { method: 'POST', headers: alice })).status, 200);
+    const rate = await f.request('/api/account/telegram/test', { method: 'POST', headers: alice });
+    assert.equal(rate.status, 429);
+    assert.equal(rate.headers.get('retry-after'), '10');
+    assert.equal((await f.request('/api/account/telegram/disconnect', { method: 'POST', headers: alice })).status, 200);
+    assert.equal((await f.request('/api/account/telegram/test', { method: 'POST', headers: alice })).status, 409);
+    await f.request('/auth/logout', { method: 'POST', headers: alice });
+    assert.equal((await f.request('/api/account/telegram', { headers: alice })).status, 401);
+});
+
+test('webhook validates method, content type and bounded JSON while ignoring ordinary messages', async t => {
+    const f = await httpFixture(t);
+    assert.equal((await f.request('/api/telegram/webhook')).status, 405);
+    const headers = { 'X-Telegram-Bot-Api-Secret-Token': env.TELEGRAM_WEBHOOK_SECRET, 'Content-Type': 'application/json' };
+    for (const body of ['{bad', '[]', 'null', '{}']) {
+        assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers, body })).status, 400);
+    }
+    assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers: { ...headers, 'Content-Type': 'text/plain' }, body: '{}' })).status, 415);
+    assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers, body: JSON.stringify({ update_id: 1, padding: 'x'.repeat(17000) }) })).status, 413);
+    assert.equal((await f.webhook({ update_id: 1, message: { text: '/help' } })).status, 200);
+    assert.equal(f.calls.length, 0);
+});
+
+test('Telegram API client contains secret-bearing network errors and times out stalled bodies', async () => {
+    const token = env.TELEGRAM_BOT_TOKEN;
+    const calls = [];
+    const client = createTelegramClient({ token, fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        return { ok: true, json: async () => ({ ok: true, result: { message_id: 1 } }) };
+    } });
+    assert.deepEqual(await client.sendMessage('123', 'hello'), { message_id: 1 });
+    assert.equal(calls[0].url, `https://api.telegram.org/bot${token}/sendMessage`);
+    assert.deepEqual(JSON.parse(calls[0].options.body), { chat_id: '123', text: 'hello' });
+    const failing = createTelegramClient({ token, fetchImpl: async () => { throw new Error(`Network failed: ${token}`); } });
+    await assert.rejects(failing.sendMessage('123', 'hello'), error => error.code === 'unavailable' && !error.message.includes(token));
+    const timer = setTimeout(() => {}, 1000);
+    try {
+        const stalled = createTelegramClient({ token, timeoutMs: 10, fetchImpl: async (_url, { signal }) => ({
+            ok: true, json: () => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)))
+        }) });
+        await assert.rejects(stalled.sendMessage('123', 'hello'), { code: 'unavailable' });
+    } finally { clearTimeout(timer); }
+});
+
+test('webhook setup validates bot identity and public HTTPS, and never sends messages', async () => {
+    const calls = [];
+    const client = { async request(method, payload) {
+        calls.push({ method, payload });
+        return method === 'getMe' ? { username: 'GenevaTestBot' } : true;
+    } };
+    await assert.rejects(setupTelegram({ env, client }), /publicly reachable HTTPS/);
+    const setupEnv = { ...env, APP_ORIGIN: 'https://airport.example' };
+    assert.equal(await setupTelegram({ env: setupEnv, client }), 'https://airport.example/api/telegram/webhook');
+    assert.deepEqual(calls, [{ method: 'getMe', payload: undefined }, { method: 'setWebhook', payload: {
+        url: 'https://airport.example/api/telegram/webhook', secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+        allowed_updates: ['message'], max_connections: 1
+    } }]);
+    await assert.rejects(setupTelegram({ env: { ...setupEnv, TELEGRAM_BOT_USERNAME: 'WrongBot' }, client }), /does not match/);
+    assert.equal(telegramConfig({}).enabled, false);
+    assert.equal(telegramConfig({ ...env, TELEGRAM_WEBHOOK_SECRET: 'short' }).enabled, false);
+    assert.equal(telegramConfig(env).enabled, true);
+});
