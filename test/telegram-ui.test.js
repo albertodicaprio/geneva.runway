@@ -192,6 +192,7 @@ test('busy arrival controls preserve runway preferences, sync, validate threshol
     await b.open();
     assert.equal(b.nodes.busyArrivalAlerts.checked, false);
     assert.equal(b.nodes.busyArrivalAlerts.disabled, false);
+    assert.equal(b.nodes.busyArrivalThreshold.disabled, true);
     b.nodes.busyArrivalAlerts.checked = true;
     await b.nodes.busyArrivalAlerts.handlers.change();
     const save = b.requests.filter(item => item.url.endsWith('/alerts')).at(-1);
@@ -201,6 +202,7 @@ test('busy arrival controls preserve runway preferences, sync, validate threshol
     await b.open();
     assert.equal(b.nodes.predictedRunwayAlerts.checked, true);
     assert.equal(b.nodes.busyArrivalThreshold.value, 12);
+    assert.equal(b.nodes.busyArrivalThreshold.disabled, false);
     b.nodes.busyArrivalThreshold.value = '0';
     b.nodes.busyArrivalThreshold.handlers.change();
     assert.equal(b.nodes.busyArrivalThreshold.value, 12);
@@ -215,6 +217,11 @@ test('busy arrival controls preserve runway preferences, sync, validate threshol
     await b.nodes.busyArrivalAlerts.handlers.change();
     assert.equal(b.nodes.busyArrivalAlerts.checked, true);
     assert.match(b.nodes.telegramMessage.textContent, /Could not save/);
+    assert.equal(b.nodes.busyArrivalThreshold.disabled, false);
+    b.error(null);
+    b.nodes.busyArrivalAlerts.checked = false;
+    await b.nodes.busyArrivalAlerts.handlers.change();
+    assert.equal(b.nodes.busyArrivalThreshold.disabled, true);
     b.document.documentElement.dataset.userId = '';
     b.events.authchange();
     assert.equal(b.nodes.busyArrivalAlerts.checked, false);

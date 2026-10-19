@@ -54,7 +54,7 @@
         nodes.busyArrivalAlerts.checked = alerts.busyArrivals === true;
         nodes.busyArrivalAlerts.disabled = nodes.predictedRunwayAlerts.disabled;
         nodes.busyArrivalThreshold.value = alerts.busyArrivalThreshold ?? 10;
-        nodes.busyArrivalThreshold.disabled = nodes.predictedRunwayAlerts.disabled;
+        nodes.busyArrivalThreshold.disabled = nodes.busyArrivalAlerts.disabled || !nodes.busyArrivalAlerts.checked;
         if (connection) clearLink();
     }
     async function request(path, method = 'GET', body) {
