@@ -247,6 +247,7 @@ server.listen(PORT, HOST, () => {
     console.log(`Geneva Runway app listening on http://${HOST}:${listeningPort}`);
     startAircraftRefreshScheduler();
     void telegram.startPolling();
+    telegram.startAlertScheduler();
 });
 
 let shuttingDown = false;
@@ -258,6 +259,7 @@ async function shutdown() {
     deadline.unref();
     await Promise.all([
         telegram.stopPolling(),
+        telegram.stopAlertScheduler(),
         new Promise(resolve => server.close(resolve))
     ]);
     process.exit(0);

@@ -803,18 +803,34 @@ outbound notification channel; notification configuration belongs in the app.
      tested locally over HTTP. Use a separate bot for each environment and
      one running receiver per bot. No public URL or production deploy needed.
 
-2. [ ] Add notification preferences and reliable automatic delivery.
-   - Add per-notification toggles/fields to Settings in the account dropdown.
-   - Evaluate events from existing backend snapshots independently of browser
-     activity; do not increase upstream OpenSky requests per subscriber.
-   - Persist duplicate suppression and pending deliveries; add expiry,
-     bounded retries, Telegram rate-limit handling, quiet hours in
-     Europe/Zurich, and handling for users who block the bot.
-   - Define baseline/restart behavior so old observations do not trigger a
-     notification burst. Recheck connection and preferences before delivery.
+2. [x] Add opt-in predicted runway change alerts.
+   - Add a saved per-account switch under Settings → Telegram alerts on every
+     page. Default off, disable until connected, synchronize across devices,
+     protect saves with session/CSRF validation and restore failed saves.
+   - Share the weather page's service/cache. Check once per minute only with
+     subscribers, independently of browser activity and OpenSky refreshes.
+   - Establish a baseline after enabling/restart, require two distinct reports
+     confirming a known 04/22 change, and apply a one-hour cooldown. Reports
+     refresh about every 30 minutes, giving roughly 30–60 minutes of latency.
+     Unknown/stale reports reset confirmation; long gaps establish a baseline.
+   - Persist detection and pending delivery, bound attempts to three, honor
+     rate limits, expire after 15 minutes, and discard pending work when
+     disabled, disconnected, restarted, blocked, or no longer matching the
+     prediction. Make the weather-based uncertainty explicit in messages.
+   - Validation: 178 tests cover transitions, confirmation, cooldown, stale and
+     unknown data, persistence, retries, expiry, restart, scheduler shutdown,
+     preference isolation/CSRF and browser save/rollback. Weather-page and
+     multiple-subscriber checks share one provider request/cache. Day/Night
+     Chrome checks pass at 320/390/700/1040px, including keyboard switch saving
+     and clearing preferences on disconnect. Docker builds; local Caddy serves
+     homepage and aircraft JSON (200) and rejects guest alert updates (401).
 
-3. [ ] Add notification providers individually from IDEAS.md.
-   - Wind / predicted runway changes (review the existing Hermes behavior).
+3. [ ] Extend notification preferences and delivery.
+   - Add quiet hours in Europe/Zurich and per-provider fields as needed.
+   - Extend the existing bounded delivery and cancellation behavior for future
+     alert types; keep background evaluation independent of browser requests.
+
+4. [ ] Add other notification providers individually from IDEAS.md.
    - Busy arrival periods, with a configurable threshold and reset condition.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.

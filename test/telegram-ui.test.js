@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser({ configured = true, connected = false } = {}) {
     const nodes = {};
     for (const id of ['accountMenu', 'telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect',
-        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage']) {
+        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts']) {
         nodes[id] = { hidden: true, disabled: false, textContent: '', handlers: {},
             addEventListener(name, fn) { this.handlers[name] = fn; },
             removeAttribute(name) { delete this[name]; }, focus() { document.activeElement = this; } };
@@ -19,7 +19,7 @@ function browser({ configured = true, connected = false } = {}) {
     const window = { addEventListener(name, fn) { events[name] = fn; }, setInterval(fn) { events.interval = fn; } };
     const requests = [];
     const connection = { name: '<Alice>', username: 'alice', blocked: false };
-    let state = { enabled: configured, connection: connected ? connection : null, expiresAt: null };
+    let state = { enabled: configured, connection: connected ? connection : null, expiresAt: null, alerts: { predictedRunwayChanges: false } };
     let error;
     let intercept;
     const now = Date.now();
@@ -34,7 +34,11 @@ function browser({ configured = true, connected = false } = {}) {
                     state.expiresAt = now + 600_000;
                     return { ok: true, json: async () => ({ url: 'https://t.me/GenevaTestBot?start=secret', expiresAt: state.expiresAt }) };
                 }
-                if (url.endsWith('/disconnect')) state = { ...state, connection: null, expiresAt: null };
+                if (url.endsWith('/alerts')) {
+                    state.alerts = JSON.parse(options.body);
+                    return { ok: true, json: async () => ({ alerts: state.alerts }) };
+                }
+                if (url.endsWith('/disconnect')) state = { ...state, connection: null, expiresAt: null, alerts: { predictedRunwayChanges: false } };
                 return { ok: true, json: async () => ({ ok: true }) };
             }
             return { ok: true, json: async () => state };
@@ -141,4 +145,43 @@ test('blocked delivery keeps the account visible while disabling the test action
     assert.equal(b.nodes.telegramTest.disabled, true);
     assert.equal(b.nodes.telegramDisconnect.hidden, false);
     assert.match(b.nodes.telegramStatus.textContent, /delivery unavailable/);
+});
+
+test('runway toggle starts off, saves with CSRF, reflects other devices and resets on disconnect', async () => {
+    const b = browser({ connected: true });
+    await b.open();
+    const toggle = b.nodes.predictedRunwayAlerts;
+    assert.equal(toggle.checked, false);
+    assert.equal(toggle.disabled, false);
+    toggle.checked = true;
+    await toggle.handlers.change();
+    assert.equal(toggle.checked, true);
+    const save = b.requests.find(request => request.url.endsWith('/alerts'));
+    assert.equal(save.options.method, 'POST');
+    assert.equal(save.options.headers['X-CSRF-Token'], 'csrf');
+    assert.deepEqual(JSON.parse(save.options.body), { predictedRunwayChanges: true });
+    assert.match(b.nodes.telegramMessage.textContent, /baseline/);
+    b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: false } });
+    b.events.interval(); await flush();
+    assert.equal(toggle.checked, false);
+    await b.nodes.telegramDisconnect.handlers.click();
+    assert.equal(toggle.checked, false);
+    assert.equal(toggle.disabled, true);
+});
+
+test('failed preference saves restore the saved toggle and logout clears it', async () => {
+    const b = browser({ connected: true });
+    await b.open();
+    b.error({ status: 503, message: 'Could not save alert preferences.' });
+    b.nodes.predictedRunwayAlerts.checked = true;
+    await b.nodes.predictedRunwayAlerts.handlers.change();
+    assert.equal(b.nodes.predictedRunwayAlerts.checked, false);
+    assert.match(b.nodes.telegramMessage.textContent, /Could not save/);
+    b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: true } });
+    b.events.interval(); await flush();
+    assert.equal(b.nodes.predictedRunwayAlerts.checked, true);
+    b.document.documentElement.dataset.userId = '';
+    b.events.authchange();
+    assert.equal(b.nodes.predictedRunwayAlerts.checked, false);
+    assert.equal(b.nodes.predictedRunwayAlerts.disabled, true);
 });

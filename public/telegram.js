@@ -1,6 +1,6 @@
 (() => {
     const ids = ['telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect', 'telegramTest',
-        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage'];
+        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts'];
     const nodes = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const menu = document.getElementById('accountMenu');
     if (!menu || ids.some(id => !nodes[id])) return;
@@ -12,6 +12,7 @@
     let enabled = false;
     let connection = null;
     let link = null;
+    let alerts = { predictedRunwayChanges: false };
 
     function clearLink() {
         link = null;
@@ -28,6 +29,7 @@
             csrfToken = null;
             enabled = false;
             connection = null;
+            alerts = { predictedRunwayChanges: false };
             busy = false;
             checking = false;
             clearLink();
@@ -47,11 +49,15 @@
         nodes.telegramConnect.hidden = Boolean(connection);
         nodes.telegramConnect.textContent = link ? 'Create new link' : 'Connect';
         nodes.telegramConnect.disabled = busy || !enabled || !csrfToken;
+        nodes.predictedRunwayAlerts.checked = alerts.predictedRunwayChanges === true;
+        nodes.predictedRunwayAlerts.disabled = busy || checking || !enabled || !csrfToken || !connection || connection.blocked;
         if (connection) clearLink();
     }
-    async function request(path, method = 'GET') {
+    async function request(path, method = 'GET', body) {
         const response = await fetch(`/api/account/telegram${path}`, {
-            method, cache: 'no-store', headers: method === 'POST' ? { 'X-CSRF-Token': csrfToken } : {}
+            method, cache: 'no-store', headers: method === 'POST' ? {
+                'X-CSRF-Token': csrfToken, ...(body ? { 'Content-Type': 'application/json' } : {})
+            } : {}, ...(body ? { body: JSON.stringify(body) } : {})
         });
         const result = await response.json();
         if (!response.ok) throw new Error(response.status === 401 ? 'Sign in again to manage Telegram.' : result.error || 'Telegram is unavailable. Please try again.');
@@ -77,6 +83,7 @@
             if (version !== generation) return;
             enabled = state.enabled;
             connection = state.connection;
+            alerts = state.alerts || { predictedRunwayChanges: false };
             if (state.linkError) {
                 clearLink();
                 nodes.telegramMessage.textContent = state.linkError;
@@ -87,18 +94,20 @@
             render();
         } catch (error) {
             if (version === generation) nodes.telegramMessage.textContent = error.message;
-        } finally { if (version === generation) checking = false; }
+        } finally { if (version === generation) { checking = false; render(); } }
     }
-    async function action(path) {
+    async function action(path, body) {
         synchronize();
         if (!accountId || !csrfToken || busy || checking) return;
         busy = true;
         let disconnected = false;
         const version = generation;
+        const previousAlerts = alerts;
+        if (path === '/alerts') alerts = body;
         nodes.telegramMessage.textContent = '';
         render();
         try {
-            const result = await request(path, 'POST');
+            const result = await request(path, 'POST', body);
             if (version !== generation) return;
             if (path === '/connect') {
                 link = result;
@@ -109,12 +118,20 @@
                 nodes.telegramExpiry.textContent = 'This private connection link expires in 10 minutes.';
             } else if (path === '/disconnect') {
                 connection = null;
+                alerts = { predictedRunwayChanges: false };
                 clearLink();
                 disconnected = true;
                 nodes.telegramMessage.textContent = 'Telegram disconnected.';
+            } else if (path === '/alerts') {
+                alerts = result.alerts;
+                nodes.telegramMessage.textContent = alerts.predictedRunwayChanges
+                    ? 'Predicted runway alerts enabled. The next fresh report establishes a baseline.' : 'Predicted runway alerts disabled.';
             } else nodes.telegramMessage.textContent = 'Test message sent. Check Telegram.';
         } catch (error) {
-            if (version === generation) nodes.telegramMessage.textContent = error.message;
+            if (version === generation) {
+                if (path === '/alerts') alerts = previousAlerts;
+                nodes.telegramMessage.textContent = error.message;
+            }
         } finally {
             if (version === generation) {
                 busy = false;
@@ -127,6 +144,9 @@
     nodes.telegramConnect.addEventListener('click', () => action('/connect'));
     nodes.telegramDisconnect.addEventListener('click', () => action('/disconnect'));
     nodes.telegramTest.addEventListener('click', () => action('/test'));
+    nodes.predictedRunwayAlerts.addEventListener('change', () => action('/alerts', {
+        predictedRunwayChanges: nodes.predictedRunwayAlerts.checked
+    }));
     nodes.telegramQr.addEventListener('error', () => {
         nodes.telegramQr.hidden = true;
         nodes.telegramMessage.textContent = 'Could not load the QR code. Use Open Telegram or create a new link.';

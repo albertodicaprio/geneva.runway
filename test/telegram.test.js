@@ -233,7 +233,7 @@ async function httpFixture(t) {
 
 test('account HTTP endpoints enforce real Google sessions, account isolation, CSRF and private QR responses', async t => {
     const f = await httpFixture(t);
-    for (const route of ['', '/qr', '/connect', '/disconnect', '/test']) {
+    for (const route of ['', '/qr', '/connect', '/disconnect', '/test', '/alerts']) {
         const response = await f.request(`/api/account/telegram${route}`, { method: ['', '/qr'].includes(route) ? 'GET' : 'POST' });
         assert.equal(response.status, 401);
     }
@@ -265,6 +265,36 @@ test('account HTTP endpoints enforce real Google sessions, account isolation, CS
     assert.equal((await f.request('/api/account/telegram/test', { method: 'POST', headers: alice })).status, 409);
     await f.request('/auth/logout', { method: 'POST', headers: alice });
     assert.equal((await f.request('/api/account/telegram', { headers: alice })).status, 401);
+});
+
+test('runway alert preferences are opt-in, account-isolated, persistent and protected by session/CSRF', async t => {
+    const f = await httpFixture(t);
+    const alice = await f.login('alice');
+    const body = JSON.stringify({ predictedRunwayChanges: true });
+    const save = (headers = alice, value = body) => f.request('/api/account/telegram/alerts', {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: value
+    });
+    assert.equal((await save()).status, 409);
+    await f.receive(update(tokenOf(await f.telegram.begin('alice'))));
+    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: false });
+    assert.equal((await save({ ...alice, Origin: 'https://evil.example' })).status, 403);
+    assert.equal((await save({ ...alice, 'X-CSRF-Token': 'forged' })).status, 403);
+    for (const value of ['null', '[]', '{}', '{bad', '{"predictedRunwayChanges":"yes"}',
+        '{"predictedRunwayChanges":true,"userId":"bob"}']) assert.equal((await save(alice, value)).status, 400);
+    assert.equal((await save(alice, JSON.stringify({ padding: 'x'.repeat(1100) }))).status, 413);
+    assert.equal((await f.request('/api/account/telegram/alerts', { method: 'POST', headers: alice, body })).status, 415);
+    assert.equal((await save()).status, 200);
+    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: true });
+    assert.deepEqual((await f.telegram.status('bob')).alerts, { predictedRunwayChanges: false });
+    const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client });
+    assert.equal((await restarted.status('alice')).alerts.predictedRunwayChanges, true);
+    await f.store.update(accounts => { accounts.alice.runwayAlert = { state: null, pending: null }; });
+    assert.equal((await save(alice, JSON.stringify({ predictedRunwayChanges: false }))).status, 200);
+    assert.equal((await f.store.read()).accounts.alice.runwayAlert, undefined);
+    await f.telegram.disconnect('alice');
+    await f.receive({ ...update(tokenOf(await f.telegram.begin('alice'))), update_id: 43 });
+    assert.equal((await f.telegram.status('alice')).alerts.predictedRunwayChanges, false);
+    assert.equal(f.calls.length, 0);
 });
 
 test('removed webhook URL accepts no incoming Telegram updates', async t => {

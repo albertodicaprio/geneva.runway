@@ -55,6 +55,14 @@
                                     <span data-theme-icon aria-hidden="true">◷</span> <span data-theme-label>Auto</span>
                                 </button>
                             </div>
+                            <div class="telegram-alert-settings">
+                                <h3>Telegram alerts</h3>
+                                <label class="telegram-alert-toggle" for="predictedRunwayAlerts">
+                                    <span>Predicted runway changes</span>
+                                    <input id="predictedRunwayAlerts" type="checkbox" role="switch" aria-describedby="predictedRunwayAlertHelp" disabled>
+                                </label>
+                                <p id="predictedRunwayAlertHelp">Connect Telegram to enable. Alerts follow two weather reports confirming a change, about 30 minutes apart. Actual runway use may differ.</p>
+                            </div>
                             <button class="account-logout" id="signOut" type="button" hidden>Log out</button>
                         </div>
                     </details>

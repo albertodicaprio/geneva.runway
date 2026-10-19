@@ -524,8 +524,8 @@ Integration**, between Profile and Settings in the account dropdown on every
 page. Click Connect and open the bot link, or scan its QR code with a phone,
 then press **Start** in Telegram. Leave the dropdown open to see the connection
 appear automatically. Send test message sends a single notification; Disconnect
-removes the saved association and invalidates pending links. No automatic airport
-alerts are enabled in this first step.
+removes the saved association and invalidates pending links and alerts.
+Automatic alerts are off by default and can be enabled under Settings.
 
 Setup:
 
@@ -590,13 +590,50 @@ QR generation uses the `qrcode` dependency to avoid sharing tokens with an
 external QR service. Account endpoints require a session; mutations also
 require same-origin requests and the session's CSRF token.
 
-The test notification is the first provider in `lib/notification-providers.js`.
+Test messages and predicted runway changes are providers in `lib/notification-providers.js`.
 Providers render text while the Telegram service owns recipient selection and
 delivery. Test attempts have a persistent ten-second cooldown, honor Telegram's
 rate-limit delay, and time out after eight seconds. They are not retried
 automatically because a timed-out request may already have delivered. If the
 bot is blocked, unblock it in Telegram, then disconnect and reconnect in the
-app. Later notification preferences, automatic delivery and airport/aircraft
-providers are tracked in `ROADMAP.md`.
+app. Further notification preferences and airport/aircraft providers are tracked
+in `ROADMAP.md`.
 
-Connections, polling, and test messages never trigger OpenSky requests.
+### Predicted runway change alerts
+
+After connecting Telegram, open **Settings → Telegram alerts** in the account
+menu and enable **Predicted runway changes**. The switch saves per account,
+synchronizes across devices, and starts off for existing and newly connected
+accounts. It is disabled until Telegram is connected and able to deliver.
+Saving failures restore the saved value and show an error. Disconnecting clears
+preferences and pending deliveries; reconnecting starts with alerts off.
+
+A background worker checks subscribed accounts once per minute without needing
+an open browser. It shares the weather page's single service and existing
+30-minute Open-Meteo cache, so subscribers do not multiply provider requests.
+The worker does not request weather when no accounts are subscribed.
+
+The first fresh known report after enabling or restarting establishes a baseline
+without sending a notification. A change from 22 to 04, or 04 to 22, must appear
+in two distinct successive weather observations before it sends an alert. Reads
+of the same cached observation do not count as confirmation. With the current
+weather cadence, alerts can lag a real change by roughly 30–60 minutes. Messages
+include the previous/new estimates, report time in Europe/Zurich, wind and gusts,
+and explicitly say that actual runway use may differ. They use the same existing
+weather model, including its calm/fair-weather preference for 22; they do not
+confirm actual airport operations.
+
+Each account has a one-hour cooldown between confirmed changes. Stale or unknown
+predictions reset confirmation and cancel queued delivery; a gap over 75 minutes
+or a restart establishes a new baseline. Disabling the switch or disconnecting
+cancels queued alerts. The worker rechecks preferences before delivery.
+
+Detection state and one pending runway alert per account persist in the existing
+Telegram data file. Delivery makes at most three attempts, uses increasing retry
+delays, honors Telegram rate limits, and expires after 15 minutes. An opposite
+prediction cancels outdated delivery. A network timeout can mean Telegram already
+accepted a message, so a retry can occasionally duplicate it. Blocked bots stop
+receiving alerts and show delivery unavailable in the account menu. Quiet hours
+and other alert types remain future work in `ROADMAP.md`.
+
+Connections, polling, test messages, and runway alerts never trigger OpenSky requests.

@@ -430,3 +430,17 @@ footer a:hover { text-decoration: underline; }
 [data-theme="night"] .telegram-integration { border-color: var(--night-border); }
 [data-theme="night"] .telegram-link a { color: var(--night-accent); }
 [data-theme="night"] .telegram-link #telegramExpiry { color: var(--night-muted); }
+
+.telegram-alert-settings { margin-top: 20px; padding-top: 18px; border-top: 1px solid #dbe5ee; }
+.telegram-alert-settings h3 { margin: 0 0 12px; color: #54708d; font-size: .78rem; letter-spacing: normal; }
+.telegram-alert-toggle { display: flex; align-items: center; justify-content: space-between; gap: 14px; font-size: .86rem; cursor: pointer; }
+.telegram-alert-toggle input { appearance: none; position: relative; flex: none; width: 38px; height: 22px; margin: 0; border: 1px solid #7991a7; border-radius: 20px; background: #dbe5ee; cursor: pointer; }
+.telegram-alert-toggle input::before { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #071e3640; transition: transform .15s; }
+.telegram-alert-toggle input:checked { background: #17673f; border-color: #17673f; }
+.telegram-alert-toggle input:checked::before { transform: translateX(16px); }
+.telegram-alert-toggle input:focus-visible { outline: 2px solid #287797; outline-offset: 3px; }
+.telegram-alert-toggle input:disabled { opacity: .5; cursor: default; }
+.telegram-alert-settings p { margin: 10px 0 0; color: #63758a; font-size: .75rem; line-height: 1.45; }
+[data-theme="night"] .telegram-alert-settings { border-color: var(--night-border); }
+[data-theme="night"] .telegram-alert-settings :is(h3, p) { color: var(--night-muted); }
+[data-theme="night"] .telegram-alert-toggle input:focus-visible { outline-color: var(--night-accent); }

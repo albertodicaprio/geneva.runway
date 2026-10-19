@@ -3,12 +3,26 @@ function json(res, status, body) {
     res.end(JSON.stringify(body));
 }
 
+async function readPreferences(req) {
+    if (req.headers['content-type']?.split(';')[0].trim() !== 'application/json') {
+        throw Object.assign(new Error('Send alert preferences as JSON.'), { status: 415 });
+    }
+    let body = '';
+    for await (const chunk of req) {
+        body += chunk;
+        if (Buffer.byteLength(body) > 1024) throw Object.assign(new Error('Alert preferences are too large.'), { status: 413 });
+    }
+    try { return JSON.parse(body); }
+    catch { throw Object.assign(new Error('Invalid alert preferences.'), { status: 400 }); }
+}
+
 function createTelegramHandler({ auth, telegram }) {
     const routes = {
         '/api/account/telegram': 'GET',
         '/api/account/telegram/connect': 'POST',
         '/api/account/telegram/disconnect': 'POST',
         '/api/account/telegram/test': 'POST',
+        '/api/account/telegram/alerts': 'POST',
         '/api/account/telegram/qr': 'GET'
     };
     return async function handle(req, res, url) {
@@ -31,7 +45,8 @@ function createTelegramHandler({ auth, telegram }) {
                 json(res, 403, { error: 'Please refresh the page and try again.' });
                 return true;
             }
-            if (url.pathname.endsWith('/connect')) json(res, 200, await telegram.begin(user.id));
+            if (url.pathname.endsWith('/alerts')) json(res, 200, await telegram.setAlertPreferences(user.id, await readPreferences(req)));
+            else if (url.pathname.endsWith('/connect')) json(res, 200, await telegram.begin(user.id));
             else if (url.pathname.endsWith('/disconnect')) {
                 await telegram.disconnect(user.id);
                 json(res, 200, { ok: true });
