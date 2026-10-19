@@ -849,6 +849,12 @@ outbound notification channel; notification configuration belongs in the app.
      An isolated local server serves the homepage and repeated aircraft JSON
      requests (200), and rejects guest Telegram requests (401), with credentials
      disabled and synthetic cached data.
+   - Alert menu refinement: replace both inline descriptions with info-button
+     tooltips available on hover, keyboard focus and tap. Remove the connection
+     instruction, dim disabled alert rows and threshold, and display the linked
+     Telegram name beside Connected on all four pages. Validation: nine Telegram
+     UI tests pass; Chrome checks Day/Night at 320/390/700/1040px, tooltip focus,
+     disabled styling and inline account name. Local homepage/API return 200.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each
