@@ -869,6 +869,13 @@ outbound notification channel; notification configuration belongs in the app.
      message in Telegram Integration. Preserve visible errors and retry drafts.
      Validation: Telegram UI tests and mobile Chrome checks pass, including
      draft preservation and disabled Save after success without status text.
+   - Compact account menu: display profile name/email beside their labels and
+     move Theme into Profile. Remove Settings and nest the renamed Alerts
+     subsection inside Telegram Integration on every page. Reduce section and
+     row spacing while preserving readable wrapping for long account details.
+     Validation: account and Telegram UI tests pass; Chrome checks inline profile
+     rows, grouping, theme placement and existing alert behavior in Day/Night
+     at 320/390/700/1040px with no horizontal overflow.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each

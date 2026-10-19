@@ -397,7 +397,7 @@ The payload follows the installed
 ## Optional Google sign-in
 
 The dashboard stays public. Signing in unlocks the Auto/Night/Day theme
-control beside Sign out on every page. Signed-out visitors always use Auto
+control under Profile in the account dropdown on every page. Signed-out visitors always use Auto
 (Day 07:00–19:00, Night 19:00–07:00, Geneva time). Theme preferences save
 automatically to the account and follow it across browsers and devices.
 Signing out restores Auto and preserves the account's preference for next time.
@@ -520,12 +520,12 @@ does not change where container data is stored.
 ## Optional Telegram integration
 
 Signed-in users can connect a private Telegram account from **Telegram
-Integration**, between Profile and Settings in the account dropdown on every
+Integration**, below Profile in the account dropdown on every
 page. Click Connect and open the bot link, or scan its QR code with a phone,
 then press **Start** in Telegram. Leave the dropdown open to see the connection
 appear automatically. Send test message sends a single notification; Disconnect
 removes the saved association and invalidates pending links and alerts.
-Automatic alerts are off by default and can be enabled under Settings.
+Automatic alerts are off by default and can be enabled under Telegram Integration → Alerts.
 
 Setup:
 
@@ -601,7 +601,7 @@ in `ROADMAP.md`.
 
 ### Arrival runway change alerts
 
-After connecting Telegram, open **Settings → Telegram alerts** in the account
+After connecting Telegram, open **Telegram Integration → Alerts** in the account
 menu and enable **Arrival runway changes**. The switch saves per account,
 synchronizes across devices, and defaults off for newly connected accounts.
 Existing runway-alert opt-ins are preserved. Disconnecting clears preferences
@@ -642,7 +642,7 @@ remain future work in `ROADMAP.md`.
 
 ### Busy arrival alerts
 
-Under **Settings → Telegram alerts**, enable **Busy arrivals** after connecting
+Under **Telegram Integration → Alerts**, enable **Busy arrivals** after connecting
 Telegram. This separate opt-in defaults off. Set **More than** to a whole number
 from 1 to 100 (default 10): the default alerts at 11 or more live tracked Geneva
 arrivals, rather than counting historical landings or departures. The threshold
