@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser({ configured = true, connected = false } = {}) {
     const nodes = {};
     for (const id of ['accountMenu', 'telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect',
-        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts']) {
+        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold']) {
         nodes[id] = { hidden: true, disabled: false, textContent: '', handlers: {},
             addEventListener(name, fn) { this.handlers[name] = fn; },
             removeAttribute(name) { delete this[name]; }, focus() { document.activeElement = this; } };
@@ -184,4 +184,40 @@ test('failed preference saves restore the saved toggle and logout clears it', as
     b.events.authchange();
     assert.equal(b.nodes.predictedRunwayAlerts.checked, false);
     assert.equal(b.nodes.predictedRunwayAlerts.disabled, true);
+});
+
+test('busy arrival controls preserve runway preferences, sync, validate thresholds and restore failed saves', async () => {
+    const b = browser({ connected: true });
+    b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: true, busyArrivals: false, busyArrivalThreshold: 10 } });
+    await b.open();
+    assert.equal(b.nodes.busyArrivalAlerts.checked, false);
+    assert.equal(b.nodes.busyArrivalAlerts.disabled, false);
+    b.nodes.busyArrivalAlerts.checked = true;
+    await b.nodes.busyArrivalAlerts.handlers.change();
+    const save = b.requests.filter(item => item.url.endsWith('/alerts')).at(-1);
+    assert.deepEqual(JSON.parse(save.options.body), { busyArrivals: true });
+    assert.equal(save.options.headers['X-CSRF-Token'], 'csrf');
+    b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: true, busyArrivals: true, busyArrivalThreshold: 12 } });
+    await b.open();
+    assert.equal(b.nodes.predictedRunwayAlerts.checked, true);
+    assert.equal(b.nodes.busyArrivalThreshold.value, 12);
+    b.nodes.busyArrivalThreshold.value = '0';
+    b.nodes.busyArrivalThreshold.handlers.change();
+    assert.equal(b.nodes.busyArrivalThreshold.value, 12);
+    assert.match(b.nodes.telegramMessage.textContent, /whole number/);
+    b.nodes.busyArrivalThreshold.value = '15';
+    await b.nodes.busyArrivalThreshold.handlers.change();
+    assert.deepEqual(JSON.parse(b.requests.filter(item => item.url.endsWith('/alerts')).at(-1).options.body), { busyArrivalThreshold: 15 });
+    b.state({ enabled: true, connection: b.connection, alerts: { predictedRunwayChanges: true, busyArrivals: true, busyArrivalThreshold: 15 } });
+    await b.open();
+    b.error({ status: 503, message: 'Could not save' });
+    b.nodes.busyArrivalAlerts.checked = false;
+    await b.nodes.busyArrivalAlerts.handlers.change();
+    assert.equal(b.nodes.busyArrivalAlerts.checked, true);
+    assert.match(b.nodes.telegramMessage.textContent, /Could not save/);
+    b.document.documentElement.dataset.userId = '';
+    b.events.authchange();
+    assert.equal(b.nodes.busyArrivalAlerts.checked, false);
+    assert.equal(b.nodes.busyArrivalAlerts.disabled, true);
+    assert.equal(b.nodes.busyArrivalThreshold.value, 10);
 });

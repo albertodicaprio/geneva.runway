@@ -67,6 +67,14 @@
                                     <input id="predictedRunwayAlerts" type="checkbox" role="switch" aria-describedby="predictedRunwayAlertHelp" disabled>
                                 </label>
                                 <p id="predictedRunwayAlertHelp">Connect Telegram to enable. Alerts follow two consecutive arrivals indicating the same new runway. Runway direction is inferred from tracking.</p>
+                                <label class="telegram-alert-toggle busy-arrival-toggle" for="busyArrivalAlerts">
+                                    <span>Busy arrivals</span>
+                                    <input id="busyArrivalAlerts" type="checkbox" role="switch" aria-describedby="busyArrivalAlertHelp" disabled>
+                                </label>
+                                <label class="busy-arrival-threshold" for="busyArrivalThreshold">More than
+                                    <input id="busyArrivalThreshold" type="number" min="1" max="100" step="1" value="10" aria-describedby="busyArrivalAlertHelp" disabled> arrivals
+                                </label>
+                                <p id="busyArrivalAlertHelp">Connect Telegram to enable. One alert per busy period; resets after five minutes at or below your threshold. Counts live tracked Geneva arrivals.</p>
                             </div>
                             <button class="account-logout" id="signOut" type="button" hidden>Log out</button>
                         </div>

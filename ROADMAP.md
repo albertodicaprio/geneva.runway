@@ -833,7 +833,22 @@ outbound notification channel; notification configuration belongs in the app.
      alert types; keep background evaluation independent of browser requests.
 
 4. [ ] Add other notification providers individually from IDEAS.md.
-   - Busy arrival periods, with a configurable threshold and reset condition.
+   - [x] Busy arrival periods: a separate saved opt-in on every page with a
+     per-account threshold from 1 to 100 (default more than 10 live arrivals).
+     Cache-only background checks run once per minute and count unique aircraft
+     with positions under two minutes old. Stale snapshots cannot alert.
+     Send once per busy period; re-arm after five minutes of fresh quiet checks.
+     Persist deduplication across restarts; cancel pending delivery on quiet or
+     stale data, threshold changes, opt-out or disconnect. Bound delivery to
+     three attempts and five minutes with the shared send cooldown and Telegram
+     retry delays. Existing runway preferences and detector state are preserved.
+     Validation: 190 tests pass, including cache-only counting, reset/dedup,
+     retry/cancellation, preference persistence/isolation/CSRF, threshold
+     validation and browser rollback/sync. Headless Chrome verifies Day/Night
+     layout at 320/390/700/1040px and saves both alert types independently.
+     An isolated local server serves the homepage and repeated aircraft JSON
+     requests (200), and rejects guest Telegram requests (401), with credentials
+     disabled and synthetic cached data.
    - Possible go-arounds and aircraft observed in the area over 15 minutes,
      after defining and validating conservative detection rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each

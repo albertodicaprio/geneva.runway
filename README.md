@@ -638,6 +638,34 @@ confirmed alert. Disabling the switch or disconnecting cancels pending alerts,
 and preferences are rechecked before delivery. A network timeout may mean
 Telegram accepted the message, so a retry can occasionally duplicate it.
 Blocked bots stop receiving alerts and show delivery unavailable. Quiet hours
-and other alert types remain future work in `ROADMAP.md`.
+remain future work in `ROADMAP.md`.
 
-Connections, polling, test messages, and runway alerts never trigger OpenSky requests.
+### Busy arrival alerts
+
+Under **Settings → Telegram alerts**, enable **Busy arrivals** after connecting
+Telegram. This separate opt-in defaults off. Set **More than** to a whole number
+from 1 to 100 (default 10): the default alerts at 11 or more live tracked Geneva
+arrivals, rather than counting historical landings or departures.
+
+A background check runs once per minute without an open browser. It reads the
+existing aircraft cache only, counts distinct aircraft with positions less than
+two minutes old, and ignores snapshots two minutes old or older. The message
+reports the current inbound count; it does not predict when those aircraft will
+land. Enabling alerts or changing the threshold can notify on the next check if
+the count is already above the threshold.
+
+Each account receives one alert per busy period. The detector re-arms after five
+minutes of fresh checks at or below the threshold. A rebound or stale data
+interrupts that quiet interval. Detector state survives server restarts, so a
+restart does not repeat an already delivered busy-period alert. Long gaps between
+checks restart the quiet interval.
+
+Pending messages expire after five minutes and allow at most three attempts.
+Retries honor Telegram rate limits and the shared per-account send cooldown.
+Stale data, counts at or below the threshold, opt-out, disconnect, or a threshold
+change cancel pending delivery. Blocked bots stop receiving alerts. A timed-out
+send can occasionally be delivered twice if Telegram accepted the first attempt.
+Preferences synchronize across devices; changing one alert preserves the other.
+
+Connections, polling, test messages, runway alerts, and busy arrival alerts never
+trigger OpenSky requests.

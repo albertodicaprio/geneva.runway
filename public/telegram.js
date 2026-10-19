@@ -1,6 +1,6 @@
 (() => {
     const ids = ['telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect', 'telegramTest',
-        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts'];
+        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold'];
     const nodes = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const menu = document.getElementById('accountMenu');
     if (!menu || ids.some(id => !nodes[id])) return;
@@ -51,6 +51,10 @@
         nodes.telegramConnect.disabled = busy || !enabled || !csrfToken;
         nodes.predictedRunwayAlerts.checked = alerts.predictedRunwayChanges === true;
         nodes.predictedRunwayAlerts.disabled = busy || checking || !enabled || !csrfToken || !connection || connection.blocked;
+        nodes.busyArrivalAlerts.checked = alerts.busyArrivals === true;
+        nodes.busyArrivalAlerts.disabled = nodes.predictedRunwayAlerts.disabled;
+        nodes.busyArrivalThreshold.value = alerts.busyArrivalThreshold ?? 10;
+        nodes.busyArrivalThreshold.disabled = nodes.predictedRunwayAlerts.disabled;
         if (connection) clearLink();
     }
     async function request(path, method = 'GET', body) {
@@ -103,7 +107,7 @@
         let disconnected = false;
         const version = generation;
         const previousAlerts = alerts;
-        if (path === '/alerts') alerts = body;
+        if (path === '/alerts') alerts = { ...alerts, ...body };
         nodes.telegramMessage.textContent = '';
         render();
         try {
@@ -124,8 +128,9 @@
                 nodes.telegramMessage.textContent = 'Telegram disconnected.';
             } else if (path === '/alerts') {
                 alerts = result.alerts;
-                nodes.telegramMessage.textContent = alerts.predictedRunwayChanges
-                    ? 'Arrival runway alerts enabled. Current arrival history establishes a baseline.' : 'Arrival runway alerts disabled.';
+                nodes.telegramMessage.textContent = Object.hasOwn(body, 'predictedRunwayChanges')
+                    ? (alerts.predictedRunwayChanges ? 'Arrival runway alerts enabled. Current arrival history establishes a baseline.' : 'Arrival runway alerts disabled.')
+                    : 'Busy arrival alert settings saved.';
             } else nodes.telegramMessage.textContent = 'Test message sent. Check Telegram.';
         } catch (error) {
             if (version === generation) {
@@ -147,6 +152,18 @@
     nodes.predictedRunwayAlerts.addEventListener('change', () => action('/alerts', {
         predictedRunwayChanges: nodes.predictedRunwayAlerts.checked
     }));
+    nodes.busyArrivalAlerts.addEventListener('change', () => action('/alerts', {
+        busyArrivals: nodes.busyArrivalAlerts.checked
+    }));
+    nodes.busyArrivalThreshold.addEventListener('change', () => {
+        const threshold = Number(nodes.busyArrivalThreshold.value);
+        if (!Number.isInteger(threshold) || threshold < 1 || threshold > 100) {
+            nodes.telegramMessage.textContent = 'Choose a whole number from 1 to 100.';
+            render();
+            return;
+        }
+        action('/alerts', { busyArrivalThreshold: threshold });
+    });
     nodes.telegramQr.addEventListener('error', () => {
         nodes.telegramQr.hidden = true;
         nodes.telegramMessage.textContent = 'Could not load the QR code. Use Open Telegram or create a new link.';
