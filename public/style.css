@@ -454,7 +454,7 @@ footer a:hover { text-decoration: underline; }
 .telegram-connection #telegramAccount::before { content: "· "; }
 .telegram-alert-row { display: flex; align-items: center; gap: 10px; }
 .telegram-alert-row .telegram-alert-toggle { flex: 1; min-width: 0; }
-.telegram-alert-row:has(input:disabled), .busy-arrival-threshold:has(input:disabled) { opacity: .5; }
+.telegram-alert-toggle:has(input:disabled), .busy-arrival-threshold:has(input:disabled) { opacity: .5; }
 .telegram-alert-row:has(input:disabled) .telegram-alert-toggle { cursor: default; }
 .telegram-alert-row input:disabled, .busy-arrival-threshold input:disabled { opacity: 1; }
 .telegram-alert-help { position: relative; flex: none; }
