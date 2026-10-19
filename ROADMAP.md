@@ -776,9 +776,10 @@ outbound notification channel; notification configuration belongs in the app.
    - Offer a bot deep link and a locally generated QR code for the same
      short-lived, single-use connection token. Associate private Telegram chat
      IDs with verified Google account IDs; enforce one-to-one connections.
-   - A secret-authenticated HTTPS webhook receives Telegram's `/start <token>`
-     linking event. Ordinary messages are ignored; there are no user-facing bot
-     commands or Telegram polling. Registration is an explicit setup script.
+   - One server-side long-polling loop receives Telegram's `/start <token>`
+     linking event using outbound HTTPS. It starts automatically after checking
+     the bot identity; real local linking needs only a bot token and username.
+     Other messages/commands are logged as bounded metadata and ignored.
    - Persist connections in the Docker data volume, protect account changes
      with session/CSRF checks, and document BotFather and environment setup in
      `.env.example` and README. Keep secrets and linking tokens out of logs.
@@ -786,15 +787,21 @@ outbound notification channel; notification configuration belongs in the app.
      provider; test delivery is initiated only from the account dropdown.
    - Validate link expiry/replacement/replay, private sender identity,
      one-to-one ownership, real account sessions and CSRF, persistence and disk
-     failures, bounded webhook bodies, send cooldown/rate limits, blocked bots,
-     and late browser responses after logout. All 152 tests pass.
+     failures, send cooldown/rate limits, blocked bots, and late browser
+     responses after logout. Polling persists its cursor per bot, retries
+     failures without acknowledging later updates, respects Telegram retry
+     delays, stops on conflicting receivers/invalid credentials, and cancels
+     on shutdown. All 163 tests pass, including localhost Node startup and
+     SIGTERM with a simulated Telegram service.
    - Headless Chrome checks pass in Day/Night at 320/390/700/1040px: QR renders,
      connection state updates, menu fits without horizontal overflow, and
      Disconnect returns focus to Connect. Docker builds; local Caddy serves
-     homepage and aircraft JSON (200), rejects guests (401) and invalid webhook
-     secrets (403), and removes the synthetic secret header from access logs.
-   - Real Telegram linking/delivery awaits BotFather credentials and explicit
-     webhook registration against the public HTTPS deployment.
+     homepage and aircraft JSON (200) and rejects guest account requests (401).
+     The old webhook route, secret, registration script, and Caddy log filter
+     have been removed; no migration tooling is needed.
+   - Real Telegram linking/delivery awaits BotFather credentials and can be
+     tested locally over HTTP. Use a separate bot for each environment and
+     one running receiver per bot. No public URL or production deploy needed.
 
 2. [ ] Add notification preferences and reliable automatic delivery.
    - Add per-notification toggles/fields to Settings in the account dropdown.

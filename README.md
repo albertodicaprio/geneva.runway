@@ -535,38 +535,40 @@ Setup:
    chats only. No bot commands or Telegram login/domain settings are needed.
 2. Copy the Telegram section of `.env.example` into your existing ignored
    `.env`. Set `TELEGRAM_BOT_TOKEN` to BotFather's API token and
-   `TELEGRAM_BOT_USERNAME` to the bot username without `@`. Generate a separate
-   webhook secret with `openssl rand -hex 32` and put it in
-   `TELEGRAM_WEBHOOK_SECRET`. Never put credentials in source control, browser
-   URLs or screenshots. Keep all three blank to disable the integration.
-3. Deploy the updated app and Caddy configuration with `APP_ORIGIN` set to your
-   public HTTPS website origin. The new Caddy log filter removes Telegram's
-   secret header from access logs. The existing HTTPS route and ports suffice.
-4. Register the webhook once from the deployed container:
+   `TELEGRAM_BOT_USERNAME` to the bot username without `@`. Keep both blank
+   to disable the integration. Never put credentials in source control,
+   browser URLs or screenshots.
+3. For local Node development, use `APP_ORIGIN=http://127.0.0.1:3000` and its
+   matching Google OAuth redirect URI (see Optional Google sign-in above),
+   then run `npm start`. For local Docker, use `APP_ORIGIN=http://127.0.0.1`
+   and the matching Google redirect URI, start both `app` and `caddy`, and open
+   `http://127.0.0.1/`. Keep the local Caddy setting `CADDY_SITE_ADDRESS=http://:80`.
+4. Sign in, connect through the link or QR code, press Start in Telegram,
+   then send a test message from the app. No public URL, tunnel, webhook
+   secret, registration script or production deployment is needed.
 
-   ```sh
-   docker compose exec app node scripts/setup-telegram.js
-   ```
+The Node server checks that the token and username identify the same bot and
+starts one background [Telegram long-polling loop](https://core.telegram.org/bots/api#getupdates).
+Each request waits up to 30 seconds, returning immediately when an update
+arrives; its HTTP timeout is 40 seconds. Sending a notification retains its
+separate eight-second timeout. This uses outbound HTTPS only, independently
+of browser activity and aircraft refreshes. Invalid credentials, mismatched
+bot usernames or another receiver using the same bot stop polling with an
+explanatory console message. Network/storage failures retry with exponential
+backoff up to 30 seconds, honoring longer Telegram rate-limit delays.
 
-   Alternatively, on a host with Node 24 and the app dependencies installed:
+Use separate BotFather bots and data files for development and production.
+Only one running app instance can receive updates for a bot; do not run local
+Node and Compose simultaneously with the same token. Server startup does not
+configure or remove webhooks. Polling is cancelled when the app shuts down.
 
-   ```sh
-   node --env-file=.env scripts/setup-telegram.js
-   ```
-
-   The script checks that the token and username identify the same bot, then
-   registers `${APP_ORIGIN}/api/telegram/webhook` with a secret request header
-   and message updates only. It does not send messages. Run it again after
-   changing the bot, public origin, or webhook secret. Server startup never
-   changes webhook registration. A bot has one webhook: use a separate bot
-   for development instead of redirecting your production bot.
-5. Sign in, connect through the link or QR code, and send a test message.
-
-Telegram calls the webhook only to complete linking. The app validates the
-secret header, private-chat sender and single-use token; it ignores ordinary
-messages and commands. There is no Telegram long polling. See Telegram's
-[deep-linking](https://core.telegram.org/bots/features#deep-linking) and
-[webhook documentation](https://core.telegram.org/bots/api#setwebhook).
+The app accepts the [deep-link](https://core.telegram.org/bots/features#deep-linking)
+`/start <token>` event only from a matching private-chat sender. Other messages
+and commands receive no reply; the console records only the update ID and a
+fixed category (command, message, attachment, other), without text, arguments,
+names, chat IDs or attachment content. Processed update cursors are persisted
+per bot before acknowledgement, so restarts do not replay processed events.
+A failed operation is retried without acknowledging later events.
 
 Connections are one-to-one and keyed by verified Google account ID, independent
 of email or Telegram username changes. The saved Telegram name/username reflect
@@ -576,7 +578,8 @@ restart and image rebuilds. Locally they are stored in ignored
 `/app/data/telegram-connections.json` in `aircraft_data`. Include this file in
 private backups; do not delete the volume when upgrading. Use
 `TELEGRAM_CONNECTIONS_FILE` to override the path. Atomic serialized writes are
-intended for one app instance. Malformed files are preserved and reported as
+intended for one app instance; the bot identity and polling cursor are saved
+in the same file. Malformed files are preserved and reported as
 unavailable rather than overwritten.
 
 Link tokens and QR codes are generated locally, expire after ten minutes, and
@@ -596,7 +599,4 @@ bot is blocked, unblock it in Telegram, then disconnect and reconnect in the
 app. Later notification preferences, automatic delivery and airport/aircraft
 providers are tracked in `ROADMAP.md`.
 
-For local Docker testing use both `app` and `caddy` at `http://127.0.0.1/`.
-Telegram cannot reach that local HTTP address; use simulated authenticated
-webhook requests for local checks and the deployed public HTTPS address for
-real linking. Connections and test messages never trigger OpenSky requests.
+Connections, polling, and test messages never trigger OpenSky requests.

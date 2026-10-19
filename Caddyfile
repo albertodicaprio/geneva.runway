@@ -12,12 +12,7 @@
 {$CADDY_SITE_ADDRESS} {
 	log {
 		output stdout
-		format filter {
-			wrap console
-			fields {
-				request>headers>X-Telegram-Bot-Api-Secret-Token delete
-			}
-		}
+		format console
 	}
 
 	request_body {

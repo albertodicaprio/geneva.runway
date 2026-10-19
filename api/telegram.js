@@ -3,33 +3,13 @@ function json(res, status, body) {
     res.end(JSON.stringify(body));
 }
 
-async function readUpdate(req) {
-    if (req.headers['content-type']?.split(';')[0].trim() !== 'application/json') {
-        throw Object.assign(new Error('Send JSON.'), { status: 415 });
-    }
-    const chunks = [];
-    let size = 0;
-    for await (const chunk of req) {
-        size += chunk.length;
-        if (size > 16_384) throw Object.assign(new Error('Request is too large.'), { status: 413 });
-        chunks.push(chunk);
-    }
-    let update;
-    try { update = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { /* Checked below. */ }
-    if (!update || typeof update !== 'object' || Array.isArray(update) || !Number.isSafeInteger(update.update_id)) {
-        throw Object.assign(new Error('Invalid Telegram update.'), { status: 400 });
-    }
-    return update;
-}
-
 function createTelegramHandler({ auth, telegram }) {
     const routes = {
         '/api/account/telegram': 'GET',
         '/api/account/telegram/connect': 'POST',
         '/api/account/telegram/disconnect': 'POST',
         '/api/account/telegram/test': 'POST',
-        '/api/account/telegram/qr': 'GET',
-        '/api/telegram/webhook': 'POST'
+        '/api/account/telegram/qr': 'GET'
     };
     return async function handle(req, res, url) {
         const method = routes[url.pathname];
@@ -42,15 +22,6 @@ function createTelegramHandler({ auth, telegram }) {
             return true;
         }
         try {
-            if (url.pathname === '/api/telegram/webhook') {
-                if (!telegram.validSecret(req.headers['x-telegram-bot-api-secret-token'])) {
-                    json(res, 403, { error: 'Forbidden' });
-                    return true;
-                }
-                await telegram.accept(await readUpdate(req));
-                json(res, 200, { ok: true });
-                return true;
-            }
             const user = auth.getUser(req);
             if (!user) {
                 json(res, 401, { error: 'Sign in to manage Telegram.' });
@@ -73,7 +44,7 @@ function createTelegramHandler({ auth, telegram }) {
                 res.end(svg);
             } else json(res, 200, await telegram.status(user.id));
         } catch (error) {
-            // Never log upstream errors, webhook bodies or connection tokens.
+            // Never log upstream errors or connection tokens.
             if (error.retryAfter) res.setHeader('Retry-After', String(error.retryAfter));
             json(res, error.status || 503, { error: error.status ? error.message : 'Telegram is temporarily unavailable. Please try again.' });
         }

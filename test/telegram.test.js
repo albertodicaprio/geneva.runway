@@ -11,10 +11,9 @@ const { createTelegramHandler } = require('../api/telegram');
 const { createAuth } = require('../lib/auth');
 const { OAuth2Client } = require('google-auth-library');
 const { createUserSettings } = require('../lib/user-settings');
-const { setupTelegram } = require('../scripts/setup-telegram');
 
 const env = { TELEGRAM_BOT_TOKEN: '12345:private_bot_token', TELEGRAM_BOT_USERNAME: 'GenevaTestBot',
-    TELEGRAM_WEBHOOK_SECRET: 'private_webhook_secret_1234567890', APP_ORIGIN: 'http://localhost:3000',
+    APP_ORIGIN: 'http://localhost:3000',
     GOOGLE_OAUTH_CLIENT_ID: 'google-client', GOOGLE_OAUTH_CLIENT_SECRET: 'google-secret' };
 const tokenOf = link => new URL(link.url).searchParams.get('start');
 function update(token, id = 123456) {
@@ -214,11 +213,22 @@ async function httpFixture(t) {
         const session = await (await request('/api/auth/session', { headers: { Cookie: cookie } })).json();
         return { Cookie: cookie, Origin: env.APP_ORIGIN, 'X-CSRF-Token': session.csrfToken };
     }
-    const webhook = (value, secret = env.TELEGRAM_WEBHOOK_SECRET) => request('/api/telegram/webhook', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret },
-        body: JSON.stringify(value)
-    });
-    return { ...f, request, login, webhook };
+    async function receive(value) {
+        let delivered;
+        const finished = new Promise(resolve => { delivered = resolve; });
+        let first = true;
+        f.client.request = async (method, _payload, { signal }) => {
+            if (method === 'getMe') return { id: 12345, is_bot: true, username: env.TELEGRAM_BOT_USERNAME };
+            if (first) { first = false; return [value]; }
+            delivered(); // Second poll means the first update was committed.
+            return new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+        };
+        t.after(() => f.telegram.stopPolling());
+        void f.telegram.startPolling();
+        await finished;
+        await f.telegram.stopPolling();
+    }
+    return { ...f, request, login, receive };
 }
 
 test('account HTTP endpoints enforce real Google sessions, account isolation, CSRF and private QR responses', async t => {
@@ -242,8 +252,7 @@ test('account HTTP endpoints enforce real Google sessions, account isolation, CS
     const image = await f.request('/api/account/telegram/qr', { headers: alice });
     assert.match(image.headers.get('content-type'), /image\/svg\+xml/);
     assert.match(await image.text(), /<svg/);
-    assert.equal((await f.webhook(update(tokenOf(link)), 'forged')).status, 403);
-    assert.equal((await f.webhook(update(tokenOf(link)))).status, 200);
+    await f.receive(update(tokenOf(link)));
     const state = await (await f.request('/api/account/telegram', { headers: alice })).json();
     assert.ok(state.connection);
     assert.doesNotMatch(JSON.stringify(state), /private|123456|chatId/);
@@ -258,16 +267,11 @@ test('account HTTP endpoints enforce real Google sessions, account isolation, CS
     assert.equal((await f.request('/api/account/telegram', { headers: alice })).status, 401);
 });
 
-test('webhook validates method, content type and bounded JSON while ignoring ordinary messages', async t => {
+test('removed webhook URL accepts no incoming Telegram updates', async t => {
     const f = await httpFixture(t);
-    assert.equal((await f.request('/api/telegram/webhook')).status, 405);
-    const headers = { 'X-Telegram-Bot-Api-Secret-Token': env.TELEGRAM_WEBHOOK_SECRET, 'Content-Type': 'application/json' };
-    for (const body of ['{bad', '[]', 'null', '{}']) {
-        assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers, body })).status, 400);
+    for (const method of ['GET', 'POST']) {
+        assert.equal((await f.request('/api/telegram/webhook', { method })).status, 404);
     }
-    assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers: { ...headers, 'Content-Type': 'text/plain' }, body: '{}' })).status, 415);
-    assert.equal((await f.request('/api/telegram/webhook', { method: 'POST', headers, body: JSON.stringify({ update_id: 1, padding: 'x'.repeat(17000) }) })).status, 413);
-    assert.equal((await f.webhook({ update_id: 1, message: { text: '/help' } })).status, 200);
     assert.equal(f.calls.length, 0);
 });
 
@@ -292,21 +296,13 @@ test('Telegram API client contains secret-bearing network errors and times out s
     } finally { clearTimeout(timer); }
 });
 
-test('webhook setup validates bot identity and public HTTPS, and never sends messages', async () => {
-    const calls = [];
-    const client = { async request(method, payload) {
-        calls.push({ method, payload });
-        return method === 'getMe' ? { username: 'GenevaTestBot' } : true;
-    } };
-    await assert.rejects(setupTelegram({ env, client }), /publicly reachable HTTPS/);
-    const setupEnv = { ...env, APP_ORIGIN: 'https://airport.example' };
-    assert.equal(await setupTelegram({ env: setupEnv, client }), 'https://airport.example/api/telegram/webhook');
-    assert.deepEqual(calls, [{ method: 'getMe', payload: undefined }, { method: 'setWebhook', payload: {
-        url: 'https://airport.example/api/telegram/webhook', secret_token: env.TELEGRAM_WEBHOOK_SECRET,
-        allowed_updates: ['message'], max_connections: 1
-    } }]);
-    await assert.rejects(setupTelegram({ env: { ...setupEnv, TELEGRAM_BOT_USERNAME: 'WrongBot' }, client }), /does not match/);
+test('Telegram configuration only needs a token and username and disabled integration never polls', async () => {
+    let calls = 0;
+    const telegram = createTelegram({ env: {}, client: { request() { calls++; } } });
+    await telegram.startPolling();
+    await telegram.stopPolling();
+    assert.equal(calls, 0);
     assert.equal(telegramConfig({}).enabled, false);
-    assert.equal(telegramConfig({ ...env, TELEGRAM_WEBHOOK_SECRET: 'short' }).enabled, false);
+    assert.equal(telegramConfig({ ...env, TELEGRAM_BOT_TOKEN: 'invalid' }).enabled, false);
     assert.equal(telegramConfig(env).enabled, true);
 });

@@ -14,7 +14,8 @@ const { createAuthAnalytics, validWebsiteId: isValidWebsiteId } = require('./lib
 const auth = createAuth({ analytics: createAuthAnalytics() });
 const { createTelegram } = require('./lib/telegram');
 const { createTelegramHandler } = require('./api/telegram');
-const telegramHandler = createTelegramHandler({ auth, telegram: createTelegram() });
+const telegram = createTelegram();
+const telegramHandler = createTelegramHandler({ auth, telegram });
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -245,4 +246,21 @@ server.listen(PORT, HOST, () => {
     const listeningPort = typeof address === 'object' && address ? address.port : PORT;
     console.log(`Geneva Runway app listening on http://${HOST}:${listeningPort}`);
     startAircraftRefreshScheduler();
+    void telegram.startPolling();
 });
+
+let shuttingDown = false;
+async function shutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    // Bound shutdown even if a browser is waiting for the next aircraft update.
+    const deadline = setTimeout(() => process.exit(0), 9000);
+    deadline.unref();
+    await Promise.all([
+        telegram.stopPolling(),
+        new Promise(resolve => server.close(resolve))
+    ]);
+    process.exit(0);
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
