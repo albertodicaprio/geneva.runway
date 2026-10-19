@@ -764,6 +764,45 @@ Docker deployment, cache fallback, traffic classification, and track retention.
       Keep arrival filtering summaries and upstream failure warnings.
     - Validation: all 15 aircraft service and general traffic tests pass.
 
+## Telegram integration (next feature)
+
+Implement, validate locally, and commit one step at a time. Telegram is an
+outbound notification channel; notification configuration belongs in the app.
+
+1. [ ] Connect a signed-in account to Telegram.
+   - Add a Telegram Integration section between Profile and Settings in the
+     account dropdown on all pages. Show connection status, connected account,
+     Connect/Disconnect, and Send test message only when connected.
+   - Offer a bot deep link and a locally generated QR code for the same
+     short-lived, single-use connection token. Associate private Telegram chat
+     IDs with verified Google account IDs; enforce one-to-one connections.
+   - Deep links require receiving Telegram's `/start <token>` linking event.
+     Confirm the inbound transport before implementing it; no user-facing bot
+     commands or long polling are planned.
+   - Persist connections in the Docker data volume, protect account changes
+     with session/CSRF checks, and document BotFather and environment setup in
+     `.env.example` and README. Keep secrets and linking tokens out of logs.
+   - Introduce a small notification-provider interface with a test-message
+     provider; test delivery is initiated only from the account dropdown.
+
+2. [ ] Add notification preferences and reliable automatic delivery.
+   - Add per-notification toggles/fields to Settings in the account dropdown.
+   - Evaluate events from existing backend snapshots independently of browser
+     activity; do not increase upstream OpenSky requests per subscriber.
+   - Persist duplicate suppression and pending deliveries; add expiry,
+     bounded retries, Telegram rate-limit handling, quiet hours in
+     Europe/Zurich, and handling for users who block the bot.
+   - Define baseline/restart behavior so old observations do not trigger a
+     notification burst. Recheck connection and preferences before delivery.
+
+3. [ ] Add notification providers individually from IDEAS.md.
+   - Wind / predicted runway changes (review the existing Hermes behavior).
+   - Busy arrival periods, with a configurable threshold and reset condition.
+   - Possible go-arounds and aircraft observed in the area over 15 minutes,
+     after defining and validating conservative detection rules.
+   - Define freshness, confirmation, cooldown, and deduplication rules for each
+     provider; distinguish predictions and possible events from confirmed ones.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
