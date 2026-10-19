@@ -63,10 +63,10 @@
                             <div class="telegram-alert-settings">
                                 <h3>Telegram alerts</h3>
                                 <label class="telegram-alert-toggle" for="predictedRunwayAlerts">
-                                    <span>Predicted runway changes</span>
+                                    <span>Arrival runway changes</span>
                                     <input id="predictedRunwayAlerts" type="checkbox" role="switch" aria-describedby="predictedRunwayAlertHelp" disabled>
                                 </label>
-                                <p id="predictedRunwayAlertHelp">Connect Telegram to enable. Alerts follow two weather reports confirming a change, about 30 minutes apart. Actual runway use may differ.</p>
+                                <p id="predictedRunwayAlertHelp">Connect Telegram to enable. Alerts follow two consecutive arrivals indicating the same new runway. Runway direction is inferred from tracking.</p>
                             </div>
                             <button class="account-logout" id="signOut" type="button" hidden>Log out</button>
                         </div>

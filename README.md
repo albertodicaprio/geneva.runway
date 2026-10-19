@@ -590,7 +590,7 @@ QR generation uses the `qrcode` dependency to avoid sharing tokens with an
 external QR service. Account endpoints require a session; mutations also
 require same-origin requests and the session's CSRF token.
 
-Test messages and predicted runway changes are providers in `lib/notification-providers.js`.
+Test messages and arrival runway changes are providers in `lib/notification-providers.js`.
 Providers render text while the Telegram service owns recipient selection and
 delivery. Test attempts have a persistent ten-second cooldown, honor Telegram's
 rate-limit delay, and time out after eight seconds. They are not retried
@@ -599,41 +599,45 @@ bot is blocked, unblock it in Telegram, then disconnect and reconnect in the
 app. Further notification preferences and airport/aircraft providers are tracked
 in `ROADMAP.md`.
 
-### Predicted runway change alerts
+### Arrival runway change alerts
 
 After connecting Telegram, open **Settings → Telegram alerts** in the account
-menu and enable **Predicted runway changes**. The switch saves per account,
-synchronizes across devices, and starts off for existing and newly connected
-accounts. It is disabled until Telegram is connected and able to deliver.
-Saving failures restore the saved value and show an error. Disconnecting clears
-preferences and pending deliveries; reconnecting starts with alerts off.
+menu and enable **Arrival runway changes**. The switch saves per account,
+synchronizes across devices, and defaults off for newly connected accounts.
+Existing runway-alert opt-ins are preserved. Disconnecting clears preferences
+and pending deliveries; reconnecting starts with alerts off.
 
-A background worker checks subscribed accounts once per minute without needing
-an open browser. It shares the weather page's single service and existing
-30-minute Open-Meteo cache, so subscribers do not multiply provider requests.
-The worker does not request weather when no accounts are subscribed.
+A background worker checks the existing aircraft cache once per minute without
+needing an open browser. It uses the same retained arrivals behind the weather
+page's Last arrival badge and processes every new arrival in chronological
+order, including multiple arrivals between checks. It never requests weather
+or triggers extra OpenSky refreshes.
 
-The first fresh known report after enabling or restarting establishes a baseline
-without sending a notification. A change from 22 to 04, or 04 to 22, must appear
-in two distinct successive weather observations before it sends an alert. Reads
-of the same cached observation do not count as confirmation. With the current
-weather cadence, alerts can lag a real change by roughly 30–60 minutes. Messages
-include the previous/new estimates, report time in Europe/Zurich, wind and gusts,
-and explicitly say that actual runway use may differ. They use the same existing
-weather model, including its calm/fair-weather preference for 22; they do not
-confirm actual airport operations.
+Two consecutive distinct arrivals with the same inferred runway establish the
+current direction. A notification is sent when a matching pair establishes a
+different direction. For example, after runway 22 is established, the sequence
+`22, 04, 22, 04, 04` alerts only at the final 04. An opposite or unknown arrival
+breaks the candidate pair. Repeated reads and reappearance of the same flight
+cannot count twice; the pair must contain different aircraft. All further
+arrivals on the established direction remain silent. A newly confirmed reverse
+change can alert immediately, without an hour-long cooldown or weather delay.
+Delivery normally starts on the next one-minute check after the second arrival
+appears in the cache.
 
-Each account has a one-hour cooldown between confirmed changes. Stale or unknown
-predictions reset confirmation and cancel queued delivery; a gap over 75 minutes
-or a restart establishes a new baseline. Disabling the switch or disconnecting
-cancels queued alerts. The worker rechecks preferences before delivery.
+Enabling or restarting consumes existing arrival history silently as a baseline.
+Stale tracking clears confirmation and cancels pending delivery. Messages name
+the two flights, their estimated arrival times in Europe/Zurich, and the previous
+and new inferred runway. Disappearance from tracking does not confirm touchdown;
+this alert reflects the app's existing arrival classifications.
 
-Detection state and one pending runway alert per account persist in the existing
-Telegram data file. Delivery makes at most three attempts, uses increasing retry
-delays, honors Telegram rate limits, and expires after 15 minutes. An opposite
-prediction cancels outdated delivery. A network timeout can mean Telegram already
-accepted a message, so a retry can occasionally duplicate it. Blocked bots stop
-receiving alerts and show delivery unavailable in the account menu. Quiet hours
+Detection state and one pending alert per account persist in the Telegram data
+file. Delivery makes at most three attempts, honors Telegram rate limits, and
+expires 15 minutes after the confirming arrival. A confirmed reverse change
+replaces queued delivery; a single noisy opposite arrival cannot cancel a
+confirmed alert. Disabling the switch or disconnecting cancels pending alerts,
+and preferences are rechecked before delivery. A network timeout may mean
+Telegram accepted the message, so a retry can occasionally duplicate it.
+Blocked bots stop receiving alerts and show delivery unavailable. Quiet hours
 and other alert types remain future work in `ROADMAP.md`.
 
 Connections, polling, test messages, and runway alerts never trigger OpenSky requests.

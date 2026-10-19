@@ -803,27 +803,29 @@ outbound notification channel; notification configuration belongs in the app.
      tested locally over HTTP. Use a separate bot for each environment and
      one running receiver per bot. No public URL or production deploy needed.
 
-2. [x] Add opt-in predicted runway change alerts.
+2. [x] Add opt-in arrival runway change alerts.
    - Add a saved per-account switch under Settings → Telegram alerts on every
      page. Default off, disable until connected, synchronize across devices,
      protect saves with session/CSRF validation and restore failed saves.
-   - Share the weather page's service/cache. Check once per minute only with
-     subscribers, independently of browser activity and OpenSky refreshes.
-   - Establish a baseline after enabling/restart, require two distinct reports
-     confirming a known 04/22 change, and apply a one-hour cooldown. Reports
-     refresh about every 30 minutes, giving roughly 30–60 minutes of latency.
-     Unknown/stale reports reset confirmation; long gaps establish a baseline.
-   - Persist detection and pending delivery, bound attempts to three, honor
-     rate limits, expire after 15 minutes, and discard pending work when
-     disabled, disconnected, restarted, blocked, or no longer matching the
-     prediction. Make the weather-based uncertainty explicit in messages.
-   - Validation: 178 tests cover transitions, confirmation, cooldown, stale and
-     unknown data, persistence, retries, expiry, restart, scheduler shutdown,
-     preference isolation/CSRF and browser save/rollback. Weather-page and
-     multiple-subscriber checks share one provider request/cache. Day/Night
-     Chrome checks pass at 320/390/700/1040px, including keyboard switch saving
-     and clearing preferences on disconnect. Docker builds; local Caddy serves
-     homepage and aircraft JSON (200) and rejects guest alert updates (401).
+   - Read retained arrivals from the aircraft service's cache-only accessor
+     once per minute, independently of browser activity. Process the complete
+     arrival sequence so multiple arrivals between checks are not missed.
+   - Require two consecutive distinct arrivals with matching inferred 04/22
+     directions to establish or change the runway. A single opposite or
+     unknown breaks the pair; duplicate reads/reappearing flights do not count.
+     Remove weather confirmation and the hour-long cooldown. Existing opt-ins
+     carry over; old weather detector state is replaced silently.
+   - Consume startup history silently; persist processed flight identities,
+     confirmed direction and pending delivery. Retain bounded retry/rate-limit
+     handling, 15-minute expiry and cancellation on disconnect, opt-out, stale
+     tracking or a confirmed reversal. Messages identify the two flights and
+     clarify that tracking disappearance does not confirm touchdown.
+   - Validation: all 180 tests pass, including the user's 22/04/22/04/04
+     sequence, duplicate/reappearing aircraft, unknown directions, multiple
+     arrivals per snapshot, quick reverse changes, legacy preference/state
+     compatibility, cache-only reads, delivery retry/expiry, and existing
+     preference security/browser behavior. No weather or additional OpenSky
+     requests are made by this alert.
 
 3. [ ] Extend notification preferences and delivery.
    - Add quiet hours in Europe/Zurich and per-provider fields as needed.

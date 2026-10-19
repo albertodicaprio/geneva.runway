@@ -125,7 +125,7 @@
             } else if (path === '/alerts') {
                 alerts = result.alerts;
                 nodes.telegramMessage.textContent = alerts.predictedRunwayChanges
-                    ? 'Predicted runway alerts enabled. The next fresh report establishes a baseline.' : 'Predicted runway alerts disabled.';
+                    ? 'Arrival runway alerts enabled. Current arrival history establishes a baseline.' : 'Arrival runway alerts disabled.';
             } else nodes.telegramMessage.textContent = 'Test message sent. Check Telegram.';
         } catch (error) {
             if (version === generation) {

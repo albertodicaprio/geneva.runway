@@ -1,7 +1,7 @@
-const { weatherService } = require('../lib/weather-service');
+const { createWeatherService } = require('../lib/weather-service');
 const { getLastArrival } = require('../lib/aircraft-service');
 
-function createWeatherHandler(service = weatherService, lastArrival = getLastArrival) {
+function createWeatherHandler(service = createWeatherService(), lastArrival = getLastArrival) {
     return async (req, res) => {
         res.setHeader('Cache-Control', 'no-store');
         if (req.method !== 'GET') {

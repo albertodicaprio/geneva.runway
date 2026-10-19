@@ -44,3 +44,27 @@ test('last arrival supports legacy retention times and an empty cache', async ()
     const empty = createAircraftService({ cacheStore: { read: async () => { throw Object.assign(new Error('No cache'), { code: 'ENOENT' }); } } });
     assert.equal(await empty.getLastArrival(), null);
 });
+
+test('runway notification history returns every retained arrival in order without upstream requests', async () => {
+    let now = 1_000_000;
+    const tracks = [
+        { icao24: 'ABC123', callsign: 'FlightA', approachDirection: '22', disappearedAt: 950, expiresAt: 8150 },
+        { icao24: 'abc456', callsign: 'FlightB', approachDirection: 'unknown', disappearedAt: 900, expiresAt: 8100 },
+        { icao24: 'abc789', approachDirection: '04', expiresAt: 8050 },
+        { icao24: 'expired', disappearedAt: 800, expiresAt: 999 },
+        { icao24: 'future', disappearedAt: 1100, expiresAt: 8300 }
+    ];
+    const service = createAircraftService({ clock: () => now,
+        fetch: async () => assert.fail('Notification history must only read the cache'),
+        cacheStore: { read: async () => ({ version: 6, lastFetchTime: 990000, arrivals: { recentTracks: tracks } }) } });
+    const result = await service.getRunwayArrivals();
+    assert.equal(result.stale, false);
+    assert.deepEqual(result.arrivals.map(item => item.direction), ['04', 'unknown', '22']);
+    assert.equal(result.arrivals[2].id, 'abc123:FLIGHTA');
+    assert.equal(result.arrivals[2].estimatedLandingAt, 950000);
+    const originalId = result.arrivals[2].id;
+    tracks[0].disappearedAt = 980;
+    assert.equal((await service.getRunwayArrivals()).arrivals.at(-1).id, originalId);
+    now += 600000;
+    assert.equal((await service.getRunwayArrivals()).stale, true);
+});

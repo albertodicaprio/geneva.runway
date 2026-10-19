@@ -293,32 +293,3 @@ test('Open-Meteo current and daily normalization also apply the calm fair-weathe
     assert.equal(result.days[0].runway.calmConditions, true);
     assert.ok(result.days.slice(1).every(day => day.runway.direction === 'unknown'));
 });
-
-test('weather page and multiple runway subscribers share one provider request and cache', async () => {
-    const { createRunwayAlerts } = require('../lib/runway-alerts');
-    let now = START;
-    let calls = 0;
-    const service = createWeatherService({ now: () => now, fetchImpl: async () => {
-        calls++;
-        return { ok: true, json: async () => providerData() };
-    } });
-    const data = { accounts: {
-        alice: { chatId: '123', alerts: { predictedRunwayChanges: true } },
-        bob: { chatId: '456', alerts: { predictedRunwayChanges: true } }
-    } };
-    const store = { read: async () => structuredClone(data), update: async change => change(data.accounts, data) };
-    const alerts = createRunwayAlerts({ weather: service, store, client: {}, serialize: action => action(), clock: () => now });
-    const response = { setHeader() {}, status() { return this; }, json(value) { this.body = value; } };
-    const handler = createWeatherHandler(service, async () => null);
-    await Promise.all([alerts.check(), handler({ method: 'GET' }, response)]);
-    assert.equal(calls, 1);
-    assert.equal(response.body.current.runway.direction, '22');
-    assert.equal(data.accounts.alice.runwayAlert.state.baseline, '22');
-    assert.equal(data.accounts.bob.runwayAlert.state.baseline, '22');
-    now += 29 * 60_000;
-    await Promise.all([alerts.check(), handler({ method: 'GET' }, response)]);
-    assert.equal(calls, 1);
-    now += 60_000;
-    await Promise.all([alerts.check(), handler({ method: 'GET' }, response)]);
-    assert.equal(calls, 2);
-});
