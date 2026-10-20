@@ -1,6 +1,6 @@
 (() => {
     const ids = ['telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect', 'telegramTest',
-        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'holdingArrivalAlerts'];
+        'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'holdingArrivalAlerts', 'goAroundAlerts'];
     const nodes = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     const menu = document.getElementById('accountMenu');
     if (!menu || ids.some(id => !nodes[id])) return;
@@ -61,6 +61,8 @@
         nodes.telegramConnect.disabled = busy || !enabled || !csrfToken;
         nodes.predictedRunwayAlerts.checked = alerts.predictedRunwayChanges === true;
         nodes.predictedRunwayAlerts.disabled = busy || !enabled || !csrfToken || !connection || connection.blocked;
+        nodes.goAroundAlerts.checked = alerts.goArounds === true;
+        nodes.goAroundAlerts.disabled = nodes.predictedRunwayAlerts.disabled;
         nodes.holdingArrivalAlerts.checked = alerts.holdingArrivals === true;
         nodes.holdingArrivalAlerts.disabled = nodes.predictedRunwayAlerts.disabled;
         nodes.busyArrivalAlerts.checked = alerts.busyArrivals === true;
@@ -154,6 +156,7 @@
                 }
                 nodes.telegramMessage.textContent = savingThreshold ? '' : Object.hasOwn(body, 'predictedRunwayChanges')
                     ? (alerts.predictedRunwayChanges ? 'Arrival runway alerts enabled. Current arrival history establishes a baseline.' : 'Arrival runway alerts disabled.')
+                    : Object.hasOwn(body, 'goArounds') ? 'Possible go-around alert settings saved.'
                     : Object.hasOwn(body, 'holdingArrivals') ? 'Possible holding alert settings saved.' : 'Busy arrival alert settings saved.';
             } else nodes.telegramMessage.textContent = 'Test message sent. Check Telegram.';
         } catch (error) {
@@ -176,6 +179,9 @@
     nodes.telegramTest.addEventListener('click', () => action('/test'));
     nodes.predictedRunwayAlerts.addEventListener('change', () => action('/alerts', {
         predictedRunwayChanges: nodes.predictedRunwayAlerts.checked
+    }));
+    nodes.goAroundAlerts.addEventListener('change', () => action('/alerts', {
+        goArounds: nodes.goAroundAlerts.checked
     }));
     nodes.holdingArrivalAlerts.addEventListener('change', () => action('/alerts', {
         holdingArrivals: nodes.holdingArrivalAlerts.checked

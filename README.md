@@ -408,11 +408,12 @@ configuration is needed. Server events use `provider: "telegram"` and
 | `telegram_runway_change_sent` | Telegram accepts an arrival runway change alert |
 | `telegram_busy_arrivals_sent` | Telegram accepts a busy arrival alert |
 | `telegram_holding_arrivals_sent` | Telegram accepts a possible holding alert |
+| `telegram_go_around_sent` | Telegram accepts a possible go-around alert |
 
 Properties identify the website `accountId`, verified Google `name` and `email`,
 and the recipient's `telegramName` and `telegramUsername` when available.
 Notification events also include `notificationType` (`test`,
-`arrivalRunwayChange`, `busyArrivals`, or `holdingArrivals`). Events exclude the full message,
+`arrivalRunwayChange`, `busyArrivals`, `holdingArrivals`, or `goArounds`). Events exclude the full message,
 Telegram chat IDs, tokens, links, cookies and request parameters. A sent event
 means Telegram accepted the message; it does not confirm the user read it.
 Failed or ambiguous sends do not produce sent events. Duplicate linking updates,
@@ -756,5 +757,58 @@ pending sends. A timed-out send can occasionally duplicate if Telegram accepted
 it before the timeout. Delivery uses the existing logs and Umami collector,
 including Do Not Track behavior.
 
-Connections, polling, test messages, runway alerts, busy arrival alerts, and
-possible holding alerts never trigger OpenSky requests.
+### Possible go-around alerts
+
+Enable **Telegram Integration → Alerts → Possible go-around** to opt in.
+It covers live Geneva-bound arrivals only. A detector runs after each successful
+existing aircraft refresh, with a 30-second cache-only fallback for stale checks
+and delivery retries. It makes no extra OpenSky requests and never evaluates
+projected browser positions or altitude.
+
+The initial conservative rule requires:
+
+- Two distinct observations of a descending approach toward the same runway,
+  with at least 20 m of descent and 100 m of progress toward its threshold.
+- Both positions before and within 8 km of the threshold, within 1 km of the
+  extended centreline, heading within 25° of inbound alignment, and estimated
+  height below 600 m above runway elevation (no more than 100 m below it).
+- Following that low approach, two consecutive climbing observations, at least
+  15 seconds apart, each gaining at least 20 m and reporting vertical speed
+  of at least 2.5 m/s. Total gain from the observed low point must reach 150 m.
+- Confirmation within three minutes of the last qualifying descent, while
+  still within 12 km of the selected threshold and airborne.
+
+The detector uses a consistent barometric altitude source. Height above runway
+is approximate because pressure altitude is not corrected for local pressure.
+The approximate runway geometry/elevations come from the
+[OurAirports LSGG runway data](https://ourairports.com/airports/LSGG/runways.html)
+and its [source dataset](https://github.com/davidmegginson/ourairports-data/blob/main/runways.csv),
+checked on 20 October 2026, including runway 04's displaced landing threshold.
+This geometry is separate from the existing arrival/runway classification.
+
+A message names the flight and the approached runway and says **possible
+go-around**. Tracking cannot confirm the manoeuvre or its cause. Sparse data,
+early aborted approaches, missing measurements and pressure errors can cause
+misses; this detector deliberately favors avoiding false positives. Confirmation
+requires multiple refreshes, so notification follows the climb rather than
+arriving at the instant the manoeuvre starts.
+
+Snapshots/positions must be under two minutes old. Missing or grounded aircraft,
+invalid measurements, stale data, backward timestamps and gaps of two minutes
+or more reset incomplete attempts and cancel queued messages. Duplicate position
+timestamps do not advance detection. Timers and consumed attempts persist across
+restarts; enabling the alert does not replay historical trails.
+
+Send once per approach attempt. A fresh alert for the same aircraft/callsign
+requires leaving the low approach gate and then establishing another descending
+approach. Consumed attempts remain recorded for two hours after the last
+observation, preventing short disappearances or a restart from duplicating them.
+
+Delivery reuses the shared account cooldown, three-attempt/five-minute retry
+limits, Telegram retry delays, blocked-bot handling, logs and DNT-aware Umami
+events. At most one flight's delivery is attempted per account per check. Opt-out
+or disconnect cancels pending sends; changing this opt-in resets only its own
+detector. A timeout can occasionally lead to duplicate delivery on retry.
+
+Connections, polling, test messages and all arrival alerts only inspect the
+existing aircraft cache; they never trigger OpenSky requests.

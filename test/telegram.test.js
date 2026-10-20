@@ -270,13 +270,13 @@ test('account HTTP endpoints enforce real Google sessions, account isolation, CS
 test('runway alert preferences are opt-in, account-isolated, persistent and protected by session/CSRF', async t => {
     const f = await httpFixture(t);
     const alice = await f.login('alice');
-    const body = JSON.stringify({ predictedRunwayChanges: true, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false });
+    const body = JSON.stringify({ predictedRunwayChanges: true, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false, goArounds: false });
     const save = (headers = alice, value = body) => f.request('/api/account/telegram/alerts', {
         method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: value
     });
     assert.equal((await save()).status, 409);
     await f.receive(update(tokenOf(await f.telegram.begin('alice'))));
-    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: false, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false });
+    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: false, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false, goArounds: false });
     assert.equal((await save({ ...alice, Origin: 'https://evil.example' })).status, 403);
     assert.equal((await save({ ...alice, 'X-CSRF-Token': 'forged' })).status, 403);
     for (const value of ['null', '[]', '{}', '{bad', '{"predictedRunwayChanges":"yes"}',
@@ -284,8 +284,8 @@ test('runway alert preferences are opt-in, account-isolated, persistent and prot
     assert.equal((await save(alice, JSON.stringify({ padding: 'x'.repeat(1100) }))).status, 413);
     assert.equal((await f.request('/api/account/telegram/alerts', { method: 'POST', headers: alice, body })).status, 415);
     assert.equal((await save()).status, 200);
-    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: true, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false });
-    assert.deepEqual((await f.telegram.status('bob')).alerts, { predictedRunwayChanges: false, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false });
+    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: true, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false, goArounds: false });
+    assert.deepEqual((await f.telegram.status('bob')).alerts, { predictedRunwayChanges: false, busyArrivals: false, busyArrivalThreshold: 10, holdingArrivals: false, goArounds: false });
     const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client });
     assert.equal((await restarted.status('alice')).alerts.predictedRunwayChanges, true);
     await f.store.update(accounts => { accounts.alice.runwayAlert = { state: null, pending: null }; });
@@ -351,7 +351,7 @@ test('busy arrival preferences validate partial updates, preserve runway setting
     }
     await save({ predictedRunwayChanges: true });
     await save({ busyArrivals: true, busyArrivalThreshold: 12 });
-    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: true, busyArrivals: true, busyArrivalThreshold: 12, holdingArrivals: false });
+    assert.deepEqual((await f.telegram.status('alice')).alerts, { predictedRunwayChanges: true, busyArrivals: true, busyArrivalThreshold: 12, holdingArrivals: false, goArounds: false });
     await f.store.update(accounts => {
         accounts.alice.runwayAlert = { state: null, pending: null };
         accounts.alice.busyAlert = { active: true, belowSince: null, pending: null, lastCheckedAt: 1 };
@@ -477,10 +477,41 @@ test('holding preferences enforce session/CSRF, persist per account, and preserv
     const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client });
     assert.equal((await restarted.status('alice')).alerts.holdingArrivals, true);
     assert.equal((await restarted.status('bob')).alerts.holdingArrivals, false);
-    await save({ holdingArrivals: false });
+    await save({ holdingArrivals: false, goArounds: false });
     const account = (await f.store.read()).accounts.alice;
     assert.equal(account.holdingAlert, undefined);
     assert.ok(account.busyAlert);
     assert.ok(account.runwayAlert);
+    assert.equal(f.calls.length, 0);
+});
+
+test('go-around preferences are opt-in, session/CSRF protected, persistent and independent of other detectors', async t => {
+    const f = await httpFixture(t);
+    const alice = await f.login('alice');
+    const save = (body, headers = alice) => f.request('/api/account/telegram/alerts', {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    assert.equal((await save({ goArounds: true })).status, 409);
+    await f.receive(update(tokenOf(await f.telegram.begin('alice'))));
+    assert.equal((await f.telegram.status('alice')).alerts.goArounds, false);
+    assert.equal((await save({ goArounds: true }, { ...alice, 'X-CSRF-Token': 'wrong' })).status, 403);
+    assert.equal((await save({ goArounds: 'true' })).status, 400);
+    assert.equal((await save({ goArounds: true })).status, 200);
+    await f.store.update(accounts => {
+        accounts.alice.goAroundAlert = { lastCheckedAt: 1, flights: [] };
+        accounts.alice.holdingAlert = { lastCheckedAt: 1, flights: [] };
+        accounts.alice.runwayAlert = { state: null, pending: null };
+    });
+    await save({ busyArrivals: true });
+    assert.deepEqual((await f.store.read()).accounts.alice.goAroundAlert, { lastCheckedAt: 1, flights: [] });
+    const restarted = createTelegram({ env, store: createTelegramStore({ filePath: f.filePath }), client: f.client });
+    assert.equal((await restarted.status('alice')).alerts.goArounds, true);
+    assert.equal((await restarted.status('bob')).alerts.goArounds, false);
+    await save({ goArounds: false });
+    const account = (await f.store.read()).accounts.alice;
+    assert.equal(account.goAroundAlert, undefined);
+    assert.ok(account.holdingAlert); assert.ok(account.runwayAlert);
+    await f.telegram.disconnect('alice');
+    assert.equal((await f.telegram.status('alice')).alerts.goArounds, false);
     assert.equal(f.calls.length, 0);
 });

@@ -13,11 +13,11 @@ test('notification logs include exact message and recipient as one JSON line; se
             assert.equal(logs.at(-1).event, 'telegram_notification_sending');
             sends.push({ id, text });
         } }, analytics: { trackTelegram(event, context) { events.push({ event, context }); } } });
-    for (const type of ['test', 'arrivalRunwayChange', 'busyArrivals', 'holdingArrivals']) {
+    for (const type of ['test', 'arrivalRunwayChange', 'busyArrivals', 'holdingArrivals', 'goArounds']) {
         await telemetry.send({ accountId: 'google-alice', connection, type, text: 'Line one\nLine two' });
     }
-    assert.deepEqual(events.map(item => item.event), ['telegram_test_sent', 'telegram_runway_change_sent', 'telegram_busy_arrivals_sent', 'telegram_holding_arrivals_sent']);
-    assert.equal(sends.length, 4);
+    assert.deepEqual(events.map(item => item.event), ['telegram_test_sent', 'telegram_runway_change_sent', 'telegram_busy_arrivals_sent', 'telegram_holding_arrivals_sent', 'telegram_go_around_sent']);
+    assert.equal(sends.length, 5);
     assert.equal(logs[0].message, 'Line one\nLine two');
     assert.equal(logs[0].telegramName, connection.name);
     assert.equal(logs[0].email, 'alice@example.com');

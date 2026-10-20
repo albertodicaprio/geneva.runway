@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser({ configured = true, connected = false } = {}) {
     const nodes = {};
     for (const id of ['accountMenu', 'telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect',
-        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'holdingArrivalAlerts']) {
+        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'holdingArrivalAlerts', 'goAroundAlerts']) {
         nodes[id] = { hidden: true, disabled: false, textContent: '', handlers: {},
             addEventListener(name, fn) { this.handlers[name] = fn; },
             removeAttribute(name) { delete this[name]; }, focus() { document.activeElement = this; } };
@@ -339,5 +339,41 @@ test('all pages include the holding opt-in and accessible explanation', () => {
         const html = fs.readFileSync(path.join(__dirname, `../public/${name}.html`), 'utf8');
         assert.match(html, /id="holdingArrivalAlerts"[^>]*aria-describedby="holdingArrivalAlertHelp"/);
         assert.match(html, /id="holdingArrivalAlertHelp" role="tooltip"/);
+    }
+});
+
+test('go-around alerts default off, save independently, restore failed saves and reset on logout', async () => {
+    const b = browser({ connected: true });
+    b.state({ enabled: true, connection: b.connection, alerts: { holdingArrivals: true, busyArrivals: true, predictedRunwayChanges: true } });
+    await b.open();
+    assert.equal(b.nodes.goAroundAlerts.checked, false);
+    assert.equal(b.nodes.goAroundAlerts.disabled, false);
+    b.nodes.goAroundAlerts.checked = true;
+    await b.nodes.goAroundAlerts.handlers.change();
+    assert.deepEqual(JSON.parse(b.requests.filter(item => item.url.endsWith('/alerts')).at(-1).options.body), { goArounds: true });
+    assert.equal(b.nodes.goAroundAlerts.checked, true);
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, true);
+    assert.equal(b.nodes.busyArrivalAlerts.checked, true);
+    assert.equal(b.nodes.predictedRunwayAlerts.checked, true);
+    b.error({ status: 503, message: 'Could not save.' });
+    b.nodes.goAroundAlerts.checked = false;
+    await b.nodes.goAroundAlerts.handlers.change();
+    assert.equal(b.nodes.goAroundAlerts.checked, true);
+    assert.match(b.nodes.telegramMessage.textContent, /Could not save/);
+    b.error(null);
+    b.state({ enabled: true, connection: b.connection, alerts: { goArounds: false } });
+    await b.open(); assert.equal(b.nodes.goAroundAlerts.checked, false);
+    b.document.documentElement.dataset.userId = '';
+    await b.events.authchange(); await flush();
+    assert.equal(b.nodes.goAroundAlerts.checked, false);
+    assert.equal(b.nodes.goAroundAlerts.disabled, true);
+});
+
+test('all pages include the go-around opt-in and accessible explanation as a separate alert row', () => {
+    for (const name of ['index', 'arrivals', 'weather', 'stats']) {
+        const html = fs.readFileSync(path.join(__dirname, `../public/${name}.html`), 'utf8');
+        assert.match(html, /id="goAroundAlerts"[^>]*aria-describedby="goAroundAlertHelp"/);
+        assert.match(html, /id="goAroundAlertHelp" role="tooltip"/);
+        assert.match(html, /confirm holding\.<\/p>\s*<\/div>\s*<\/div>\s*<div class="telegram-alert-row/);
     }
 });

@@ -908,7 +908,23 @@ outbound notification channel; notification configuration belongs in the app.
      serves homepage and repeated aircraft JSON (200), rejects guest Telegram
      access (401), with OpenSky/Telegram credentials disabled. No live messages
      sent during validation.
-   - Possible go-arounds, after defining and validating conservative rules.
+   - [x] Possible go-around: a saved opt-in on all four pages. Require a low,
+     aligned descending approach inside an 8 km/1 km corridor, then two fresh
+     climbing observations and at least 150 m gained. Use separately modeled
+     runway thresholds/elevations; do not change existing arrival classification.
+     Evaluate on successful aircraft refreshes with a cache-only 30-second
+     fallback. Discard stale/missing/incomplete observations and persist consumed
+     attempts across restarts. Re-arm only after leaving the approach gate and
+     establishing a fresh descending approach. Reuse bounded delivery, shared
+     cooldown, cancellation, logs and DNT-aware telemetry. No extra upstream calls.
+     Validation: all 235 tests pass, including both corridors, exact climb gain,
+     normal landings/departures, high/off-axis traffic, altitude spikes, duplicate
+     timestamps, tracking gaps, new approaches, restart/delivery deduplication,
+     retry limits, refresh subscriptions/shutdown, preference isolation/CSRF,
+     browser rollback/sync and telemetry. Chrome checks pass in Day/Night at
+     320/390/700/1040px. Local startup serves homepage and repeated aircraft JSON
+     (200) and rejects guest Telegram access (401), with credentials disabled.
+     No live Telegram messages sent during validation.
    - Define freshness, confirmation, cooldown, and deduplication rules for each
      provider; distinguish predictions and possible events from confirmed ones.
 

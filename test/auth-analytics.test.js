@@ -133,15 +133,16 @@ const telegramConnection = () => ({ name: 'Telegram Alice', username: 'alice', c
 test('Telegram collector sends distinct event names with recipient properties and no message, chat ID or saved IP', async () => {
     const f = fixture();
     for (const event of ['telegram_connected', 'telegram_disconnected', 'telegram_test_sent',
-        'telegram_runway_change_sent', 'telegram_busy_arrivals_sent', 'telegram_holding_arrivals_sent']) {
+        'telegram_runway_change_sent', 'telegram_busy_arrivals_sent', 'telegram_holding_arrivals_sent', 'telegram_go_around_sent']) {
         f.trackTelegram(event, { accountId: 'google-alice', connection: telegramConnection(),
-            notificationType: event === 'telegram_holding_arrivals_sent' ? 'holdingArrivals' : 'busyArrivals',
+            notificationType: event === 'telegram_go_around_sent' ? 'goArounds' : event === 'telegram_holding_arrivals_sent' ? 'holdingArrivals' : 'busyArrivals',
             message: 'Private message body', token: 'private-token' });
     }
     await flush();
-    assert.equal(f.calls.length, 6);
+    assert.equal(f.calls.length, 7);
     for (const { options } of f.calls) {
         const { payload } = JSON.parse(options.body);
+        if (payload.name === 'telegram_go_around_sent') assert.equal(payload.data.notificationType, 'goArounds');
         if (payload.name === 'telegram_holding_arrivals_sent') assert.equal(payload.data.notificationType, 'holdingArrivals');
         assert.equal(payload.data.provider, 'telegram');
         assert.equal(payload.data.source, 'server');
@@ -159,7 +160,7 @@ test('Telegram collector sends distinct event names with recipient properties an
     f.trackTelegram('telegram_connected', { connection: dnt });
     f.trackTelegram('telegram_connected', { connection: {} });
     await flush();
-    assert.equal(f.calls.length, 6);
+    assert.equal(f.calls.length, 7);
 });
 
 test('auth and Telegram events share the bounded collector queue and disabled configuration', async () => {
