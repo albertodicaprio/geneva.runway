@@ -729,8 +729,8 @@ Under **Telegram Integration → Alerts**, enable **Possible holding**. This
 separate opt-in defaults off and covers only live Geneva-bound arrivals in the
 app's existing tracked area. Once enabled, a background check runs each minute,
 using only cached observations. An aircraft must remain continuously tracked
-for **more than 15 minutes** before it qualifies. At the normal check cadence,
-the first alert usually follows about 16 minutes of observations. Existing
+for **more than 25 minutes** before it qualifies. At the normal check cadence,
+the first alert usually follows about 26 minutes of observations. Existing
 trail history is not counted when enabling the alert.
 
 The message names the flight and its observed duration, describing **possible

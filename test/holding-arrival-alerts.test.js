@@ -13,42 +13,42 @@ const flight = (n, id = 'abc:TEST123') => ({ id, callsign: id.split(':')[1], obs
 const snapshot = (n, arrivals = [flight(n)]) => ({ arrivals, observedAt: start + n * minute, stale: false });
 function dwell() {
     let state;
-    for (let n = 0; n <= 15; n++) state = advanceHoldingAlert(state, snapshot(n), start + n * minute);
+    for (let n = 0; n <= 25; n++) state = advanceHoldingAlert(state, snapshot(n), start + n * minute);
     return state;
 }
 
-test('requires more than fifteen minutes of fresh observations; repeats cannot advance the timer', () => {
+test('requires more than twenty-five minutes of fresh observations; repeats cannot advance the timer', () => {
     let state = dwell();
     assert.equal(state.flights[0].pending, null);
-    state = advanceHoldingAlert(state, snapshot(15), start + 16 * minute);
+    state = advanceHoldingAlert(state, snapshot(25), start + 26 * minute);
     assert.equal(state.flights[0].pending, null);
-    state = advanceHoldingAlert(state, snapshot(16), start + 16 * minute);
-    assert.equal(state.flights[0].pending.createdAt, start + 16 * minute);
+    state = advanceHoldingAlert(state, snapshot(26), start + 26 * minute);
+    assert.equal(state.flights[0].pending.createdAt, start + 26 * minute);
     assert.equal(validHoldingAlert(state), true);
 });
 
 test('tracking gaps, missing aircraft, stale and invalid snapshots reset unfinished dwell', () => {
-    for (const data of [snapshot(16, []), { ...snapshot(16), stale: true }, snapshot(14), snapshot(17),
-        { ...snapshot(16), arrivals: [{ ...flight(16), observedAt: start + 17 * minute }] }]) {
-        let state = advanceHoldingAlert(dwell(), data, start + 16 * minute);
-        state = advanceHoldingAlert(state, snapshot(17), start + 17 * minute);
-        assert.equal(state.flights[0].firstSeenAt, start + 17 * minute);
+    for (const data of [snapshot(26, []), { ...snapshot(26), stale: true }, snapshot(24), snapshot(27),
+        { ...snapshot(26), arrivals: [{ ...flight(26), observedAt: start + 27 * minute }] }]) {
+        let state = advanceHoldingAlert(dwell(), data, start + 26 * minute);
+        state = advanceHoldingAlert(state, snapshot(27), start + 27 * minute);
+        assert.equal(state.flights[0].firstSeenAt, start + 27 * minute);
         assert.equal(state.flights[0].pending, null);
     }
-    const state = advanceHoldingAlert(dwell(), snapshot(18), start + 18 * minute);
-    assert.equal(state.flights[0].firstSeenAt, start + 18 * minute);
+    const state = advanceHoldingAlert(dwell(), snapshot(28), start + 28 * minute);
+    assert.equal(state.flights[0].firstSeenAt, start + 28 * minute);
     assert.equal(state.flights[0].pending, null);
 });
 
 test('flight identity separates callsigns and aircraft; delivered identity survives disappearance', () => {
-    let state = advanceHoldingAlert(dwell(), snapshot(16), start + 16 * minute);
+    let state = advanceHoldingAlert(dwell(), snapshot(26), start + 26 * minute);
     state.flights[0].pending = null;
-    state = advanceHoldingAlert(state, snapshot(17, []), start + 17 * minute);
-    state = advanceHoldingAlert(state, snapshot(18, [flight(18), flight(18, 'abc:NEW123'), flight(18, 'def:TEST123')]), start + 18 * minute);
+    state = advanceHoldingAlert(state, snapshot(27, []), start + 27 * minute);
+    state = advanceHoldingAlert(state, snapshot(28, [flight(28), flight(28, 'abc:NEW123'), flight(28, 'def:TEST123')]), start + 28 * minute);
     assert.equal(state.flights.length, 3);
     assert.equal(state.flights.find(f => f.id === 'abc:TEST123').alerted, true);
     assert.equal(state.flights.filter(f => f.pending).length, 0);
-    state = advanceHoldingAlert(state, snapshot(139, []), start + 139 * minute);
+    state = advanceHoldingAlert(state, snapshot(149, []), start + 149 * minute);
     assert.equal(state.flights.length, 0);
 });
 
@@ -77,7 +77,7 @@ async function fixture(t) {
         accounts.bob = { ...accounts.alice, chatId: '456', userId: '456', alerts: { holdingArrivals: false } };
         delete accounts.bob.holdingAlert;
     });
-    let n = 16; let data = snapshot(n); let failure; let reads = 0;
+    let n = 26; let data = snapshot(n); let failure; let reads = 0;
     const sends = [];
     let queue = Promise.resolve();
     const options = { store, clock: () => start + n * minute, logger: {},
@@ -95,25 +95,25 @@ test('delivery includes flight and duration, persists deduplication after restar
     assert.equal(f.sends[0].accountId, 'alice');
     assert.equal(f.sends[0].type, 'holdingArrivals');
     assert.match(f.sends[0].text, /possible holding: TEST123/);
-    assert.match(f.sends[0].text, /16 minutes/);
+    assert.match(f.sends[0].text, /26 minutes \(more than 25 minutes\)/);
     assert.match(f.sends[0].text, /does not confirm/);
     assert.equal((await f.store.read()).accounts.bob.holdingAlert, undefined);
-    f.set(17);
+    f.set(27);
     await createHoldingArrivalAlerts(f.options).check();
     assert.equal(f.sends.length, 1);
 });
 
 test('shared cooldown, Telegram retry delay, expiration and attempt limit bound delivery', async t => {
     const f = await fixture(t);
-    await f.store.update(accounts => { accounts.alice.nextSendAt = start + 17 * minute; });
+    await f.store.update(accounts => { accounts.alice.nextSendAt = start + 27 * minute; });
     await f.alerts.check(); assert.equal(f.sends.length, 0);
-    f.set(17); f.fail({ code: 429, retryAfter: 120 }); await f.alerts.check();
-    f.set(18); await f.alerts.check(); assert.equal(f.sends.length, 1);
-    f.set(19); f.fail({ code: 'unavailable' }); await f.alerts.check(); assert.equal(f.sends.length, 2);
-    f.set(20); await f.alerts.check(); assert.equal(f.sends.length, 2);
-    f.set(21); await f.alerts.check(); assert.equal(f.sends.length, 2); // Expired.
+    f.set(27); f.fail({ code: 429, retryAfter: 120 }); await f.alerts.check();
+    f.set(28); await f.alerts.check(); assert.equal(f.sends.length, 1);
+    f.set(29); f.fail({ code: 'unavailable' }); await f.alerts.check(); assert.equal(f.sends.length, 2);
+    f.set(30); await f.alerts.check(); assert.equal(f.sends.length, 2);
+    f.set(31); await f.alerts.check(); assert.equal(f.sends.length, 2); // Expired.
     const g = await fixture(t); g.fail({ code: 'unavailable' });
-    for (let n = 16; n <= 20; n++) { g.set(n); await g.alerts.check(); }
+    for (let n = 26; n <= 30; n++) { g.set(n); await g.alerts.check(); }
     assert.equal(g.sends.length, 3);
     assert.equal((await g.store.read()).accounts.alice.holdingAlert.flights[0].pending, null);
 });
@@ -124,7 +124,7 @@ test('pending sends cancel on disappearance, stale tracking, opt-out, disconnect
         await f.alerts.check();
         if (kind === 'opt-out') await f.store.update(accounts => { accounts.alice.alerts.holdingArrivals = false; delete accounts.alice.holdingAlert; });
         if (kind === 'disconnect') await f.store.update(accounts => { delete accounts.alice; });
-        f.set(17, kind === 'missing' ? snapshot(17, []) : kind === 'stale' ? { ...snapshot(17), stale: true } : undefined);
+        f.set(27, kind === 'missing' ? snapshot(27, []) : kind === 'stale' ? { ...snapshot(27), stale: true } : undefined);
         await f.alerts.check(); assert.equal(f.sends.length, 1, kind);
         const account = (await f.store.read()).accounts.alice;
         if (account?.holdingAlert) assert.equal(account.holdingAlert.flights[0].pending, null, kind);
@@ -144,15 +144,15 @@ test('no opt-ins means no reads, and shutdown cancels in-flight evaluation', asy
         arrivals: () => { started(); return new Promise(resolve => { finish = resolve; }); },
         schedule(fn) { timers.push(fn); }, cancel() {} });
     worker.start(); worker.start(); await begun;
-    const stopped = worker.stop(); finish(snapshot(16)); await stopped;
+    const stopped = worker.stop(); finish(snapshot(26)); await stopped;
     assert.equal(f.sends.length, 0); assert.equal(timers.length, 0);
 });
 
 test('a later flight with the same identity starts over after the two-hour retention window', () => {
-    let state = advanceHoldingAlert(dwell(), snapshot(16), start + 16 * minute);
-    state = advanceHoldingAlert(state, snapshot(137), start + 137 * minute);
+    let state = advanceHoldingAlert(dwell(), snapshot(26), start + 26 * minute);
+    state = advanceHoldingAlert(state, snapshot(147), start + 147 * minute);
     assert.equal(state.flights[0].alerted, false);
-    assert.equal(state.flights[0].firstSeenAt, start + 137 * minute);
+    assert.equal(state.flights[0].firstSeenAt, start + 147 * minute);
 });
 
 test('simultaneous qualifying flights queue individually and share the send cooldown', async t => {
@@ -160,10 +160,10 @@ test('simultaneous qualifying flights queue individually and share the send cool
     await f.store.update(accounts => {
         accounts.alice.holdingAlert.flights.push({ ...accounts.alice.holdingAlert.flights[0], id: 'def:OTHER123', callsign: 'OTHER123' });
     });
-    f.set(16, snapshot(16, [flight(16), flight(16, 'def:OTHER123')]));
+    f.set(26, snapshot(26, [flight(26), flight(26, 'def:OTHER123')]));
     await f.alerts.check(); await f.alerts.check();
     assert.equal(f.sends.length, 1);
-    f.set(17, snapshot(17, [flight(17), flight(17, 'def:OTHER123')]));
+    f.set(27, snapshot(27, [flight(27), flight(27, 'def:OTHER123')]));
     await f.alerts.check();
     assert.equal(f.sends.length, 2);
     assert.match(f.sends[1].text, /OTHER123/);

@@ -893,7 +893,7 @@ outbound notification channel; notification configuration belongs in the app.
      synthetic events were accepted by local Umami, DNT was suppressed, and no
      Telegram messages were sent. Local homepage/aircraft JSON return 200.
    - [x] Possible holding: a separate saved opt-in on all four pages for live
-     Geneva arrivals observed continuously for more than 15 minutes. Cache-only
+     Geneva arrivals observed continuously for more than 25 minutes. Cache-only
      minute checks require snapshot and aircraft positions under two minutes old;
      missing/stale observations and monitoring gaps reset unfinished timers.
      No trail backfill or holding-pattern claim. One event per aircraft/callsign,
