@@ -79,6 +79,16 @@
                                         </label>
                                         <button class="theme-toggle" id="busyArrivalThresholdSave" type="button" aria-label="Save busy arrival threshold" disabled>Save</button>
                                     </div>
+                                    <div class="telegram-alert-row busy-arrival-toggle">
+                                        <label class="telegram-alert-toggle" for="holdingArrivalAlerts">
+                                            <span>Possible holding</span>
+                                            <input id="holdingArrivalAlerts" type="checkbox" role="switch" aria-describedby="holdingArrivalAlertHelp" disabled>
+                                        </label>
+                                        <div class="telegram-alert-help">
+                                            <button type="button" aria-label="About possible holding" aria-describedby="holdingArrivalAlertHelp">ⓘ</button>
+                                            <p id="holdingArrivalAlertHelp" role="tooltip">One alert per Geneva arrival tracked continuously for more than 15 minutes. Tracking gaps reset the timer. Time in the area alone does not confirm holding.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <button class="account-logout" id="signOut" type="button" hidden>Log out</button>

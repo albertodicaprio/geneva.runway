@@ -407,11 +407,12 @@ configuration is needed. Server events use `provider: "telegram"` and
 | `telegram_test_sent` | Telegram accepts a test message |
 | `telegram_runway_change_sent` | Telegram accepts an arrival runway change alert |
 | `telegram_busy_arrivals_sent` | Telegram accepts a busy arrival alert |
+| `telegram_holding_arrivals_sent` | Telegram accepts a possible holding alert |
 
 Properties identify the website `accountId`, verified Google `name` and `email`,
 and the recipient's `telegramName` and `telegramUsername` when available.
 Notification events also include `notificationType` (`test`,
-`arrivalRunwayChange`, or `busyArrivals`). Events exclude the full message,
+`arrivalRunwayChange`, `busyArrivals`, or `holdingArrivals`). Events exclude the full message,
 Telegram chat IDs, tokens, links, cookies and request parameters. A sent event
 means Telegram accepted the message; it does not confirm the user read it.
 Failed or ambiguous sends do not produce sent events. Duplicate linking updates,
@@ -721,5 +722,39 @@ change cancel pending delivery. Blocked bots stop receiving alerts. A timed-out
 send can occasionally be delivered twice if Telegram accepted the first attempt.
 Preferences synchronize across devices; changing one alert preserves the other.
 
-Connections, polling, test messages, runway alerts, and busy arrival alerts never
-trigger OpenSky requests.
+### Possible holding alerts
+
+Under **Telegram Integration → Alerts**, enable **Possible holding**. This
+separate opt-in defaults off and covers only live Geneva-bound arrivals in the
+app's existing tracked area. Once enabled, a background check runs each minute,
+using only cached observations. An aircraft must remain continuously tracked
+for **more than 15 minutes** before it qualifies. At the normal check cadence,
+the first alert usually follows about 16 minutes of observations. Existing
+trail history is not counted when enabling the alert.
+
+The message names the flight and its observed duration, describing **possible
+holding**. Time in this area alone cannot confirm a holding pattern or a delay;
+the detector does not analyze circles or change arrival/runway classification.
+It excludes departures, general traffic, grounded aircraft, and retained history.
+
+Both the snapshot and aircraft position must be less than two minutes old.
+Missing aircraft, stale tracking, backward timestamps, or gaps of two minutes
+or more between observations/checks reset unfinished timers and cancel queued
+messages. Re-reading a cached position does not add observation time.
+
+Each account receives at most one alert event per aircraft/callsign, with
+identities retained for two hours after their last observation to prevent
+repeats on short disappearances. Timers and deduplication survive restarts;
+downtime of two minutes or more resets unfinished timers. Changing this opt-in
+resets its detector and preserves the other alert preferences.
+
+Queued delivery expires after five minutes and allows at most three attempts,
+honoring Telegram retry delays and the shared account send cooldown. Multiple
+qualifying flights queue separately; at most one is attempted per account per
+check. Opt-out, disconnect, blocked delivery, or lost fresh tracking cancels
+pending sends. A timed-out send can occasionally duplicate if Telegram accepted
+it before the timeout. Delivery uses the existing logs and Umami collector,
+including Do Not Track behavior.
+
+Connections, polling, test messages, runway alerts, busy arrival alerts, and
+possible holding alerts never trigger OpenSky requests.

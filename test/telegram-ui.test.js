@@ -8,7 +8,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve));
 function browser({ configured = true, connected = false } = {}) {
     const nodes = {};
     for (const id of ['accountMenu', 'telegramStatus', 'telegramAccount', 'telegramConnect', 'telegramDisconnect',
-        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave']) {
+        'telegramTest', 'telegramLinkPanel', 'telegramLink', 'telegramQr', 'telegramExpiry', 'telegramMessage', 'predictedRunwayAlerts', 'busyArrivalAlerts', 'busyArrivalThreshold', 'busyArrivalThresholdSave', 'holdingArrivalAlerts']) {
         nodes[id] = { hidden: true, disabled: false, textContent: '', handlers: {},
             addEventListener(name, fn) { this.handlers[name] = fn; },
             removeAttribute(name) { delete this[name]; }, focus() { document.activeElement = this; } };
@@ -306,4 +306,38 @@ test('a threshold save during an in-flight poll is not discarded or overwritten 
     b.events.authchange();
     assert.equal(b.nodes.busyArrivalThreshold.value, 10);
     assert.equal(b.nodes.telegramMessage.textContent, '');
+});
+
+test('holding alerts default off, save independently, roll back failures and synchronize across accounts', async () => {
+    const b = browser({ connected: true });
+    await b.open();
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, false);
+    assert.equal(b.nodes.holdingArrivalAlerts.disabled, false);
+    b.nodes.holdingArrivalAlerts.checked = true;
+    await b.nodes.holdingArrivalAlerts.handlers.change();
+    assert.deepEqual(JSON.parse(b.requests.filter(item => item.url.endsWith('/alerts')).at(-1).options.body), { holdingArrivals: true });
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, true);
+    assert.equal(b.nodes.busyArrivalAlerts.checked, false);
+    b.error({ status: 503, message: 'Could not save.' });
+    b.nodes.holdingArrivalAlerts.checked = false;
+    await b.nodes.holdingArrivalAlerts.handlers.change();
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, true);
+    assert.match(b.nodes.telegramMessage.textContent, /Could not save/);
+    b.error(null);
+    b.state({ enabled: true, connection: b.connection, alerts: { holdingArrivals: false } });
+    await b.open();
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, false);
+    b.document.documentElement.dataset.userId = 'bob';
+    b.state({ enabled: true, connection: null });
+    await b.events.authchange(); await flush();
+    assert.equal(b.nodes.holdingArrivalAlerts.checked, false);
+    assert.equal(b.nodes.holdingArrivalAlerts.disabled, true);
+});
+
+test('all pages include the holding opt-in and accessible explanation', () => {
+    for (const name of ['index', 'arrivals', 'weather', 'stats']) {
+        const html = fs.readFileSync(path.join(__dirname, `../public/${name}.html`), 'utf8');
+        assert.match(html, /id="holdingArrivalAlerts"[^>]*aria-describedby="holdingArrivalAlertHelp"/);
+        assert.match(html, /id="holdingArrivalAlertHelp" role="tooltip"/);
+    }
 });

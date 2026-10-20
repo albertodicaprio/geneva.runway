@@ -892,8 +892,23 @@ outbound notification channel; notification configuration belongs in the app.
      stale Settings-heading assertion to match the compact menu. Five labelled
      synthetic events were accepted by local Umami, DNT was suppressed, and no
      Telegram messages were sent. Local homepage/aircraft JSON return 200.
-   - Possible go-arounds and aircraft observed in the area over 15 minutes,
-     after defining and validating conservative detection rules.
+   - [x] Possible holding: a separate saved opt-in on all four pages for live
+     Geneva arrivals observed continuously for more than 15 minutes. Cache-only
+     minute checks require snapshot and aircraft positions under two minutes old;
+     missing/stale observations and monitoring gaps reset unfinished timers.
+     No trail backfill or holding-pattern claim. One event per aircraft/callsign,
+     with persisted timers and two-hour deduplication after last observation.
+     Delivery shares account serialization, cooldown, Telegram retry delays,
+     three-attempt/five-minute limits, cancellation, logs and DNT-aware analytics.
+     Validation: all 217 tests pass, covering duration boundaries, stale/missing
+     observations, identity/restart deduplication, concurrent flights, delivery
+     bounds, isolated/CSRF-protected preferences, UI rollback/sync and telemetry.
+     Headless Chrome checks pass in Day/Night at 320/390/700/1040px for saves,
+     independent preferences, tooltip focus and layout. Isolated local startup
+     serves homepage and repeated aircraft JSON (200), rejects guest Telegram
+     access (401), with OpenSky/Telegram credentials disabled. No live messages
+     sent during validation.
+   - Possible go-arounds, after defining and validating conservative rules.
    - Define freshness, confirmation, cooldown, and deduplication rules for each
      provider; distinguish predictions and possible events from confirmed ones.
 
