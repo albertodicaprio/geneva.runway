@@ -158,7 +158,11 @@ successful OpenSky refreshes; earlier cache data is not backfilled. Files are
 retained until manually removed.
 
 The Stats page at `/stats.html` has a calendar for choosing a recorded Geneva
-day or an inclusive range. Future days and days without archived flights are
+day or an inclusive range. Signed-out visitors can view today and the previous
+two calendar days in Europe/Zurich; signing in unlocks the full recorded history.
+The API enforces the same limit for available dates, ranges, and legacy `days`
+queries (default three days for guests, seven when signed in; wider guest
+queries return 403). Future days and days without archived flights are
 disabled; gaps inside a selected range contribute no flights. Its Landings, General, and Takeoffs bar
 shows each category separately. General includes overflights and unknown
 routes; takeoffs are Geneva departures. Each category has its own total and

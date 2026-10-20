@@ -6,13 +6,14 @@ const path = require('path');
 loadLocalEnv();
 
 const aircraftHandler = require('./api/aircraft');
-const statsHandler = require('./api/stats');
+const { createStatsHandler } = require('./api/stats');
 const weatherHandler = require('./api/weather');
 const { startAircraftRefreshScheduler } = require('./lib/aircraft-service');
 const { createAuth } = require('./lib/auth');
 const { createAuthAnalytics, validWebsiteId: isValidWebsiteId } = require('./lib/auth-analytics');
 const analytics = createAuthAnalytics();
 const auth = createAuth({ analytics });
+const statsHandler = createStatsHandler({ getUser: req => auth.getUser(req) });
 const { createTelegram } = require('./lib/telegram');
 const { createTelegramHandler } = require('./api/telegram');
 const telegram = createTelegram({ analytics });

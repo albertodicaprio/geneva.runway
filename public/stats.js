@@ -128,6 +128,7 @@ const GenevaStats = (() => {
 
     function create({ document, fetch, logger = console, setTimeout = globalThis.setTimeout, clearTimeout = globalThis.clearTimeout }) {
         let requestId = 0;
+        let datesRequestId = 0;
         const filters = { landing: '', general: '', takeoffs: '', hourly: '' };
         let filterTimer;
         let today;
@@ -235,11 +236,21 @@ const GenevaStats = (() => {
                 }
             }
         }
-        async function start() {
+        async function refreshDates() {
+            const current = ++datesRequestId;
+            requestId++;
+            clearTimeout(filterTimer);
+            from = to = undefined;
+            available = new Set();
+            renderCalendar();
+            showEmpty('Loading flight stats…');
             try {
                 const response = await fetch('/api/stats?available=1', { cache: 'no-store' });
                 if (!response.ok) throw new Error(`HTTP error ${response.status}`);
                 const data = await response.json();
+                if (current !== datesRequestId) return;
+                const limit = document.getElementById('statsHistoryLimit');
+                if (limit) limit.hidden = !data.historyLimited;
                 today = data.today;
                 available = new Set(data.dates);
                 const latest = data.dates.at(-1);
@@ -249,10 +260,14 @@ const GenevaStats = (() => {
                 if (latest) load();
                 else showEmpty('No recorded flights yet.');
             } catch (error) {
+                if (current !== datesRequestId) return;
                 logger.error('Error fetching available stats dates:', error);
                 document.getElementById('statsRangeLabel').textContent = 'Unable to load available dates.';
                 showEmpty('Unable to load flight stats.');
             }
+        }
+        async function start() {
+            await refreshDates();
             document.getElementById('statsPreviousMonth').addEventListener('click', () => {
                 month = shiftMonth(month, -1);
                 renderCalendar();
@@ -300,7 +315,7 @@ const GenevaStats = (() => {
                 button.addEventListener('click', () => showView(button.dataset.statsView));
             }
         }
-        return { start, load, showView };
+        return { start, load, showView, refreshDates };
     }
 
     return { create };
@@ -309,6 +324,13 @@ const GenevaStats = (() => {
 if (typeof module !== 'undefined') module.exports = GenevaStats;
 if (typeof document !== 'undefined') {
     const stats = GenevaStats.create({ document, fetch: (...args) => window.fetch(...args) });
+    let userId = document.documentElement.dataset.userId;
+    window.addEventListener('authchange', () => {
+        const nextUserId = document.documentElement.dataset.userId;
+        if (nextUserId === userId) return;
+        userId = nextUserId;
+        void stats.refreshDates();
+    });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', stats.start);
     else stats.start();
 }

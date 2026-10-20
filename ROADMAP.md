@@ -928,6 +928,16 @@ outbound notification channel; notification configuration belongs in the app.
    - Define freshness, confirmation, cooldown, and deduplication rules for each
      provider; distinguish predictions and possible events from confirmed ones.
 
+Completed stats access update:
+
+- [x] Limit signed-out Stats history to today and the previous two Geneva-local
+  calendar days. Filter available dates and reject older range/legacy-day API
+  requests with 403; signed-in sessions retain the full archive. Show a sign-in
+  link beside the calendar and refresh dates/totals on account changes.
+  Validation: all 238 tests pass, including guest/signed-in access, calendar
+  refresh, direct API requests, DST and year boundaries. Local server startup,
+  frontend and cached stats requests are covered by the integration suite.
+
 Remaining maintenance:
 
 - Keep the host, container base image, Node runtime, and reverse proxy patched.

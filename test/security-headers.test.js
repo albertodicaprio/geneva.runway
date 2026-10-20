@@ -13,6 +13,14 @@ let testCacheDir;
 
 before(async () => {
     testCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'geneva-runway-test-'));
+    const today = genevaDate(Date.now());
+    const previous = new Date(Date.parse(`${today}T00:00:00Z`) - 2 * 86400000).toISOString().slice(0, 10);
+    const directory = path.join(testCacheDir, 'flight-history');
+    fs.mkdirSync(directory, { recursive: true });
+    for (const [date, category] of [[previous, 'arrival'], [today, 'departure']]) {
+        fs.writeFileSync(path.join(directory, `${date}.json`), JSON.stringify({ version: 1, date,
+            flights: [{ category, airline: 'Swiss', firstSeenAt: Date.now() / 1000 }] }));
+    }
     server = spawn(process.execPath, ['server.js'], {
         cwd: projectRoot,
         env: { ...process.env, PORT: '0', TMPDIR: testCacheDir,
@@ -115,14 +123,16 @@ test('retired aviation weather links redirect to the forecast and the removed AP
 });
 
 test('the stats API serves archive summaries without requiring OpenSky', async () => {
-    const response = await fetch(`${baseUrl}/api/stats?days=7`);
+    const response = await fetch(`${baseUrl}/api/stats`);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('cache-control'), 'no-store');
     const summary = await response.json();
-    assert.equal(summary.days, 7);
-    assert.equal(summary.landing.total, 0);
+    assert.equal(summary.days, 3);
+    assert.equal(summary.landing.total, 1);
     assert.equal(summary.general.total, 0);
-    assert.equal(summary.takeoffs.total, 0);
+    assert.equal(summary.takeoffs.total, 1);
+    assert.equal((await fetch(`${baseUrl}/api/stats?days=7`)).status, 403);
+    assert.equal((await fetch(`${baseUrl}/api/stats?days=30`)).status, 403);
     const yesterday = await fetch(`${baseUrl}/api/stats?days=1&offset=1`);
     assert.equal(yesterday.status, 200);
     assert.equal((await yesterday.json()).days, 1);
@@ -132,18 +142,18 @@ test('the stats API serves archive summaries without requiring OpenSky', async (
 
 test('stats availability and date ranges use only recorded Geneva days', async () => {
     const today = genevaDate(Date.now());
-    const previous = new Date(Date.parse(`${today}T00:00:00Z`) - 10 * 86400000).toISOString().slice(0, 10);
-    const recent = new Date(Date.parse(`${today}T00:00:00Z`) - 8 * 86400000).toISOString().slice(0, 10);
-    const missing = new Date(Date.parse(`${today}T00:00:00Z`) - 9 * 86400000).toISOString().slice(0, 10);
+    const previous = new Date(Date.parse(`${today}T00:00:00Z`) - 2 * 86400000).toISOString().slice(0, 10);
+    const recent = today;
+    const missing = new Date(Date.parse(`${today}T00:00:00Z`) - 1 * 86400000).toISOString().slice(0, 10);
     const directory = path.join(testCacheDir, 'flight-history');
-    fs.mkdirSync(directory, { recursive: true });
-    for (const [date, category] of [[previous, 'arrival'], [recent, 'departure']]) {
-        fs.writeFileSync(path.join(directory, `${date}.json`), JSON.stringify({ version: 1, date,
-            flights: [{ category, airline: 'Swiss', firstSeenAt: Date.now() / 1000 }] }));
-    }
+    const old = new Date(Date.parse(`${today}T00:00:00Z`) - 3 * 86400000).toISOString().slice(0, 10);
+    fs.writeFileSync(path.join(directory, `${old}.json`), JSON.stringify({ version: 1, date: old,
+        flights: [{ category: 'arrival', airline: 'Hidden' }] }));
+    assert.equal((await fetch(`${baseUrl}/api/stats?from=${old}&to=${recent}`)).status, 403);
+    assert.equal((await fetch(`${baseUrl}/api/stats?available=1`, { headers: { Cookie: 'gva-session=forged' } })).status, 200);
     const availability = await fetch(`${baseUrl}/api/stats?available=1`);
     assert.equal(availability.status, 200);
-    assert.deepEqual(await availability.json(), { today, dates: [previous, recent] });
+    assert.deepEqual(await availability.json(), { today, dates: [previous, recent], historyLimited: true });
     const range = await fetch(`${baseUrl}/api/stats?from=${previous}&to=${recent}`);
     assert.equal(range.status, 200);
     const summary = await range.json();

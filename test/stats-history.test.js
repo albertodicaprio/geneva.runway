@@ -8,7 +8,7 @@ const { summarizeFlights } = require('../lib/stats');
 const GenevaStats = require('../public/stats');
 
 function statsDocument() {
-    const ids = ['statsOverview', 'statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
+    const ids = ['statsHistoryLimit', 'statsOverview', 'statsCalendar', 'statsCalendarMonth', 'statsPreviousMonth', 'statsNextMonth', 'statsRangeLabel',
         'landingSummary', 'landingCharts', 'generalSummary', 'generalCharts', 'takeoffsSummary', 'takeoffsCharts',
         'landingStats', 'generalStats', 'takeoffsStats', 'hourlyStats', 'hourlyChart', 'showHourlyLandings', 'showHourlyTakeoffs'];
     const elements = Object.fromEntries(ids.map(id => [id, {
@@ -630,4 +630,28 @@ test('Hourly chart shows empty and failure states and clears stale data after a 
     elements.showHourlyLandings.onchange();
     assert.match(elements.hourlyChart.innerHTML, /Unable to load hourly stats/);
     assert.doesNotMatch(elements.hourlyChart.innerHTML, /<svg/);
+});
+
+
+test('restricted history explains sign-in and refreshes dates and totals after sign-out', async () => {
+    const { elements, document } = statsDocument();
+    let restricted = false;
+    const requested = [];
+    const app = GenevaStats.create({ document, fetch: async url => {
+        requested.push(url);
+        return { ok: true, json: async () => url.includes('available=1')
+            ? { today: '2026-09-28', historyLimited: restricted,
+                dates: restricted ? ['2026-09-27'] : ['2026-08-01', '2026-09-27'] }
+            : summarizeFlights([], 1) };
+    } });
+    await app.start();
+    assert.equal(elements.statsHistoryLimit.hidden, true);
+    elements.statsPreviousMonth.onclick();
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-08-01"[^>]*aria-pressed/);
+    restricted = true;
+    await app.refreshDates();
+    assert.equal(elements.statsHistoryLimit.hidden, false);
+    assert.equal(elements.statsPreviousMonth.disabled, true);
+    assert.match(elements.statsCalendar.innerHTML, /data-stats-date="2026-08-01"[^>]*disabled/);
+    assert.equal(requested.at(-1), '/api/stats?from=2026-09-27&to=2026-09-27');
 });
