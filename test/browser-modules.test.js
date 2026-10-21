@@ -26,6 +26,25 @@ function selectEvent(id, key) {
     return { key, target: { closest: () => ({ dataset: { aircraftId: id } }) }, preventDefault() { this.prevented = true; } };
 }
 
+test('historical map keeps paths and filters but hides stale markers and ignores live updates until returning to live', () => {
+    const { document, elements } = makeDocument();
+    const map = create({ document, now: () => 5000000 });
+    map.init();
+    map.update({ aircraft: [aircraft('LIVE')] });
+    map.setHistory({ historical: true, aircraft: [aircraft('PAST'), aircraft('ENDED', { historicalActive: false })],
+        generalTraffic: [aircraft('OTHER')] });
+    assert.match(elements.mapMarkers.innerHTML, /PAST/);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /ENDED|LIVE|OTHER/);
+    assert.equal((elements.mapPaths.innerHTML.match(/<path/g) || []).length, 2);
+    map.update({ aircraft: [aircraft('NEWLIVE')] });
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /NEWLIVE/);
+    map.setLayer('general', true);
+    assert.match(elements.mapMarkers.innerHTML, /OTHER/);
+    map.setHistory(null);
+    assert.match(elements.mapMarkers.innerHTML, /NEWLIVE/);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /PAST/);
+});
+
 test('featured and list layouts share escaped identity, route, photo, and measurements', () => {
     const plane = aircraft('<GVA>', {
         route: { airline: { name: 'Swiss & Partners' }, origin: { iata_code: 'LHR', name: 'London Heathrow Airport' } },

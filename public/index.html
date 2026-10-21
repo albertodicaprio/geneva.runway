@@ -143,10 +143,10 @@
             <section id="mapSection" class="map-section" aria-labelledby="mapHeading">
                 <div class="section-heading">
                     <div>
-                        <p class="eyebrow">LIVE POSITION</p>
+                        <p id="mapMode" class="eyebrow">LIVE POSITION</p>
                         <h2 id="mapHeading">Traffic near Geneva</h2>
                     </div>
-                    <p class="map-note">Aircraft positions may be estimated for up to 60 seconds.</p>
+                    <p id="mapPositionNote" class="map-note">Aircraft positions may be estimated for up to 60 seconds.</p>
                 </div>
                 <fieldset class="map-controls">
                     <legend>Show on map</legend>
@@ -167,6 +167,13 @@
                         </g>
                         <g id="mapMarkers"></g>
                     </svg>
+                </div>
+                <div class="map-timeline">
+                    <div class="map-timeline-heading"><label for="mapHistoryTime">Go back in time</label><button id="mapHistoryLive" type="button" disabled>Back to live</button></div>
+                    <input id="mapHistoryTime" type="range" min="0" max="1" value="1" step="1" aria-describedby="mapHistoryStatus" disabled>
+                    <div class="map-timeline-heading"><span id="mapHistoryEarliest">Last 24 hours</span><span>Live</span></div>
+                    <p id="mapHistoryStatus" class="history-note" role="status">Loading path history…</p>
+                    <p class="history-note">Historical views show the preceding two hours of recorded trails, limited to the available recordings. Times are local to Geneva.</p>
                 </div>
                 <div id="mapAircraftDetails" class="map-details arrival-card" role="region" aria-labelledby="mapDetailsHeading" hidden>
                     <div id="mapDetailsPhoto" class="map-details-photo card-photo-wrap"></div>
@@ -212,6 +219,7 @@
 
     <script src="aircraft-card.js"></script>
     <script src="aircraft-map.js"></script>
+    <script src="map-history.js"></script>
     <script src="app.js"></script>
 </body>
 

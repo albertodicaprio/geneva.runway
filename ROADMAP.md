@@ -940,6 +940,19 @@ Completed stats access update:
 
 Remaining maintenance:
 
+- [x] Add a rolling 24-hour aircraft path archive and map time slider.
+  Record actual observations for all tracked airborne traffic using existing
+  refreshes; persist atomically beside the aircraft cache in the Docker volume.
+  Prune expired points, split tracking gaps and flight sessions, and serve
+  selected two-hour windows without upstream calls. Keep the live map and live
+  cards as the default; historical mode freezes only the map, preserves traffic
+  filters, shows Geneva-local times, and provides Back to live. History builds
+  from deployment onward and retains the 01:00–05:00 recording pause.
+  Validation: 246 tests pass, covering persistence, expiry, window clipping,
+  duplicate/stale observations, session gaps, API validation, filters and
+  asynchronous timeline navigation. Headless Chrome verifies scrubbing, retained
+  trails, traffic layers, live polling isolation and Back to live.
+
 - Keep the host, container base image, Node runtime, and reverse proxy patched.
 
 ## Current Local Run Command

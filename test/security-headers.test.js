@@ -11,6 +11,20 @@ let server;
 let baseUrl;
 let testCacheDir;
 
+test('path history endpoint serves local archive metadata and validates requested times', async () => {
+    const response = await fetch(`${baseUrl}/api/path-history`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    const metadata = await response.json();
+    assert.equal(metadata.retentionSeconds, 86400);
+    assert.equal(metadata.windowSeconds, 7200);
+    assert.equal(metadata.aircraft, undefined);
+    const history = await fetch(`${baseUrl}/api/path-history?at=${Math.floor(Date.now() / 1000) - 60}`);
+    assert.equal(history.status, 200);
+    assert.equal((await history.json()).historical, true);
+    assert.equal((await fetch(`${baseUrl}/api/path-history?at=0`)).status, 400);
+});
+
 before(async () => {
     testCacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'geneva-runway-test-'));
     const today = genevaDate(Date.now());

@@ -6,6 +6,33 @@ along with the likely runway approach direction (`04`, `22`, or `unknown`).
 The navigation links to Overview, Arrivals (including recent landings), Stats,
 and Weather.
 
+The Overview map's **Go back in time** slider explores a rolling 24-hour path
+archive. Each selected time shows the preceding two hours of recorded trails;
+the traffic layer checkboxes work in history too. **Back to live** restores the
+latest map. Arrival cards and status above the map continue to show live data.
+Times include the date and use Europe/Zurich, including daylight-saving changes.
+
+`lib/path-history.js` records observed positions for arrivals, departures and
+general traffic from the existing background refresh, even with no browser open.
+It makes no additional OpenSky requests. The archive starts collecting when this
+version runs; existing Stats summaries cannot reconstruct old paths. Recording
+still pauses from 01:00 to 05:00 Geneva time. Stale/invalid positions are skipped,
+duplicate observations are ignored, and gaps of two minutes or a changed callsign
+start separate path segments. Historical markers use the last recorded position
+at or before the selected time, disappear after two minutes without observations,
+and are never projected. Route/aircraft enrichment uses the session's latest
+known details. Only points within the last 24 hours remain available, so the
+earliest selectable times may have less than two hours of preceding trails.
+
+The archive is saved atomically to `path-history.json` beside
+`AIRCRAFT_CACHE_FILE`, using the existing Docker `aircraft_data` volume. Local
+development uses the temporary directory unless `AIRCRAFT_CACHE_FILE` names a
+persistent location. Expired positions are removed on refresh, scheduled cleanup
+(including the overnight pause), and history reads. `/api/path-history` returns
+availability; `/api/path-history?at=<Unix seconds>` returns only the selected
+two-hour map window. This is separate from the live aircraft cache and Stats
+history, with no added dependency.
+
 The Weather tab at `/weather.html` shows today and the following four days near
 Geneva Airport using [Open-Meteo](https://open-meteo.com/en/docs), preceded by a
 Now card with current conditions: daily conditions,

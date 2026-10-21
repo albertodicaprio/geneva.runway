@@ -191,6 +191,13 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .loading, .no-aircraft { margin: 0; padding: 32px; color: #687c91; text-align: center; }
 .error { border-radius: 10px; padding: 14px; color: #8e1f35; background: #fce8ec; }
 .history-note { color: #536c83; font-size: .86rem; line-height: 1.5; }
+.map-timeline { margin: 16px 0; padding: 16px; border: 1px solid #dce5ee; border-radius: 12px; }
+.map-timeline-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .86rem; }
+.map-timeline label { font-weight: 750; }
+.map-timeline input[type="range"] { display: block; width: 100%; margin: 18px 0 8px; accent-color: #2878b5; }
+.map-timeline button { padding: 8px 12px; border: 1px solid #9fb4c8; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
+.map-timeline button:disabled { opacity: .5; cursor: default; }
+.map-timeline .history-note:last-child { margin-bottom: 0; }
 .history-section { min-width: 0; }
 .history-table-wrap { overflow-x: auto; border: 1px solid #dce5ee; border-radius: 12px; background: #fff; }
 .history-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .86rem; }

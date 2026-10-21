@@ -82,6 +82,8 @@ const GenevaApp = (() => {
         let rateLimitResetTime = 0;
         let nextRequestAt = 0;
         let started = false;
+        const timeline = hasOverview && typeof MapHistory !== 'undefined'
+            ? MapHistory.create({ document, fetch, map, now }) : null;
 
         function arrivals() {
             return Array.isArray(displayedSnapshot?.aircraft) ? displayedSnapshot.aircraft : [];
@@ -145,6 +147,7 @@ const GenevaApp = (() => {
         }
 
         function updateTimeSensitive() {
+            timeline?.tick();
             if (!snapshot) return;
             displayedSnapshot = projectSnapshot(snapshot, now());
             updateStatus();
@@ -199,6 +202,7 @@ const GenevaApp = (() => {
             started = true;
             document.addEventListener('error', card.handlePhotoError, true);
             if (hasOverview) map.init();
+            timeline?.init();
             poll();
             schedule(tick, DISPLAY_INTERVAL);
         }

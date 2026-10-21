@@ -94,10 +94,12 @@ const AircraftMap = (() => {
         const layers = { arrivals: true, general: false, departures: false };
         let selectedAircraftId = null;
         let snapshot = null;
+        let history = null;
         let initialized = false;
+        const current = () => history || snapshot;
 
         function traffic() {
-            const all = Array.isArray(snapshot?.generalTraffic) ? snapshot.generalTraffic : [];
+            const all = Array.isArray(current()?.generalTraffic) ? current().generalTraffic : [];
             return {
                 general: layers.general ? all.filter(aircraft => !isGenevaDeparture(aircraft)) : [],
                 departures: layers.departures ? all.filter(isGenevaDeparture) : []
@@ -105,7 +107,8 @@ const AircraftMap = (() => {
         }
         function visibleAircraft() {
             const { general, departures } = traffic();
-            return [...(layers.arrivals && Array.isArray(snapshot?.aircraft) ? snapshot.aircraft : []), ...general, ...departures]
+            return [...(layers.arrivals && Array.isArray(current()?.aircraft) ? current().aircraft : []), ...general, ...departures]
+                .filter(aircraft => aircraft.historicalActive !== false)
                 .filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
         }
         function details() {
@@ -116,13 +119,16 @@ const AircraftMap = (() => {
             else selectedAircraftId = null;
         }
         function update(nextSnapshot = snapshot) {
+            const liveChanged = nextSnapshot !== snapshot;
             snapshot = nextSnapshot;
+            if (history && liveChanged) return;
+            const data = current();
             const focusedId = document.activeElement?.dataset?.aircraftId;
             details();
             const { general, departures } = traffic();
-            const arrivals = layers.arrivals && Array.isArray(snapshot?.aircraft) ? snapshot.aircraft : [];
-            const recentTracks = layers.arrivals && Array.isArray(snapshot?.recentTracks)
-                ? snapshot.recentTracks.filter(track => Number.isFinite(track.expiresAt) && track.expiresAt > now() / 1000) : [];
+            const arrivals = layers.arrivals && Array.isArray(data?.aircraft) ? data.aircraft : [];
+            const recentTracks = layers.arrivals && Array.isArray(data?.recentTracks)
+                ? data.recentTracks.filter(track => Number.isFinite(track.expiresAt) && track.expiresAt > now() / 1000) : [];
             const paths = document.getElementById('mapPaths');
             const markers = document.getElementById('mapMarkers');
             paths.innerHTML = [
@@ -132,13 +138,13 @@ const AircraftMap = (() => {
                 ...arrivals.map(item => mapPath(item, true, 'arrivals', selectedAircraftId))
             ].filter(Boolean).join('');
             const markup = [
-                ...general.map(item => mapMarker(item, selectedAircraftId, 'general')),
-                ...departures.map(item => mapMarker(item, selectedAircraftId, 'departure')),
-                ...arrivals.map(item => mapMarker(item, selectedAircraftId))
+                ...general.filter(item => item.historicalActive !== false).map(item => mapMarker(item, selectedAircraftId, 'general')),
+                ...departures.filter(item => item.historicalActive !== false).map(item => mapMarker(item, selectedAircraftId, 'departure')),
+                ...arrivals.filter(item => item.historicalActive !== false).map(item => mapMarker(item, selectedAircraftId))
             ].filter(Boolean).join('');
             const empty = !layers.arrivals && !layers.general && !layers.departures
                 ? 'Select a traffic layer to show aircraft.' : 'No aircraft in the selected layers are within this map area.';
-            markers.innerHTML = markup || `<text class="map-empty" x="874" y="874" text-anchor="middle">${empty}</text>`;
+            markers.innerHTML = markup || (data?.historical && paths.innerHTML ? '' : `<text class="map-empty" x="874" y="874" text-anchor="middle">${empty}</text>`);
             if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')]
                 .find(marker => marker.dataset.aircraftId === focusedId)?.focus({ preventScroll: true });
         }
@@ -185,7 +191,12 @@ const AircraftMap = (() => {
                 if (event.key === 'Escape' && selectedAircraftId) close();
             });
         }
-        return { init, update, setLayer, visibleAircraft, get selectedAircraftId() { return selectedAircraftId; } };
+        function setHistory(value) {
+            history = value;
+            selectedAircraftId = null;
+            update();
+        }
+        return { init, update, setHistory, setLayer, visibleAircraft, get selectedAircraftId() { return selectedAircraftId; } };
     }
     return { create, mapPosition, mapPath, mapMarker, isGenevaDeparture };
 })();
