@@ -155,7 +155,7 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .map-flight-path { fill: none; stroke-width: 5px; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
 .map-trail { cursor: pointer; }
 .map-trail-target { fill: none; stroke: transparent; stroke-width: 16px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: stroke; }
-.map-trail:focus-visible { outline: none; }
+.map-trail:focus { outline: none; }
 .map-trail:focus-visible .map-flight-path, .map-trail:hover .map-flight-path { stroke-width: 9px; }
 .map-aircraft { cursor: pointer; }
 .map-aircraft-icon { fill: inherit; stroke: #fff; stroke-width: 2px; paint-order: stroke; }
