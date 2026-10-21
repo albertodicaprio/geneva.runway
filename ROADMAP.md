@@ -940,6 +940,11 @@ Completed stats access update:
 
 Remaining maintenance:
 
+- [x] Preserve cached live and retained trails when entering map history, including
+  on startup, without replacing archived measurements. Make left/right arrow
+  presses move the timeline one minute. Validation: 253 tests pass; headless
+  Chrome checks single arrow presses, historical trails and Back to live.
+
 - [x] Make visible aircraft trails selectable after their icons disappear.
   Open the existing details panel from live retained and historical paths using
   the last recorded aircraft record. Add broad invisible click/tap targets,

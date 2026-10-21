@@ -10,6 +10,7 @@ The Overview map's **Go back in time** slider explores a rolling 24-hour path
 archive. Each selected time shows the preceding two hours of recorded trails;
 the traffic layer checkboxes work in history too. **Back to live** restores the
 latest map. Arrival cards and status above the map continue to show live data.
+Left and right arrow keys move the focused slider one minute per press.
 Times include the date and use Europe/Zurich, including daylight-saving changes.
 Click or tap any visible trail to open the same aircraft details panel as its
 plane icon, including retained trails after the icon disappears. These show the
@@ -18,8 +19,11 @@ the selection clears when the trail expires or its traffic layer is hidden.
 
 `lib/path-history.js` records observed positions for arrivals, departures and
 general traffic from the existing background refresh, even with no browser open.
-It makes no additional OpenSky requests. The archive starts collecting when this
-version runs; existing Stats summaries cannot reconstruct old paths. Recording
+It makes no additional OpenSky requests. Existing live and retained trail points
+are imported into the archive, including on startup, so recently departed aircraft
+remain visible when rewinding. Older paths absent from both stores cannot be
+reconstructed from Stats summaries. Imported points have no historical altitude
+or speed unless those measurements were already archived. Recording
 still pauses from 01:00 to 05:00 Geneva time. Stale/invalid positions are skipped,
 duplicate observations are ignored, and gaps of two minutes or a changed callsign
 start separate path segments. Historical markers use the last recorded position

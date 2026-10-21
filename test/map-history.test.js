@@ -1,7 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { create } = require('../public/map-history');
-
 function fixture() {
     const elements = Object.fromEntries(['mapHistoryTime', 'mapHistoryStatus', 'mapHistoryLive', 'mapHistoryEarliest',
         'mapMode', 'mapPositionNote'].map(id => [id, { handlers: {},
@@ -68,4 +67,26 @@ test('timeline discards out-of-order selections and explains unavailable history
     await f.resolve(3, {}, false);
     assert.match(f.elements.mapHistoryStatus.textContent, /Unable to load/);
     assert.equal(f.maps.at(-1).historical, true);
+});
+
+test('single arrow presses change time by a minute and return to live at the end', async () => {
+    const f = fixture();
+    f.timeline.init();
+    await f.resolve(0, { availableFrom: 90000 });
+    f.timeline.tick();
+    const slider = f.elements.mapHistoryTime;
+    const press = key => slider.handlers.keydown({ key, preventDefault() {} });
+    press('ArrowLeft');
+    assert.equal(Number(slider.value), 99940);
+    assert.equal(f.elements.mapMode.textContent, 'HISTORY');
+    assert.match(slider['aria-valuetext'], /Geneva time/);
+    // Flush the debounced request without changing the chosen value.
+    await f.select(slider.value);
+    assert.equal(f.requests.at(-1).url, '/api/path-history?at=99940');
+    press('ArrowRight');
+    assert.equal(Number(slider.value), 100000);
+    assert.equal(f.elements.mapMode.textContent, 'LIVE POSITION');
+    await f.select(90010);
+    press('ArrowLeft');
+    assert.equal(Number(slider.value), 90000);
 });

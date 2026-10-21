@@ -67,7 +67,7 @@ const MapHistory = (() => {
         }
         function init() {
             slider.disabled = true;
-            slider.addEventListener('input', () => {
+            function selectTime() {
                 if (Number(slider.value) >= Number(slider.max)) return live();
                 selected = Number(slider.value);
                 const token = ++request;
@@ -77,6 +77,14 @@ const MapHistory = (() => {
                 map.setHistory({ historical: true, aircraft: [], generalTraffic: [] });
                 const at = selected;
                 pending = defer(() => show(at, token), 180);
+            }
+            slider.addEventListener('input', selectTime);
+            slider.addEventListener('keydown', event => {
+                if (slider.disabled || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                event.preventDefault();
+                const offset = event.key === 'ArrowLeft' ? -60 : 60;
+                slider.value = Math.max(Number(slider.min), Math.min(Number(slider.max), Number(slider.value) + offset));
+                selectTime();
             });
             liveButton.addEventListener('click', live);
             describe();
