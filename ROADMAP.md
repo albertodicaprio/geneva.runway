@@ -940,6 +940,11 @@ Completed stats access update:
 
 Remaining maintenance:
 
+- [x] Refine map history navigation: use 30-second arrow-key steps and show seconds,
+  infer missing historical headings from preceding movement, and keep the displayed
+  map frozen during history requests instead of clearing it. Validation: 256 tests
+  pass; headless Chrome checks plane icons, arrow steps and map continuity.
+
 - [x] Preserve cached live and retained trails when entering map history, including
   on startup, without replacing archived measurements. Make left/right arrow
   presses move the timeline one minute. Validation: 253 tests pass; headless

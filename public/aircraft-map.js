@@ -213,12 +213,16 @@ const AircraftMap = (() => {
                 if (event.key === 'Escape' && selectedAircraftId) close();
             });
         }
+        function beginHistory() {
+            // Freeze the displayed snapshot while the requested time is loading.
+            if (!history) history = snapshot || { historical: true, aircraft: [], generalTraffic: [] };
+        }
         function setHistory(value) {
             history = value;
             selectedAircraftId = null;
             update();
         }
-        return { init, update, setHistory, setLayer, visibleAircraft, get selectedAircraftId() { return selectedAircraftId; } };
+        return { init, update, beginHistory, setHistory, setLayer, visibleAircraft, get selectedAircraftId() { return selectedAircraftId; } };
     }
     return { create, mapPosition, mapPath, mapMarker, isGenevaDeparture };
 })();

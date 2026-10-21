@@ -10,7 +10,9 @@ The Overview map's **Go back in time** slider explores a rolling 24-hour path
 archive. Each selected time shows the preceding two hours of recorded trails;
 the traffic layer checkboxes work in history too. **Back to live** restores the
 latest map. Arrival cards and status above the map continue to show live data.
-Left and right arrow keys move the focused slider one minute per press.
+Left and right arrow keys move the focused slider 30 seconds per press; the time
+label includes seconds. The current map remains visible while another time loads,
+then updates when the requested data arrives.
 Times include the date and use Europe/Zurich, including daylight-saving changes.
 Click or tap any visible trail to open the same aircraft details panel as its
 plane icon, including retained trails after the icon disappears. These show the
@@ -28,7 +30,9 @@ still pauses from 01:00 to 05:00 Geneva time. Stale/invalid positions are skippe
 duplicate observations are ignored, and gaps of two minutes or a changed callsign
 start separate path segments. Historical markers use the last recorded position
 at or before the selected time, disappear after two minutes without observations,
-and are never projected. Route/aircraft enrichment uses the session's latest
+and are never projected. When a recorded heading is missing, historical plane
+icons use the direction between preceding distinct positions. A point with no
+recorded heading or preceding movement still uses a dot. Route/aircraft enrichment uses the session's latest
 known details. Only points within the last 24 hours remain available, so the
 earliest selectable times may have less than two hours of preceding trails.
 

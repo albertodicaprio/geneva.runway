@@ -8,7 +8,7 @@ function fixture() {
     const requests = [], maps = [], timers = new Map();
     let timer = 0;
     const timeline = create({ document: { getElementById: id => elements[id] }, now: () => 100000000,
-        map: { setHistory: value => maps.push(value) },
+        map: { beginHistory() {}, setHistory: value => maps.push(value) },
         fetch: (url) => new Promise(resolve => requests.push({ url, resolve })),
         defer: callback => { timers.set(++timer, callback); return timer; }, cancel: id => timers.delete(id) });
     const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -69,7 +69,7 @@ test('timeline discards out-of-order selections and explains unavailable history
     assert.equal(f.maps.at(-1).historical, true);
 });
 
-test('single arrow presses change time by a minute and return to live at the end', async () => {
+test('single arrow presses change time by thirty seconds and return to live at the end', async () => {
     const f = fixture();
     f.timeline.init();
     await f.resolve(0, { availableFrom: 90000 });
@@ -77,16 +77,30 @@ test('single arrow presses change time by a minute and return to live at the end
     const slider = f.elements.mapHistoryTime;
     const press = key => slider.handlers.keydown({ key, preventDefault() {} });
     press('ArrowLeft');
-    assert.equal(Number(slider.value), 99940);
+    assert.equal(Number(slider.value), 99970);
     assert.equal(f.elements.mapMode.textContent, 'HISTORY');
-    assert.match(slider['aria-valuetext'], /Geneva time/);
+    assert.match(slider['aria-valuetext'], /:\d{2}:\d{2}, Geneva time/);
     // Flush the debounced request without changing the chosen value.
     await f.select(slider.value);
-    assert.equal(f.requests.at(-1).url, '/api/path-history?at=99940');
+    assert.equal(f.requests.at(-1).url, '/api/path-history?at=99970');
     press('ArrowRight');
     assert.equal(Number(slider.value), 100000);
     assert.equal(f.elements.mapMode.textContent, 'LIVE POSITION');
     await f.select(90010);
     press('ArrowLeft');
     assert.equal(Number(slider.value), 90000);
+});
+
+test('history requests preserve the displayed map until a complete response arrives, including on failure', async () => {
+    const f = fixture();
+    f.timeline.init();
+    await f.resolve(0, { availableFrom: 90000 });
+    await f.select(95000);
+    assert.equal(f.maps.length, 0, 'The live map must stay visible during the first history request');
+    const past = { historical: true, aircraft: [{ callsign: 'PAST' }] };
+    await f.resolve(1, past);
+    await f.select(95030);
+    assert.deepEqual(f.maps, [past], 'Keep the previous historical map while the next time loads');
+    await f.resolve(2, {}, false);
+    assert.deepEqual(f.maps, [past], 'A failed history request must also retain the previous map');
 });

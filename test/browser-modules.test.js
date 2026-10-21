@@ -45,6 +45,28 @@ test('historical map keeps paths and filters but hides stale markers and ignores
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /PAST/);
 });
 
+test('entering history keeps the current map frozen through live updates and layer changes until data arrives', () => {
+    const { document, elements } = makeDocument();
+    const map = create({ document });
+    map.init();
+    map.update({ aircraft: [aircraft('LIVE')] });
+    const paths = elements.mapPaths.innerHTML, markers = elements.mapMarkers.innerHTML;
+    map.beginHistory();
+    assert.equal(elements.mapPaths.innerHTML, paths);
+    assert.equal(elements.mapMarkers.innerHTML, markers);
+    map.update({ aircraft: [aircraft('NEWLIVE')] });
+    map.setLayer('general', true);
+    assert.equal(elements.mapPaths.innerHTML, paths);
+    assert.equal(elements.mapMarkers.innerHTML, markers);
+    map.setHistory({ historical: true, aircraft: [aircraft('PAST')] });
+    const past = elements.mapMarkers.innerHTML;
+    map.beginHistory();
+    map.update({ aircraft: [aircraft('LATESTLIVE')] });
+    assert.equal(elements.mapMarkers.innerHTML, past);
+    map.setHistory(null);
+    assert.match(elements.mapMarkers.innerHTML, /LATESTLIVE/);
+});
+
 test('featured and list layouts share escaped identity, route, photo, and measurements', () => {
     const plane = aircraft('<GVA>', {
         route: { airline: { name: 'Swiss & Partners' }, origin: { iata_code: 'LHR', name: 'London Heathrow Airport' } },

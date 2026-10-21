@@ -9,7 +9,7 @@ const MapHistory = (() => {
         const mode = document.getElementById('mapMode');
         const note = document.getElementById('mapPositionNote');
         const time = timestamp => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Zurich',
-            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp * 1000));
+            day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(timestamp * 1000));
         let selected = null, availableFrom = null, checkedAt = -Infinity, pending = null, request = 0;
         let availabilityRequest = false;
         function describe() {
@@ -74,7 +74,7 @@ const MapHistory = (() => {
                 cancel(pending);
                 describe();
                 status.textContent = `Loading recorded paths at ${time(selected)} (Geneva)…`;
-                map.setHistory({ historical: true, aircraft: [], generalTraffic: [] });
+                map.beginHistory();
                 const at = selected;
                 pending = defer(() => show(at, token), 180);
             }
@@ -82,7 +82,7 @@ const MapHistory = (() => {
             slider.addEventListener('keydown', event => {
                 if (slider.disabled || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
                 event.preventDefault();
-                const offset = event.key === 'ArrowLeft' ? -60 : 60;
+                const offset = event.key === 'ArrowLeft' ? -30 : 30;
                 slider.value = Math.max(Number(slider.min), Math.min(Number(slider.max), Number(slider.value) + offset));
                 selectTime();
             });

@@ -141,3 +141,19 @@ test('path API validates time and method and reads history without fetching live
     assert.equal(past.headers['Cache-Control'], 'no-store');
     assert.deepEqual(reads, [null, 99999]);
 });
+
+test('imported historical positions use their preceding movement for plane heading without looking ahead', async () => {
+    const archive = createPathHistory({ clock: () => 100000000 });
+    await archive.recordSnapshot({ aircraft: [plane(100000, { track: { color: 'purple', points: [
+        { timestamp: 99000, latitude: 46.3, longitude: 6.1 },
+        { timestamp: 99030, latitude: 46.3, longitude: 6.2 },
+        { timestamp: 99060, latitude: 46.3, longitude: 6.2 },
+        { timestamp: 99090, latitude: 46.4, longitude: 6.2 }
+    ] } })] });
+    assert.equal((await archive.read(99000)).aircraft[0].heading, null);
+    const east = (await archive.read(99030)).aircraft[0];
+    assert.ok(Math.abs(east.heading - 90) < 1, 'Imported points must render a plane pointing east');
+    assert.equal((await archive.read(99060)).aircraft[0].heading, east.heading);
+    assert.equal((await archive.read(99090)).aircraft[0].heading, 0);
+    assert.equal((await archive.read(100000)).aircraft.at(-1).heading, 220);
+});
