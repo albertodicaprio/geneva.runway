@@ -153,6 +153,10 @@ section { border: 1px solid #dce5ee; border-radius: 18px; padding: 26px; backgro
 .aircraft-map > img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .map-markers { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .map-flight-path { fill: none; stroke-width: 5px; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
+.map-trail { cursor: pointer; }
+.map-trail-target { fill: none; stroke: transparent; stroke-width: 16px; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: stroke; }
+.map-trail:focus-visible { outline: none; }
+.map-trail:focus-visible .map-flight-path, .map-trail:hover .map-flight-path { stroke-width: 9px; }
 .map-aircraft { cursor: pointer; }
 .map-aircraft-icon { fill: inherit; stroke: #fff; stroke-width: 2px; paint-order: stroke; }
 .map-aircraft.heading-unknown .map-aircraft-icon { fill: #596e80; }

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const card = require('../public/aircraft-card');
-const { create, mapMarker } = require('../public/aircraft-map');
+const { create, mapMarker, mapPath } = require('../public/aircraft-map');
 
 const aircraft = (icao24, extra = {}) => ({
     icao24, callsign: icao24, latitude: 46.3, longitude: 6.2, altitude: 10000,
@@ -35,7 +35,7 @@ test('historical map keeps paths and filters but hides stale markers and ignores
         generalTraffic: [aircraft('OTHER')] });
     assert.match(elements.mapMarkers.innerHTML, /PAST/);
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /ENDED|LIVE|OTHER/);
-    assert.equal((elements.mapPaths.innerHTML.match(/<path/g) || []).length, 2);
+    assert.equal((elements.mapPaths.innerHTML.match(/class="map-trail"/g) || []).length, 2);
     map.update({ aircraft: [aircraft('NEWLIVE')] });
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /NEWLIVE/);
     map.setLayer('general', true);
@@ -185,4 +185,70 @@ test('map markers keep escaped accessible labels without hover tooltips', () => 
     assert.match(markup, /aria-label="&lt;GENERAL&gt;/);
     assert.match(markup, /Show aircraft details/);
     assert.doesNotMatch(markup, /<title| title=/);
+});
+
+test('retained trails open last-known details after icons disappear and clear selection on expiry', () => {
+    const { document, elements } = makeDocument();
+    let now = 100000;
+    const plane = aircraft('LANDED', { expiresAt: 200, aircraftDetails: { type: 'Airbus A320', registration: 'HB-TEST' },
+        route: { airline: { name: 'Swiss' }, origin: { iata_code: 'LHR' }, destination: { iata_code: 'GVA' } } });
+    const map = create({ document, now: () => now });
+    map.init();
+    map.update({ aircraft: [plane] });
+    elements.mapMarkers.handlers.click(selectEvent('LANDED'));
+    map.update({ aircraft: [], recentTracks: [plane] });
+    assert.equal(elements.mapAircraftDetails.hidden, false);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /LANDED/);
+    assert.match(elements.mapPaths.innerHTML, /map-selected-path/);
+    elements.closeMapDetails.handlers.click();
+    const event = selectEvent('LANDED');
+    elements.mapPaths.handlers.click(event);
+    assert.equal(map.selectedAircraftId, 'LANDED');
+    assert.equal(elements.mapDetailsHeading.textContent, 'LANDED');
+    assert.equal(elements.mapDetailsAirline.textContent, 'Swiss');
+    assert.equal(elements.mapDetailsModel.textContent, 'Airbus A320');
+    assert.equal(elements.mapDetailsAltitude.textContent, '10,000 m');
+    assert.match(elements.mapPaths.innerHTML, /aria-expanded="true"/);
+    now = 200000;
+    map.update();
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    assert.equal(map.selectedAircraftId, null);
+    assert.equal(elements.mapPaths.innerHTML, '');
+});
+
+test('historical trail selection supports keyboard, close focus and layer filtering without a plane icon', () => {
+    const { document, elements } = makeDocument();
+    const map = create({ document });
+    map.init();
+    map.setLayer('departures', true);
+    map.setHistory({ historical: true, aircraft: [], generalTraffic: [aircraft('DEPART', {
+        historicalActive: false, route: { origin: { iata_code: 'GVA' } }
+    })] });
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /DEPART/);
+    const trail = { dataset: { aircraftId: 'DEPART', mapTarget: 'trail' }, focus(options) { this.focused = options; } };
+    elements.mapPaths.markers = [trail];
+    const event = { ...selectEvent('DEPART', 'Enter'), target: { closest: () => trail } };
+    elements.mapPaths.handlers.keydown(event);
+    assert.equal(event.prevented, true);
+    assert.equal(elements.mapAircraftDetails.hidden, false);
+    assert.match(elements.mapPaths.innerHTML, /map-departure-path map-selected-path/);
+    document.activeElement = trail;
+    map.update();
+    assert.deepEqual(trail.focused, { preventScroll: true });
+    elements.closeMapDetails.handlers.click();
+    assert.deepEqual(trail.focused, { preventScroll: true });
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    elements.mapPaths.handlers.keydown({ ...event, key: ' ' });
+    assert.equal(map.selectedAircraftId, 'DEPART');
+    map.setLayer('departures', false);
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+    assert.equal(map.selectedAircraftId, null);
+});
+
+test('trail buttons escape aircraft labels and provide a separate broad pointer target', () => {
+    const markup = mapPath(aircraft('<TRAIL>'), false);
+    assert.match(markup, /role="button" tabindex="0"/);
+    assert.match(markup, /aria-label="&lt;TRAIL&gt; trail/);
+    assert.match(markup, /class="map-trail-target"/);
+    assert.match(markup, /aria-controls="mapAircraftDetails"/);
 });

@@ -940,6 +940,14 @@ Completed stats access update:
 
 Remaining maintenance:
 
+- [x] Make visible aircraft trails selectable after their icons disappear.
+  Open the existing details panel from live retained and historical paths using
+  the last recorded aircraft record. Add broad invisible click/tap targets,
+  keyboard buttons, selected-path highlighting and focus restoration; clear
+  selection on expiry or layer changes. Validation: all 249 tests pass and
+  headless Chrome verifies retained/historical clicks, keyboard activation and
+  focus returning to the trail after closing details.
+
 - [x] Add a rolling 24-hour aircraft path archive and map time slider.
   Record actual observations for all tracked airborne traffic using existing
   refreshes; persist atomically beside the aircraft cache in the Docker volume.

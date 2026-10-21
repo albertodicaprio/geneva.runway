@@ -11,6 +11,10 @@ archive. Each selected time shows the preceding two hours of recorded trails;
 the traffic layer checkboxes work in history too. **Back to live** restores the
 latest map. Arrival cards and status above the map continue to show live data.
 Times include the date and use Europe/Zurich, including daylight-saving changes.
+Click or tap any visible trail to open the same aircraft details panel as its
+plane icon, including retained trails after the icon disappears. These show the
+last recorded details. Trails also support Tab, Enter/Space, Escape and Close;
+the selection clears when the trail expires or its traffic layer is hidden.
 
 `lib/path-history.js` records observed positions for arrivals, departures and
 general traffic from the existing background refresh, even with no browser open.

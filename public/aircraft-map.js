@@ -63,7 +63,11 @@ const AircraftMap = (() => {
         if (points.length < 2 || !aircraft.track?.color) return '';
         const path = smoothMapPath(points);
         const selectedClass = selectedAircraftId != null && selectedAircraftId === aircraft.icao24 ? ' map-selected-path' : '';
-        return `<path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}${selectedClass}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}"></path>`;
+        const label = `${aircraft.callsign || aircraft.icao24 || 'Unknown aircraft'} trail. Show last recorded aircraft details`;
+        return `<g class="map-trail" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" data-map-target="trail" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}">
+            <path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}${selectedClass}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}" aria-hidden="true"></path>
+            <path class="map-trail-target" d="${path}" aria-hidden="true"></path>
+        </g>`;
     }
 
     function mapMarker(aircraft, selectedAircraftId, layer = 'arrivals') {
@@ -93,6 +97,7 @@ const AircraftMap = (() => {
     function create({ document, storage, card = cardModule, now = Date.now }) {
         const layers = { arrivals: true, general: false, departures: false };
         let selectedAircraftId = null;
+        let selectedTarget = 'marker';
         let snapshot = null;
         let history = null;
         let initialized = false;
@@ -111,9 +116,24 @@ const AircraftMap = (() => {
                 .filter(aircraft => aircraft.historicalActive !== false)
                 .filter(aircraft => mapPosition(aircraft.latitude, aircraft.longitude));
         }
+        function retainedTracks() {
+            return layers.arrivals && Array.isArray(current()?.recentTracks)
+                ? current().recentTracks.filter(track => Number.isFinite(track.expiresAt) && track.expiresAt > now() / 1000) : [];
+        }
+        function selectableAircraft() {
+            const { general, departures } = traffic();
+            return [...(layers.arrivals ? current()?.aircraft || [] : []), ...general, ...departures, ...retainedTracks()];
+        }
+        function focusAircraft(id, target = 'marker') {
+            const markers = document.getElementById('mapMarkers');
+            const paths = document.getElementById('mapPaths');
+            const containers = target === 'trail' ? [paths, markers] : [markers, paths];
+            containers.flatMap(container => [...container.querySelectorAll('[data-aircraft-id]')])
+                .find(item => item.dataset.aircraftId === id)?.focus({ preventScroll: true });
+        }
         function details() {
             const panel = document.getElementById('mapAircraftDetails');
-            const aircraft = visibleAircraft().find(item => item.icao24 === selectedAircraftId);
+            const aircraft = selectableAircraft().find(item => item.icao24 === selectedAircraftId);
             panel.hidden = !aircraft;
             if (aircraft) card.selected(aircraft, document);
             else selectedAircraftId = null;
@@ -124,17 +144,17 @@ const AircraftMap = (() => {
             if (history && liveChanged) return;
             const data = current();
             const focusedId = document.activeElement?.dataset?.aircraftId;
+            const focusedTarget = document.activeElement?.dataset?.mapTarget;
             details();
             const { general, departures } = traffic();
             const arrivals = layers.arrivals && Array.isArray(data?.aircraft) ? data.aircraft : [];
-            const recentTracks = layers.arrivals && Array.isArray(data?.recentTracks)
-                ? data.recentTracks.filter(track => Number.isFinite(track.expiresAt) && track.expiresAt > now() / 1000) : [];
+            const recentTracks = retainedTracks();
             const paths = document.getElementById('mapPaths');
             const markers = document.getElementById('mapMarkers');
             paths.innerHTML = [
                 ...general.map(item => mapPath(item, true, 'general', selectedAircraftId)),
                 ...departures.map(item => mapPath(item, true, 'departure', selectedAircraftId)),
-                ...recentTracks.map(item => mapPath(item, false)),
+                ...recentTracks.map(item => mapPath(item, false, 'arrivals', selectedAircraftId)),
                 ...arrivals.map(item => mapPath(item, true, 'arrivals', selectedAircraftId))
             ].filter(Boolean).join('');
             const markup = [
@@ -144,9 +164,8 @@ const AircraftMap = (() => {
             ].filter(Boolean).join('');
             const empty = !layers.arrivals && !layers.general && !layers.departures
                 ? 'Select a traffic layer to show aircraft.' : 'No aircraft in the selected layers are within this map area.';
-            markers.innerHTML = markup || (data?.historical && paths.innerHTML ? '' : `<text class="map-empty" x="874" y="874" text-anchor="middle">${empty}</text>`);
-            if (focusedId) [...markers.querySelectorAll('[data-aircraft-id]')]
-                .find(marker => marker.dataset.aircraftId === focusedId)?.focus({ preventScroll: true });
+            markers.innerHTML = markup || (paths.innerHTML ? '' : `<text class="map-empty" x="874" y="874" text-anchor="middle">${empty}</text>`);
+            if (focusedId) focusAircraft(focusedId, focusedTarget);
         }
         function setLayer(key, enabled) {
             if (!(key in layers)) return;
@@ -169,22 +188,25 @@ const AircraftMap = (() => {
                 input.addEventListener('change', () => setLayer(key, input.checked));
             }
             const markers = document.getElementById('mapMarkers');
+            const paths = document.getElementById('mapPaths');
             const select = event => {
                 const marker = event.target.closest('[data-aircraft-id]');
                 if (!marker) return;
+                selectedTarget = marker.dataset.mapTarget || 'marker';
                 selectedAircraftId = selectedAircraftId === marker.dataset.aircraftId ? null : marker.dataset.aircraftId;
                 update();
             };
-            markers.addEventListener('click', select);
-            markers.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(event); }
-            });
+            for (const container of [markers, paths]) {
+                container.addEventListener('click', select);
+                container.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(event); }
+                });
+            }
             const close = () => {
                 const id = selectedAircraftId;
                 selectedAircraftId = null;
                 update();
-                [...markers.querySelectorAll('[data-aircraft-id]')]
-                    .find(marker => marker.dataset.aircraftId === id)?.focus({ preventScroll: true });
+                focusAircraft(id, selectedTarget);
             };
             document.getElementById('closeMapDetails').addEventListener('click', close);
             document.getElementById('mapSection').addEventListener('keydown', event => {
