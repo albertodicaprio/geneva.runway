@@ -10,7 +10,7 @@ const {
 const { createAdsbdb } = require('../lib/adsbdb');
 const { isAircraftRefreshPaused } = require('../lib/aircraft-service');
 
-test('keeps an arrival trail and color for up to one hour, then retains it for two hours after it disappears', () => {
+test('keeps an arrival trail and color for up to two hours, then retains it for two hours after it disappears', () => {
     const previous = {
         aircraft: [{
             icao24: 'tracked',
@@ -29,7 +29,7 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
     };
 
     const result = addArrivalTracks({
-        updatedAt: 3_700,
+        updatedAt: 7_300,
         aircraft: [{ icao24: 'TRACKED', latitude: 46.4, longitude: 6.3 }]
     }, previous);
 
@@ -38,14 +38,27 @@ test('keeps an arrival trail and color for up to one hour, then retains it for t
     assert.equal(result.aircraft[0].track.colorVersion, 3);
     assert.deepEqual(result.aircraft[0].track.points, [
         { latitude: 46.2, longitude: 6.1, timestamp: 100 },
-        { latitude: 46.4, longitude: 6.3, timestamp: 3_700 }
+        { latitude: 46.4, longitude: 6.3, timestamp: 7_300 }
     ]);
     assert.deepEqual(result.recentTracks, [{
         icao24: 'landed',
         track: { color: 'hsl(40 65% 32%)', colorVersion: 3, points: [{ latitude: 46.3, longitude: 6.2, timestamp: 100 }] },
-        disappearedAt: 3_700,
-        expiresAt: 10_900
+        disappearedAt: 7_300,
+        expiresAt: 14_500
     }]);
+});
+
+test('retained arrival details remain while trail points older than two hours expire', () => {
+    const previous = { aircraft: [{ icao24: 'landed', callsign: 'SWR123',
+        track: { color: 'purple', colorVersion: 3, points: [
+            { latitude: 46.1, longitude: 6.1, timestamp: 99 },
+            { latitude: 46.2, longitude: 6.2, timestamp: 100 }
+        ] } }] };
+    const disappeared = addArrivalTracks({ updatedAt: 7_300, aircraft: [] }, previous);
+    assert.deepEqual(disappeared.recentTracks[0].track.points.map(point => point.timestamp), [100]);
+    const later = addArrivalTracks({ updatedAt: 7_301, aircraft: [] }, disappeared);
+    assert.equal(later.recentTracks[0].callsign, 'SWR123');
+    assert.deepEqual(later.recentTracks[0].track.points, []);
 });
 
 test('retains flight and aircraft details with a disappeared trail across cached refreshes', () => {

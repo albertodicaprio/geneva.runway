@@ -19,15 +19,15 @@ test('general traffic includes high and unidentified airborne traffic without du
     assert.deepEqual(result.aircraft, [arrival]);
     assert.deepEqual(result.generalTraffic.map(a => a.icao24), ['general']);
     assert.equal(result.generalTraffic[0].track.color, '#00bfff');
-    assert.deepEqual(result.generalTraffic[0].track.points.map(p => p.timestamp), [400, 4000]);
+    assert.deepEqual(result.generalTraffic[0].track.points.map(p => p.timestamp), [399, 400, 4000]);
     const restored = JSON.parse(JSON.stringify(result));
     const repeated = addGeneralTraffic({ aircraft: [arrival] }, data, restored);
-    assert.equal(repeated.generalTraffic[0].track.points.length, 2);
+    assert.equal(repeated.generalTraffic[0].track.points.length, 3);
     const projected = projectAircraftData(restored, 4030000);
     assert.ok(projected.generalTraffic[0].longitude > 6.2);
     assert.equal(restored.generalTraffic[0].longitude, 6.2);
     const promoted = addArrivalTracks({ updatedAt: 4030, aircraft: [aircraft('general')] }, restored);
-    assert.deepEqual(promoted.aircraft[0].track.points.map(p => p.timestamp), [4000, 4030]);
+    assert.deepEqual(promoted.aircraft[0].track.points.map(p => p.timestamp), [399, 400, 4000, 4030]);
     assert.notEqual(promoted.aircraft[0].track.color, '#00bfff');
 });
 

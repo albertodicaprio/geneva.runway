@@ -116,6 +116,30 @@ test('archive splits flight changes and tracking gaps and retains only points in
     assert.equal((await archive.read()).availableFrom, 100000);
 });
 
+test('two hours back shows trails from four hours back through aircraft active at the selected time', async () => {
+    let now = 85_599;
+    const archive = createPathHistory({ clock: () => now * 1000 });
+    const record = async (timestamp, icao24) => {
+        now = timestamp;
+        await archive.recordSnapshot({ aircraft: [plane(timestamp, { icao24, callsign: icao24 })] });
+    };
+    await record(85_599, 'outside');
+    await record(85_600, 'older');
+    await record(85_630, 'older');
+    await record(92_770, 'active');
+    await record(92_800, 'active');
+    await record(92_830, 'future');
+    now = 100_000;
+
+    const past = await archive.read(now - 7_200);
+    assert.equal(past.windowSeconds, 7_200);
+    assert.deepEqual(past.aircraft.map(item => item.callsign).sort(), ['active', 'older']);
+    assert.deepEqual(past.aircraft.find(item => item.callsign === 'older').track.points
+        .map(point => point.timestamp), [85_600, 85_630]);
+    assert.equal(past.aircraft.find(item => item.callsign === 'active').historicalActive, true);
+    assert.equal(past.aircraft.find(item => item.callsign === 'older').historicalActive, false);
+});
+
 test('archive skips stale, future, grounded and invalid positions', async () => {
     const archive = createPathHistory({ clock: () => 100000000 });
     await archive.recordSnapshot({ aircraft: [plane(99880), plane(100001),

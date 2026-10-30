@@ -114,7 +114,7 @@ general traffic, and Geneva departures. Landing traffic starts visible; general 
 and the browser remembers the layer choices. General traffic includes other airborne
 OpenSky aircraft in the area, including flights with unknown destinations and
 high-altitude overflights. Its aircraft icons are light navy blue. Its trails are neon blue at 55% opacity, accumulate
-up to one hour of positions, and disappear when the aircraft leaves the live
+up to two hours of positions, and disappear when the aircraft leaves the live
 data. All layers share the existing upstream refresh and cache. Click a plane icon
 to expand its photo, model, full origin/destination airport names, ground speed
 (km/h), altitude (metres), and heading (degrees) below the map. Aircraft hover
