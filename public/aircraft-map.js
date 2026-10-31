@@ -150,13 +150,14 @@ const AircraftMap = (() => {
             const { general, departures } = traffic();
             const arrivals = layers.arrivals && Array.isArray(data?.aircraft) ? data.aircraft : [];
             const recentTracks = retainedTracks();
+            const includeLivePosition = !data?.historical;
             const paths = document.getElementById('mapPaths');
             const markers = document.getElementById('mapMarkers');
             paths.innerHTML = [
-                ...general.map(item => mapPath(item, true, 'general', selectedAircraftId)),
-                ...departures.map(item => mapPath(item, true, 'departure', selectedAircraftId)),
+                ...general.map(item => mapPath(item, includeLivePosition, 'general', selectedAircraftId)),
+                ...departures.map(item => mapPath(item, includeLivePosition, 'departure', selectedAircraftId)),
                 ...recentTracks.map(item => mapPath(item, false, 'arrivals', selectedAircraftId)),
-                ...arrivals.map(item => mapPath(item, true, 'arrivals', selectedAircraftId))
+                ...arrivals.map(item => mapPath(item, includeLivePosition, 'arrivals', selectedAircraftId))
             ].filter(Boolean).join('');
             const markup = [
                 ...general.filter(item => item.historicalActive !== false).map(item => mapMarker(item, selectedAircraftId, 'general')),

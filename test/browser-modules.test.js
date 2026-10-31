@@ -65,6 +65,18 @@ test('historical map retains arrival trails but removes departed general and Gen
     assert.match(elements.mapMarkers.innerHTML, /CURRENT/);
 });
 
+test('historical map does not turn a single recorded position into a round trail dot', () => {
+    const { document, elements } = makeDocument();
+    const map = create({ document });
+    map.init();
+    map.setHistory({ historical: true, aircraft: [aircraft('SINGLE', {
+        historicalActive: true,
+        track: { color: 'purple', points: [{ latitude: 46.3, longitude: 6.2 }] }
+    })], generalTraffic: [] });
+    assert.equal(elements.mapPaths.innerHTML, '');
+    assert.match(elements.mapMarkers.innerHTML, /SINGLE/);
+});
+
 test('entering history keeps the current map frozen through live updates and layer changes until data arrives', () => {
     const { document, elements } = makeDocument();
     const map = create({ document });

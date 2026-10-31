@@ -30,7 +30,7 @@ remain visible when rewinding. Older paths absent from both stores cannot be
 reconstructed from Stats summaries. Imported points have no historical altitude
 or speed unless those measurements were already archived. Recording
 still pauses from 01:00 to 05:00 Geneva time. Stale/invalid positions are skipped,
-duplicate observations are ignored, and gaps of two minutes or a changed callsign
+duplicate observations are ignored, and gaps of five minutes or a changed callsign
 start separate path segments. Historical markers use the last recorded position
 at or before the selected time, disappear after two minutes without observations,
 and are never projected. When a recorded heading is missing, historical plane

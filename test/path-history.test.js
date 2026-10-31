@@ -4,6 +4,7 @@ const fs = require('fs/promises');
 const os = require('os');
 const path = require('path');
 const { createPathHistory } = require('../lib/path-history');
+const { mapPath } = require('../public/aircraft-map');
 const { createPathHistoryHandler } = require('../api/path-history');
 const { createAircraftService } = require('../lib/aircraft-service');
 
@@ -101,7 +102,7 @@ test('archive splits flight changes and tracking gaps and retains only points in
     await archive.recordSnapshot({ aircraft: [plane(now)] });
     now += 30;
     await archive.recordSnapshot({ aircraft: [plane(now)] });
-    now += 120;
+    now += 300;
     await archive.recordSnapshot({ aircraft: [plane(now)] });
     now += 30;
     await archive.recordSnapshot({ generalTraffic: [plane(now, { callsign: 'NEW123' })] });
@@ -114,6 +115,39 @@ test('archive splits flight changes and tracking gaps and retains only points in
     now += 7201;
     assert.equal((await archive.read(now)).aircraft.length, 0);
     assert.equal((await archive.read()).availableFrom, 100000);
+});
+
+test('brief recording gaps preserve a curved historical trail through a turn', async () => {
+    let now = 100_000;
+    const archive = createPathHistory({ clock: () => now * 1000 });
+    for (const [timestamp, latitude, longitude] of [
+        [100_000, 46.20, 6.10], [100_130, 46.25, 6.15],
+        [100_260, 46.30, 6.16], [100_390, 46.32, 6.12]
+    ]) {
+        now = timestamp;
+        await archive.recordSnapshot({ aircraft: [plane(timestamp, { latitude, longitude })] });
+    }
+    const past = await archive.read(now);
+    assert.equal(past.aircraft.length, 1);
+    assert.deepEqual(past.aircraft[0].track.points.map(point => point.timestamp),
+        [100_000, 100_130, 100_260, 100_390]);
+    const visiblePath = mapPath(past.aircraft[0], false).match(/class="map-flight-path" d="([^"]+)"/)[1];
+    assert.equal((visiblePath.match(/ C /g) || []).length, 3);
+});
+
+test('previously saved short path fragments join when history is loaded', async () => {
+    const timestamps = [100_000, 100_130, 100_260, 100_390];
+    const saved = { version: 1, sessions: timestamps.map(timestamp => ({
+        identity: 'abc123:SWR123', id: `abc123:SWR123:${timestamp}`,
+        details: { icao24: 'abc123', callsign: 'SWR123' },
+        points: [{ timestamp, latitude: 46.3, longitude: 6.2,
+            heading: 220, category: 'arrival', color: 'purple' }]
+    })) };
+    const archive = createPathHistory({ file: 'saved-paths.json', clock: () => 100_390_000,
+        storage: { readFile: async () => JSON.stringify(saved) } });
+    const past = await archive.read(100_390);
+    assert.equal(past.aircraft.length, 1);
+    assert.deepEqual(past.aircraft[0].track.points.map(point => point.timestamp), timestamps);
 });
 
 test('two hours back shows trails from four hours back through aircraft active at the selected time', async () => {
