@@ -104,7 +104,8 @@ const AircraftMap = (() => {
         const current = () => history || snapshot;
 
         function traffic() {
-            const all = Array.isArray(current()?.generalTraffic) ? current().generalTraffic : [];
+            const all = Array.isArray(current()?.generalTraffic)
+                ? current().generalTraffic.filter(aircraft => aircraft.historicalActive !== false) : [];
             return {
                 general: layers.general ? all.filter(aircraft => !isGenevaDeparture(aircraft)) : [],
                 departures: layers.departures ? all.filter(isGenevaDeparture) : []

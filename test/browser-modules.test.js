@@ -45,6 +45,26 @@ test('historical map keeps paths and filters but hides stale markers and ignores
     assert.doesNotMatch(elements.mapMarkers.innerHTML, /PAST/);
 });
 
+test('historical map retains arrival trails but removes departed general and Geneva departure trails', () => {
+    const { document, elements } = makeDocument();
+    const map = create({ document });
+    map.init();
+    map.setLayer('general', true);
+    map.setLayer('departures', true);
+    map.setHistory({ historical: true,
+        aircraft: [aircraft('LANDED', { historicalActive: false })],
+        generalTraffic: [
+            aircraft('LEFT', { historicalActive: false }),
+            aircraft('DEPARTED', { historicalActive: false, route: { origin: { iata_code: 'GVA' } } }),
+            aircraft('CURRENT', { historicalActive: true })
+        ] });
+    assert.match(elements.mapPaths.innerHTML, /LANDED/);
+    assert.match(elements.mapPaths.innerHTML, /CURRENT/);
+    assert.doesNotMatch(elements.mapPaths.innerHTML, /LEFT|DEPARTED/);
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /LANDED|LEFT|DEPARTED/);
+    assert.match(elements.mapMarkers.innerHTML, /CURRENT/);
+});
+
 test('entering history keeps the current map frozen through live updates and layer changes until data arrives', () => {
     const { document, elements } = makeDocument();
     const map = create({ document });
@@ -242,18 +262,15 @@ test('historical trail selection supports keyboard, close focus and layer filter
     const { document, elements } = makeDocument();
     const map = create({ document });
     map.init();
-    map.setLayer('departures', true);
-    map.setHistory({ historical: true, aircraft: [], generalTraffic: [aircraft('DEPART', {
-        historicalActive: false, route: { origin: { iata_code: 'GVA' } }
-    })] });
-    assert.doesNotMatch(elements.mapMarkers.innerHTML, /DEPART/);
-    const trail = { dataset: { aircraftId: 'DEPART', mapTarget: 'trail' }, focus(options) { this.focused = options; } };
+    map.setHistory({ historical: true, aircraft: [aircraft('LANDED', { historicalActive: false })], generalTraffic: [] });
+    assert.doesNotMatch(elements.mapMarkers.innerHTML, /LANDED/);
+    const trail = { dataset: { aircraftId: 'LANDED', mapTarget: 'trail' }, focus(options) { this.focused = options; } };
     elements.mapPaths.markers = [trail];
-    const event = { ...selectEvent('DEPART', 'Enter'), target: { closest: () => trail } };
+    const event = { ...selectEvent('LANDED', 'Enter'), target: { closest: () => trail } };
     elements.mapPaths.handlers.keydown(event);
     assert.equal(event.prevented, true);
     assert.equal(elements.mapAircraftDetails.hidden, false);
-    assert.match(elements.mapPaths.innerHTML, /map-departure-path map-selected-path/);
+    assert.match(elements.mapPaths.innerHTML, /map-flight-path map-selected-path/);
     document.activeElement = trail;
     map.update();
     assert.deepEqual(trail.focused, { preventScroll: true });
@@ -261,8 +278,8 @@ test('historical trail selection supports keyboard, close focus and layer filter
     assert.deepEqual(trail.focused, { preventScroll: true });
     assert.equal(elements.mapAircraftDetails.hidden, true);
     elements.mapPaths.handlers.keydown({ ...event, key: ' ' });
-    assert.equal(map.selectedAircraftId, 'DEPART');
-    map.setLayer('departures', false);
+    assert.equal(map.selectedAircraftId, 'LANDED');
+    map.setLayer('arrivals', false);
     assert.equal(elements.mapAircraftDetails.hidden, true);
     assert.equal(map.selectedAircraftId, null);
 });

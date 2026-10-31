@@ -8,7 +8,10 @@ and Weather.
 
 The Overview map's **Go back in time** slider explores a rolling 24-hour path
 archive. Each selected time shows the preceding two hours of recorded trails;
-the traffic layer checkboxes work in history too. **Back to live** restores the
+confirmed Geneva arrival trails remain visible after their icons disappear,
+while general traffic and departure trails disappear when those aircraft are
+no longer tracked at the selected time. The traffic layer checkboxes work in
+history too. **Back to live** restores the
 latest map. Arrival cards and status above the map continue to show live data.
 Left and right arrow keys move the focused slider 30 seconds per press; the time
 label includes seconds. The current map remains visible while another time loads,
