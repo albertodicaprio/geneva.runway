@@ -65,19 +65,28 @@ const MapHistory = (() => {
             describe();
             tick();
         }
+        function seek(at) {
+            if (availableFrom === null || !Number.isFinite(at)) return false;
+            tick();
+            const end = Number(slider.max);
+            slider.value = Math.max(Number(slider.min), Math.min(end - 1, Math.round(at)));
+            selectTime();
+            return true;
+        }
+        function selectTime() {
+            if (Number(slider.value) >= Number(slider.max)) return live();
+            selected = Number(slider.value);
+            const token = ++request;
+            cancel(pending);
+            describe();
+            status.textContent = `Loading recorded paths at ${time(selected)} (Geneva)…`;
+            map.beginHistory();
+            const at = selected;
+            pending = defer(() => show(at, token), 180);
+        }
         function init() {
             slider.disabled = true;
-            function selectTime() {
-                if (Number(slider.value) >= Number(slider.max)) return live();
-                selected = Number(slider.value);
-                const token = ++request;
-                cancel(pending);
-                describe();
-                status.textContent = `Loading recorded paths at ${time(selected)} (Geneva)…`;
-                map.beginHistory();
-                const at = selected;
-                pending = defer(() => show(at, token), 180);
-            }
+            map.setTrailTimeHandler?.(seek);
             slider.addEventListener('input', selectTime);
             slider.addEventListener('keydown', event => {
                 if (slider.disabled || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
@@ -90,7 +99,7 @@ const MapHistory = (() => {
             describe();
             tick();
         }
-        return { init, tick };
+        return { init, tick, seek };
     }
     return { create };
 })();

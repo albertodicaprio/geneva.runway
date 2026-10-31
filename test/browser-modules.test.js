@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const card = require('../public/aircraft-card');
-const { create, mapMarker, mapPath } = require('../public/aircraft-map');
+const { create, mapMarker, mapPath, mapPosition, trailTimeAt } = require('../public/aircraft-map');
 
 const aircraft = (icao24, extra = {}) => ({
     icao24, callsign: icao24, latitude: 46.3, longitude: 6.2, altitude: 10000,
@@ -302,6 +302,41 @@ test('trail buttons escape aircraft labels and provide a separate broad pointer 
     assert.match(markup, /aria-label="&lt;TRAIL&gt; trail/);
     assert.match(markup, /class="map-trail-target"/);
     assert.match(markup, /aria-controls="mapAircraftDetails"/);
+});
+
+test('clicking a curved trail reports the time at the pointer without opening details', () => {
+    const { document, elements } = makeDocument();
+    const plane = aircraft('TIMED', { track: { color: 'purple', points: [
+        { latitude: 46.2, longitude: 6.1, timestamp: 1000 },
+        { latitude: 46.3, longitude: 6.2, timestamp: 1060 }
+    ] } });
+    const start = mapPosition(46.2, 6.1), end = mapPosition(46.3, 6.2);
+    const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    assert.equal(trailTimeAt(plane, midpoint.x, midpoint.y, false), 1030);
+    const times = [];
+    const map = create({ document });
+    map.init();
+    map.setTrailTimeHandler(at => { times.push(at); return true; });
+    map.update({ aircraft: [plane] });
+    const svg = { getScreenCTM: () => ({ inverse: () => ({}) }),
+        createSVGPoint: () => ({ matrixTransform() { return { x: this.x, y: this.y }; } }) };
+    const trail = { dataset: { aircraftId: 'TIMED', mapTarget: 'trail' }, ownerSVGElement: svg };
+    elements.mapPaths.handlers.click({ type: 'click', clientX: midpoint.x, clientY: midpoint.y,
+        target: { closest: () => trail } });
+    assert.deepEqual(times, [1030]);
+    assert.equal(map.selectedAircraftId, null);
+    assert.equal(elements.mapAircraftDetails.hidden, true);
+});
+
+test('trail time follows curved points and ignores missing timestamps', () => {
+    const turning = aircraft('TURN', { track: { color: 'purple', points: [
+        { latitude: 46.2, longitude: 6.1, timestamp: 1000 },
+        { latitude: 46.27, longitude: 6.1, timestamp: 1060 },
+        { latitude: 46.27, longitude: 6.2, timestamp: 1180 }
+    ] } });
+    const bend = mapPosition(46.27, 6.1);
+    assert.equal(trailTimeAt(turning, bend.x, bend.y, false), 1060);
+    assert.equal(trailTimeAt(aircraft('OLD'), bend.x, bend.y, false), null);
 });
 
 test('repeated historical positions do not create dots or sharp joins in a turning trail', () => {

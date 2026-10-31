@@ -104,3 +104,17 @@ test('history requests preserve the displayed map until a complete response arri
     await f.resolve(2, {}, false);
     assert.deepEqual(f.maps, [past], 'A failed history request must also retain the previous map');
 });
+
+test('trail seeking clamps to recorded history and uses the existing timeline request', async () => {
+    const f = fixture();
+    f.timeline.init();
+    assert.equal(f.timeline.seek(95000), false);
+    await f.resolve(0, { availableFrom: 90000 });
+    assert.equal(f.timeline.seek(95030), true);
+    assert.equal(Number(f.elements.mapHistoryTime.value), 95030);
+    assert.equal(f.elements.mapMode.textContent, 'HISTORY');
+    assert.equal(f.timeline.seek(120000), true);
+    assert.equal(Number(f.elements.mapHistoryTime.value), 99999);
+    assert.equal(f.timeline.seek(80000), true);
+    assert.equal(Number(f.elements.mapHistoryTime.value), 90000);
+});

@@ -34,40 +34,73 @@ const AircraftMap = (() => {
         let path = `M ${coordinate(points[0].x)} ${coordinate(points[0].y)}`;
 
         for (let index = 0; index < points.length - 1; index += 1) {
-            const previous = points[index - 1] || points[index];
-            const current = points[index];
+            const [firstControl, secondControl] = curveControls(points, index);
             const next = points[index + 1];
-            const following = points[index + 2] || next;
-            const firstControl = {
-                x: current.x + (next.x - previous.x) / 6,
-                y: current.y + (next.y - previous.y) / 6
-            };
-            const secondControl = {
-                x: next.x - (following.x - current.x) / 6,
-                y: next.y - (following.y - current.y) / 6
-            };
             path += ` C ${coordinate(firstControl.x)} ${coordinate(firstControl.y)} ${coordinate(secondControl.x)} ${coordinate(secondControl.y)} ${coordinate(next.x)} ${coordinate(next.y)}`;
         }
 
         return path;
     }
 
-    function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals', selectedAircraftId = null) {
-        // Archived snapshots can repeat a coordinate; drawing those as separate curves creates loops at turns.
+    function curveControls(points, index) {
+        const previous = points[index - 1] || points[index];
+        const current = points[index];
+        const next = points[index + 1];
+        const following = points[index + 2] || next;
+        return [
+            { x: current.x + (next.x - previous.x) / 6, y: current.y + (next.y - previous.y) / 6 },
+            { x: next.x - (following.x - current.x) / 6, y: next.y - (following.y - current.y) / 6 }
+        ];
+    }
+
+    function pathPoints(aircraft, includeEstimatedPosition) {
         const points = (aircraft.track?.points || [])
-            .map(point => mapCoordinates(point.latitude, point.longitude))
-            .filter(Boolean)
+            .map(point => ({ ...mapCoordinates(point.latitude, point.longitude), timestamp: point.timestamp }))
+            .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
             .filter((point, index, valid) => index === 0 || point.x !== valid[index - 1].x || point.y !== valid[index - 1].y);
         if (includeEstimatedPosition) {
-            const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
+            const position = mapCoordinates(aircraft.latitude, aircraft.longitude);
             const last = points.at(-1);
-            if (estimatedPosition && (!last || last.x !== estimatedPosition.x || last.y !== estimatedPosition.y))
-                points.push(estimatedPosition);
+            if (position && (!last || last.x !== position.x || last.y !== position.y))
+                points.push({ ...position, timestamp: last?.timestamp });
         }
+        return points;
+    }
+
+    function trailTimeAt(aircraft, x, y, includeEstimatedPosition = true) {
+        const points = pathPoints(aircraft, includeEstimatedPosition);
+        if (points.length < 2) return null;
+        let nearest = { distance: Infinity, time: null };
+        for (let index = 0; index < points.length - 1; index += 1) {
+            const start = points[index], end = points[index + 1];
+            if (!Number.isFinite(start.timestamp) || !Number.isFinite(end.timestamp)) continue;
+            const [first, second] = curveControls(points, index);
+            const position = t => {
+                const u = 1 - t;
+                return { x: u ** 3 * start.x + 3 * u ** 2 * t * first.x + 3 * u * t ** 2 * second.x + t ** 3 * end.x,
+                    y: u ** 3 * start.y + 3 * u ** 2 * t * first.y + 3 * u * t ** 2 * second.y + t ** 3 * end.y };
+            };
+            let previous = position(0);
+            for (let step = 1; step <= 16; step += 1) {
+                const next = position(step / 16);
+                const dx = next.x - previous.x, dy = next.y - previous.y;
+                const fraction = Math.max(0, Math.min(1, ((x - previous.x) * dx + (y - previous.y) * dy) / (dx * dx + dy * dy || 1)));
+                const distance = (x - previous.x - fraction * dx) ** 2 + (y - previous.y - fraction * dy) ** 2;
+                if (distance < nearest.distance) nearest = { distance, time: Math.round(start.timestamp +
+                    (end.timestamp - start.timestamp) * ((step - 1 + fraction) / 16)) };
+                previous = next;
+            }
+        }
+        return nearest.time;
+    }
+
+    function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals', selectedAircraftId = null) {
+        // Archived snapshots can repeat a coordinate; drawing those as separate curves creates loops at turns.
+        const points = pathPoints(aircraft, includeEstimatedPosition);
         if (points.length < 2 || !aircraft.track?.color) return '';
         const path = smoothMapPath(points);
         const selectedClass = selectedAircraftId != null && selectedAircraftId === aircraft.icao24 ? ' map-selected-path' : '';
-        const label = `${aircraft.callsign || aircraft.icao24 || 'Unknown aircraft'} trail. Show last recorded aircraft details`;
+        const label = `${aircraft.callsign || aircraft.icao24 || 'Unknown aircraft'} trail. Click to go to this time; press Enter for aircraft details`;
         return `<g class="map-trail" role="button" tabindex="0" data-aircraft-id="${escapeHtml(aircraft.icao24)}" data-map-target="trail" aria-controls="mapAircraftDetails" aria-expanded="${selectedAircraftId === aircraft.icao24}" aria-label="${escapeHtml(label)}">
             <path class="map-flight-path${layer === 'arrivals' ? '' : ` map-${layer}-path`}${selectedClass}" d="${path}" stroke="${escapeHtml(aircraft.track.color)}" aria-hidden="true"></path>
             <path class="map-trail-target" d="${path}" aria-hidden="true"></path>
@@ -105,6 +138,7 @@ const AircraftMap = (() => {
         let snapshot = null;
         let history = null;
         let initialized = false;
+        let onTrailTime = null;
         const current = () => history || snapshot;
 
         function traffic() {
@@ -198,6 +232,20 @@ const AircraftMap = (() => {
             const select = event => {
                 const marker = event.target.closest('[data-aircraft-id]');
                 if (!marker) return;
+                if (event.type === 'click' && marker.dataset.mapTarget === 'trail' && onTrailTime) {
+                    const svg = marker.ownerSVGElement;
+                    const matrix = svg?.getScreenCTM();
+                    if (matrix && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+                        const point = svg.createSVGPoint();
+                        point.x = event.clientX;
+                        point.y = event.clientY;
+                        const local = point.matrixTransform(matrix.inverse());
+                        const item = selectableAircraft().find(aircraft => aircraft.icao24 === marker.dataset.aircraftId);
+                        const at = item && trailTimeAt(item, local.x, local.y, !current()?.historical &&
+                            !retainedTracks().includes(item));
+                        if (at !== null && at !== undefined && onTrailTime(at)) return;
+                    }
+                }
                 selectedTarget = marker.dataset.mapTarget || 'marker';
                 selectedAircraftId = selectedAircraftId === marker.dataset.aircraftId ? null : marker.dataset.aircraftId;
                 update();
@@ -228,9 +276,10 @@ const AircraftMap = (() => {
             selectedAircraftId = null;
             update();
         }
-        return { init, update, beginHistory, setHistory, setLayer, visibleAircraft, get selectedAircraftId() { return selectedAircraftId; } };
+        return { init, update, beginHistory, setHistory, setLayer, visibleAircraft,
+            setTrailTimeHandler(handler) { onTrailTime = handler; }, get selectedAircraftId() { return selectedAircraftId; } };
     }
-    return { create, mapPosition, mapPath, mapMarker, isGenevaDeparture };
+    return { create, mapPosition, mapPath, mapMarker, isGenevaDeparture, trailTimeAt };
 })();
 
 if (typeof module !== 'undefined') module.exports = AircraftMap;

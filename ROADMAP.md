@@ -940,6 +940,11 @@ Completed stats access update:
 
 Remaining maintenance:
 
+- [x] Click a recorded aircraft trail to seek the map timeline to the time at
+  the pointer, using the trail's curved geometry and recorded point timestamps.
+  Keyboard trail activation still opens aircraft details. Validation: 266 tests
+  pass, including pointer time selection and timeline bounds.
+
 - [x] Refine map history navigation: use 30-second arrow-key steps and show seconds,
   infer missing historical headings from preceding movement, and keep the displayed
   map frozen during history requests instead of clearing it. Validation: 256 tests
