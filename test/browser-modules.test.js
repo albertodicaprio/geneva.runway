@@ -303,3 +303,19 @@ test('trail buttons escape aircraft labels and provide a separate broad pointer 
     assert.match(markup, /class="map-trail-target"/);
     assert.match(markup, /aria-controls="mapAircraftDetails"/);
 });
+
+test('repeated historical positions do not create dots or sharp joins in a turning trail', () => {
+    const turning = aircraft('TURNING', { track: { color: 'purple', points: [
+        { latitude: 46.20, longitude: 6.10 },
+        { latitude: 46.20, longitude: 6.10 },
+        { latitude: 46.25, longitude: 6.15 },
+        { latitude: 46.25, longitude: 6.15 },
+        { latitude: 46.30, longitude: 6.16 },
+        { latitude: 46.30, longitude: 6.16 }
+    ] } });
+    const visiblePath = mapPath(turning, false).match(/class="map-flight-path" d="([^"]+)"/)[1];
+    assert.equal((visiblePath.match(/ C /g) || []).length, 2);
+    assert.equal(mapPath(aircraft('STILL', { track: { color: 'purple', points: [
+        { latitude: 46.3, longitude: 6.2 }
+    ] } }), true), '');
+});

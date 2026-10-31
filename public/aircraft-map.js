@@ -53,12 +53,16 @@ const AircraftMap = (() => {
     }
 
     function mapPath(aircraft, includeEstimatedPosition = true, layer = 'arrivals', selectedAircraftId = null) {
+        // Archived snapshots can repeat a coordinate; drawing those as separate curves creates loops at turns.
         const points = (aircraft.track?.points || [])
             .map(point => mapCoordinates(point.latitude, point.longitude))
-            .filter(Boolean);
+            .filter(Boolean)
+            .filter((point, index, valid) => index === 0 || point.x !== valid[index - 1].x || point.y !== valid[index - 1].y);
         if (includeEstimatedPosition) {
             const estimatedPosition = mapCoordinates(aircraft.latitude, aircraft.longitude);
-            if (estimatedPosition) points.push(estimatedPosition);
+            const last = points.at(-1);
+            if (estimatedPosition && (!last || last.x !== estimatedPosition.x || last.y !== estimatedPosition.y))
+                points.push(estimatedPosition);
         }
         if (points.length < 2 || !aircraft.track?.color) return '';
         const path = smoothMapPath(points);
